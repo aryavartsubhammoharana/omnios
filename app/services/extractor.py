@@ -28,28 +28,71 @@ def get_easyocr_reader():
     return _easyocr_reader if _easyocr_reader is not False else None
 
 def format_ocr_text_locally(raw_text: str) -> str:
-    """Formats raw OCR lines into clean structured Markdown locally with $0 API cost."""
-    lines = raw_text.split("\n")
+    """Formats raw OCR lines into clean structured Markdown locally with $0 API cost.
+    Handles: Page headers, Subject/Unit/Chapter headings, Section headings,
+    Numbered questions (1. / 1_ / 1) / Q1.), bullet lists, and body text."""
+    import re
+
+    # Step 1: Normalize OCR artifacts — underscores used as periods by OCR
+    text = raw_text.replace("_", ". ").replace(". . ", ". ").replace(".  ", ". ")
+
+    # Step 2: Split numbered questions that are glued together on same line
+    # Pattern: "...sentence. 2. Next question" or "...sentence. 2 Next question"
+    text = re.sub(r'(?<=[.?!])\s*(\d{1,3})\s*[.)]\s*', r'\n\1. ', text)
+
+    lines = text.split("\n")
     formatted_lines = []
-    
+
     for line in lines:
         l = line.strip()
         if not l:
             continue
-        if l.startswith("--- Page "):
-            formatted_lines.append(f"\n\n### {l}\n")
-        elif l.lower().startswith(("subject:", "question bank", "unit ", "chapter ")):
+
+        # --- Page Header ---
+        if re.match(r'^-{2,}\s*Page\s+\d+', l, re.IGNORECASE):
+            formatted_lines.append(f"\n\n---\n\n### 📄 {l.strip('- ')}\n")
+
+        # --- Subject / Unit / Chapter / Question Bank (Top-Level Heading) ---
+        elif re.match(r'^(subject\s*[:.]|question\s*bank|unit\s+\d|chapter\s+\d)', l, re.IGNORECASE):
             formatted_lines.append(f"\n## {l}\n")
-        elif l.lower().startswith(("short questions:", "broad questions:", "section ", "notes:")):
+
+        # --- Section Heading (Short Questions / Broad Questions / Section / Notes) ---
+        elif re.match(r'^(short\s+questions?|broad\s+questions?|long\s+questions?|section\s+[a-z]|notes?\s*[:.]|fill\s+in|true\s+or\s+false|match\s+the|multiple\s+choice|mcq|objective)', l, re.IGNORECASE):
             formatted_lines.append(f"\n### {l}\n")
-        elif len(l) > 1 and l[0].isdigit() and l[1] in [".", ")", " "]:
-            formatted_lines.append(f"\n**{l}**")
+
+        # --- Numbered Question: "1. ..." / "Q1. ..." / "Q.1 ..." ---
+        elif re.match(r'^(Q\.?\s*)?(\d{1,3})\s*[.)]\s+', l):
+            # Extract the question number and text
+            m = re.match(r'^(Q\.?\s*)?(\d{1,3})\s*[.)]\s+(.*)', l)
+            if m:
+                num = m.group(2)
+                qtext = m.group(3).strip()
+                formatted_lines.append(f"\n**{num}. {qtext}**\n")
+            else:
+                formatted_lines.append(f"\n**{l}**\n")
+
+        # --- Bullet list items ---
         elif l.startswith(("-", "*", "•")):
             formatted_lines.append(f"- {l.lstrip('-*• ')}")
+
+        # --- Lettered sub-options: a) / b) / (a) / (i) ---
+        elif re.match(r'^\(?[a-eA-Eivx]{1,4}[.)]\s+', l):
+            formatted_lines.append(f"   - {l}")
+
+        # --- "Define ...", "Describe ...", "Differentiate ...", "Draw ...", "Discuss ...", "Mention ...", "Write ...", "What ...", "Why ...", "How ...", "Give ..." --- (standalone question keywords)
+        elif re.match(r'^(Define|Describe|Differentiate|Distinguish|Draw|Discuss|Mention|Write|What|Why|How|Give|Classify|Compare|Contrast|Explain|State|List|Name|Depict|Enumerate)\b', l, re.IGNORECASE) and len(l) > 20:
+            formatted_lines.append(f"\n**{l}**\n")
+
+        # --- Regular body text ---
         else:
             formatted_lines.append(l)
 
-    return "\n".join(formatted_lines).strip()
+    result = "\n".join(formatted_lines).strip()
+
+    # Step 3: Clean up excessive blank lines
+    result = re.sub(r'\n{4,}', '\n\n\n', result)
+
+    return result
 
 def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
     """Calculates total pages and processes PDF page-by-page (Text layer -> GPU OCR per page) with real-time progress."""

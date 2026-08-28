@@ -31,7 +31,7 @@ def query_gemini_ai(prompt: str, context: str = "") -> str:
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
         payload = {"contents": [{"parts": [{"text": full_prompt}]}]}
-        res = requests.post(url, json=payload, timeout=20)
+        res = requests.post(url, json=payload, timeout=60)
         if res.status_code == 200:
             data = res.json()
             return data["candidates"][0]["content"]["parts"][0]["text"].strip()
@@ -70,7 +70,7 @@ def query_sarvam_ai(prompt: str, context: str = "") -> str:
             ],
             "temperature": 0.7
         }
-        res = requests.post(url, json=payload, headers=headers, timeout=30)
+        res = requests.post(url, json=payload, headers=headers, timeout=60)
         if res.status_code == 200:
             data = res.json()
             return data["choices"][0]["message"]["content"].strip()
