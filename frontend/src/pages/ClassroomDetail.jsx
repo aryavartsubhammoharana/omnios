@@ -87,6 +87,18 @@ export default function ClassroomDetail() {
     return () => clearInterval(interval);
   }, [id, documents, uploading]);
 
+  // Auto-refresh readingDoc modal while OCR is still in progress
+  useEffect(() => {
+    if (!readingDoc || readingDoc.processing_status === 'ready') return;
+
+    const interval = setInterval(() => {
+      API.get(`/api/upload/document/${readingDoc.id}`).then((res) => {
+        setReadingDoc(res.data);
+      });
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [readingDoc]);
+
   const handleOpenEditClassroomModal = () => {
     setEditName(classroom.name);
     setEditDescription(classroom.description || '');
@@ -917,7 +929,16 @@ export default function ClassroomDetail() {
                     className="flex items-center space-x-1.5 bg-slate-800 text-slate-500 text-xs font-semibold px-3.5 py-2 rounded-xl cursor-not-allowed opacity-60 font-mono"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-slate-600" />
-                    <span>Ask NotebookLM AI (OCR 75%...)</span>
+                    <span>
+                      {(() => {
+                        const st = readingDoc.processing_status || '';
+                        if (st.startsWith('ocr_page_')) {
+                          const parts = st.split('_');
+                          return `Page ${parts[2]}/${parts[3]} OCR (${readingDoc.processing_progress || 50}%)`;
+                        }
+                        return `Processing (${readingDoc.processing_progress || 50}%)`;
+                      })()}
+                    </span>
                   </button>
                 )}
 
@@ -946,7 +967,16 @@ export default function ClassroomDetail() {
                         <div className="h-4 bg-slate-800 rounded w-full"></div>
                         <div className="h-4 bg-slate-800 rounded w-5/6"></div>
                         <div className="h-4 bg-slate-800 rounded w-4/6"></div>
-                        <p className="text-xs text-amber-400 font-sans mt-4">Extracting text page-by-page ({readingDoc.processing_progress || 75}% complete)...</p>
+                        <p className="text-xs text-amber-400 font-sans mt-4">
+                          {(() => {
+                            const st = readingDoc.processing_status || '';
+                            if (st.startsWith('ocr_page_')) {
+                              const parts = st.split('_');
+                              return `📄 Extracting Page ${parts[2]} of ${parts[3]} (${readingDoc.processing_progress || 50}% complete)...`;
+                            }
+                            return `📄 Extracting text page-by-page (${readingDoc.processing_progress || 50}% complete)...`;
+                          })()}
+                        </p>
                       </div>
                     ) : (
                       <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-inner prose prose-invert max-w-none prose-table:border prose-table:border-slate-700 prose-td:p-3 prose-th:p-3 prose-th:bg-slate-800 text-sm">
