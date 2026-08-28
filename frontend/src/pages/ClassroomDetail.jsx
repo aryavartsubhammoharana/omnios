@@ -488,13 +488,20 @@ export default function ClassroomDetail() {
                   const status = doc.processing_status || 'ready';
                   const isProcessing = status === 'processing';
                   const isOcrProcessing = status === 'ocr_processing';
+                  const isPageOcr = status.startsWith('ocr_page_');
                   const isReady = status === 'ready';
                   const progress = doc.processing_progress || 100;
                   const isDocOwner = user?.role === 'teacher' && doc.uploaded_by_id === user?.id;
 
                   let statusText = `OCR Ready (100%)`;
-                  if (isProcessing) statusText = `Uploading (50%)`;
-                  if (isOcrProcessing) statusText = `GPU OCR & Gemini AI (75%)`;
+                  if (isProcessing) statusText = `Uploading (${progress}%)`;
+                  if (isOcrProcessing) statusText = `Processing (${progress}%)`;
+                  if (isPageOcr) {
+                    const parts = status.split('_');
+                    const curPage = parts[2];
+                    const totPages = parts[3];
+                    statusText = `Page ${curPage}/${totPages} OCR (${progress}%)`;
+                  }
 
                   return (
                     <div key={doc.id} className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 hover:border-indigo-500/40 transition">
@@ -934,12 +941,12 @@ export default function ClassroomDetail() {
               ) : (
                 <div className="p-6 h-full overflow-y-auto font-sans leading-relaxed text-slate-200">
                   <div className="max-w-4xl mx-auto space-y-4">
-                    {readingDoc.processing_status === 'processing' || readingDoc.processing_status === 'ocr_processing' ? (
+                    {readingDoc.processing_status !== 'ready' ? (
                       <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 space-y-4 animate-pulse">
                         <div className="h-4 bg-slate-800 rounded w-full"></div>
                         <div className="h-4 bg-slate-800 rounded w-5/6"></div>
                         <div className="h-4 bg-slate-800 rounded w-4/6"></div>
-                        <p className="text-xs text-amber-400 font-sans mt-4">Running GPU OCR & Gemini AI Structuring (75% complete)...</p>
+                        <p className="text-xs text-amber-400 font-sans mt-4">Extracting text page-by-page ({readingDoc.processing_progress || 75}% complete)...</p>
                       </div>
                     ) : (
                       <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-inner prose prose-invert max-w-none prose-table:border prose-table:border-slate-700 prose-td:p-3 prose-th:p-3 prose-th:bg-slate-800 text-sm">

@@ -20,27 +20,32 @@ def process_file_text_in_background(doc_id: int):
     db = SessionLocal()
     try:
         doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
-        if doc:
-            # Stage 2: 75% GPU OCR & Gemini AI Processing
-            doc.processing_status = "ocr_processing"
-            doc.processing_progress = 75
-            db.commit()
+        if not doc:
+            return
 
-            # Run GPU EasyOCR + Zero-Data-Loss Gemini AI Structuring safely
-            extracted_text = ""
+        def on_page_progress_update(current_page: int, total_pages: int, ocr_used: bool):
+            pct = 50 + int((current_page / max(1, total_pages)) * 48)
             try:
-                extracted_text = extract_text_from_file(doc.file_path)
-            except Exception as ex_ext:
-                print(f"Extractor exception for doc {doc_id}: {ex_ext}")
+                sub_db = SessionLocal()
+                sub_doc = sub_db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
+                if sub_doc:
+                    sub_doc.processing_status = f"ocr_page_{current_page}_{total_pages}"
+                    sub_doc.processing_progress = pct
+                    sub_db.commit()
+                sub_db.close()
+            except Exception as ex:
+                print(f"Error updating page progress for doc {doc_id}: {ex}")
 
-            # Re-fetch doc in case DB session stale during long OCR/Gemini call
-            doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
-            if doc:
-                doc.content_text = extracted_text if (extracted_text and extracted_text.strip()) else f"Classroom Study Material File '{doc.filename}' uploaded by teacher."
-                doc.processing_status = "ready"
-                doc.processing_progress = 100
-                db.commit()
-                print(f"Document {doc_id} OCR + Gemini AI processing completed 100%!")
+        # Page-by-page extraction (text layer -> GPU OCR per page)
+        extracted_text = extract_text_from_file(doc.file_path, on_page_progress=on_page_progress_update)
+
+        doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
+        if doc:
+            doc.content_text = extracted_text if (extracted_text and extracted_text.strip()) else f"Classroom Study Material File '{doc.filename}' uploaded by teacher."
+            doc.processing_status = "ready"
+            doc.processing_progress = 100
+            db.commit()
+            print(f"✅ Document {doc_id} ('{doc.filename}') all pages processed 100%!")
     except Exception as e:
         print(f"Error extracting text in background for doc {doc_id}: {e}")
         try:
@@ -88,7 +93,7 @@ def upload_document(
     db.commit()
     db.refresh(doc)
 
-    # 50% to 75% to 100% Background GPU OCR + Gemini AI Structuring
+    # 50% to 100% Page-by-Page GPU OCR & Extraction in Background
     background_tasks.add_task(process_file_text_in_background, doc.id)
 
     return {

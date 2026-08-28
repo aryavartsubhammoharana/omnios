@@ -36,7 +36,9 @@ def format_ocr_text_locally(raw_text: str) -> str:
         l = line.strip()
         if not l:
             continue
-        if l.lower().startswith(("subject:", "question bank", "unit ", "chapter ")):
+        if l.startswith("--- Page "):
+            formatted_lines.append(f"\n\n### {l}\n")
+        elif l.lower().startswith(("subject:", "question bank", "unit ", "chapter ")):
             formatted_lines.append(f"\n## {l}\n")
         elif l.lower().startswith(("short questions:", "broad questions:", "section ", "notes:")):
             formatted_lines.append(f"\n### {l}\n")
@@ -49,65 +51,60 @@ def format_ocr_text_locally(raw_text: str) -> str:
 
     return "\n".join(formatted_lines).strip()
 
-def perform_local_ocr_on_pdf(file_path: str, max_pages: int = 35) -> str:
-    """100% Zero-Cost Local GPU-Accelerated EasyOCR Pipeline for scanned image PDFs."""
-    reader = get_easyocr_reader()
-    if not reader:
-        return ""
-
+def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
+    """Calculates total pages and processes PDF page-by-page (Text layer -> GPU OCR per page) with real-time progress."""
+    filename = os.path.basename(file_path)
     extracted_pages = []
+    
     try:
         doc = fitz.open(file_path)
-        num_pages = min(len(doc), max_pages)
-        for page_idx in range(num_pages):
+        total_pages = len(doc)
+        print(f"📄 '{filename}' has {total_pages} page(s). Starting Page-by-Page Extraction...")
+
+        for page_idx in range(total_pages):
+            page_num = page_idx + 1
             page = doc[page_idx]
-            pix = page.get_pixmap(dpi=150)
-            img = np.frombuffer(pix.samples, dtype=np.uint8).reshape((pix.height, pix.width, pix.n))
             
-            lines = reader.readtext(img, detail=0)
-            if lines:
-                page_text = "\n".join(lines)
-                extracted_pages.append(f"--- Page {page_idx + 1} ---\n" + page_text)
+            # Step 1: Check text layer on this individual page
+            page_text = page.get_text()
+            ocr_used = False
+
+            # Step 2: If no text on this page, run GPU EasyOCR on this page's pixmap
+            if not page_text or len(page_text.strip()) < 15:
+                reader = get_easyocr_reader()
+                if reader:
+                    ocr_used = True
+                    pix = page.get_pixmap(dpi=150)
+                    img = np.frombuffer(pix.samples, dtype=np.uint8).reshape((pix.height, pix.width, pix.n))
+                    lines = reader.readtext(img, detail=0)
+                    if lines:
+                        page_text = "\n".join(lines)
+            
+            if page_text and page_text.strip():
+                extracted_pages.append(f"--- Page {page_num} of {total_pages} ---\n" + page_text.strip())
+            
+            print(f"   ↳ [Page {page_num}/{total_pages}] Extracted {'via GPU OCR' if ocr_used else 'via Text Layer'} ({len(page_text.strip()) if page_text else 0} chars)")
+
+            # Step 3: Trigger real-time progress callback
+            if on_page_progress:
+                on_page_progress(page_num, total_pages, ocr_used)
+
         doc.close()
     except Exception as e:
-        print(f"Local GPU EasyOCR error on {file_path}: {e}")
+        print(f"Error during page-by-page extraction for {filename}: {e}")
 
-    raw_ocr_text = "\n\n".join(extracted_pages).strip()
-    if not raw_ocr_text:
-        return ""
+    raw_combined = "\n\n".join(extracted_pages).strip()
+    if not raw_combined:
+        return f"Classroom Study Note PDF Document: '{filename}'"
 
-    # Structure into clean Markdown locally with $0 API cost
-    return format_ocr_text_locally(raw_ocr_text)
+    return format_ocr_text_locally(raw_combined)
 
-def extract_text_from_file(file_path: str) -> str:
+def extract_text_from_file(file_path: str, on_page_progress=None) -> str:
     ext = os.path.splitext(file_path)[1].lower()
     filename = os.path.basename(file_path)
 
     if ext == ".pdf":
-        text = ""
-        # 1. Super-Fast PyMuPDF fitz text layer extraction (< 50ms, $0 API cost)
-        try:
-            doc = fitz.open(file_path)
-            for page in doc:
-                t = page.get_text()
-                if t and t.strip():
-                    text += t + "\n"
-            doc.close()
-        except Exception:
-            pass
-
-        if text and len(text.strip()) > 50:
-            print(f"PyMuPDF extracted text layer INSTANTLY (< 50ms, $0 API cost) for '{filename}'")
-            return text.strip()
-
-        # 2. 100% Zero-Cost Local GPU EasyOCR for scanned image PDFs (0 API cost!)
-        print(f"Scanned image PDF detected for '{filename}'. Running 100% Zero-Cost Local GPU EasyOCR...")
-        ocr_text = perform_local_ocr_on_pdf(file_path)
-        if ocr_text.strip():
-            print(f"Local GPU EasyOCR completed 100% ($0 API cost) for '{filename}'")
-            return ocr_text.strip()
-
-        return f"Study Note PDF Document: '{filename}' uploaded by teacher."
+        return extract_pdf_page_by_page(file_path, on_page_progress=on_page_progress)
 
     elif ext in [".docx", ".doc"]:
         try:

@@ -122,7 +122,15 @@ export default function QuickPDFReader() {
                 ? 'bg-amber-950 text-amber-300 border-amber-800 animate-pulse'
                 : 'bg-emerald-950 text-emerald-300 border-emerald-800'
             }`}>
-              {isProcessing ? 'GPU OCR & AI Structuring (75%)' : 'OCR Ready (100%)'}
+              {(() => {
+                if (!isProcessing) return 'OCR Ready (100%)';
+                const st = documentInfo.processing_status || '';
+                if (st.startsWith('ocr_page_')) {
+                  const parts = st.split('_');
+                  return `Page ${parts[2]}/${parts[3]} OCR (${documentInfo.processing_progress || 75}%)`;
+                }
+                return `Processing (${documentInfo.processing_progress || 50}%)`;
+              })()}
             </span>
           </div>
         </div>
@@ -185,7 +193,16 @@ export default function QuickPDFReader() {
           {isProcessing && (
             <div className="p-3 bg-amber-950/80 border-b border-amber-800/80 flex items-center space-x-2 text-xs text-amber-300 flex-shrink-0 animate-pulse">
               <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <span>📄 GPU OCR & Gemini AI Text Extraction in progress (75%). AI Chatbot will unlock as soon as OCR reaches 100%.</span>
+              <span>
+                {(() => {
+                  const st = documentInfo.processing_status || '';
+                  if (st.startsWith('ocr_page_')) {
+                    const parts = st.split('_');
+                    return `📄 Extracting Page ${parts[2]} of ${parts[3]} (${documentInfo.processing_progress || 75}%). AI Chatbot will unlock when all pages finish.`;
+                  }
+                  return `📄 Extracting document text (${documentInfo.processing_progress || 50}%). AI Chatbot will unlock as soon as ready.`;
+                })()}
+              </span>
             </div>
           )}
 
