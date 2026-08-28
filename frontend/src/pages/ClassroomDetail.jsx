@@ -73,13 +73,19 @@ export default function ClassroomDetail() {
 
   useEffect(() => {
     loadData();
+  }, [id]);
+
+  useEffect(() => {
+    const hasUnfinishedDocs = documents.some(d => d.processing_status && d.processing_status !== 'ready');
+    if (!hasUnfinishedDocs && !uploading) return;
+
     const interval = setInterval(() => {
       API.get(`/api/upload/list?classroom_id=${id}`).then((res) => {
         setDocuments(res.data);
       });
-    }, 2500);
+    }, 3000);
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, documents, uploading]);
 
   const handleOpenEditClassroomModal = () => {
     setEditName(classroom.name);

@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -24,6 +24,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Custom Middleware to force 200 OK (Disable 304 caching completely)
+@app.middleware("http")
+async def disable_304_cache_middleware(request: Request, call_next):
+    # Remove incoming cache validation headers from request scope to prevent Starlette 304 responses
+    headers = dict(request.scope.get("headers", []))
+    headers.pop(b"if-none-match", None)
+    headers.pop(b"if-modified-since", None)
+    request.scope["headers"] = list(headers.items())
+
+    response = await call_next(request)
+    
+    # Force fresh 200 OK delivery with no-store cache headers
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 # Ensure uploads directory exists and mount static files
 UPLOAD_DIR = "uploads"
