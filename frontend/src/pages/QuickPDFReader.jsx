@@ -29,6 +29,8 @@ export default function QuickPDFReader() {
     try {
       const res = await API.get(`/api/upload/document/${documentId}`);
       setDocumentInfo(res.data);
+      // Track study session & streak
+      API.post('/api/analytics/track-view', null, { params: { document_id: documentId, time_spent_seconds: 60 } }).catch(() => {});
     } catch (err) {
       console.error("Error loading document", err);
     } finally {

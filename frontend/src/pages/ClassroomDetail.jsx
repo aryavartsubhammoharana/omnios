@@ -129,6 +129,8 @@ export default function ClassroomDetail() {
       const res = await API.get(`/api/upload/document/${docId}`);
       setReadingDoc(res.data);
       setViewMode('pdf');
+      // Track study session & streak
+      API.post('/api/analytics/track-view', null, { params: { document_id: docId, time_spent_seconds: 45 } }).catch(() => {});
     } catch (err) {
       console.error("Error fetching document text", err);
     } finally {

@@ -7,7 +7,10 @@ from typing import List, Optional
 from app.database import get_db
 from app.models.user import User
 from app.models.file import DocumentFile
+from app.models.chunk import DocumentChunk
 from app.services.extractor import extract_text_from_file
+from app.services.embedding import generate_embeddings_batch
+from app.utils.text_chunker import chunk_text
 from app.utils.deps import get_current_user
 
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
@@ -36,7 +39,7 @@ def process_file_text_in_background(doc_id: int):
             except Exception as ex:
                 print(f"Error updating page progress for doc {doc_id}: {ex}")
 
-        # Page-by-page extraction (text layer -> GPU OCR per page)
+        # 1. Page-by-page extraction (text layer -> GPU OCR per page)
         extracted_text = extract_text_from_file(doc.file_path, on_page_progress=on_page_progress_update)
 
         doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
@@ -46,6 +49,37 @@ def process_file_text_in_background(doc_id: int):
             doc.processing_progress = 100
             db.commit()
             print(f"✅ Document {doc_id} ('{doc.filename}') all pages processed 100%!")
+
+            # 2. Semantic Text Chunking for RAG Vector Index
+            try:
+                chunks = chunk_text(doc.content_text, max_tokens=600, overlap_tokens=80)
+                if chunks:
+                    # Clean any old chunks for this document
+                    db.query(DocumentChunk).filter(DocumentChunk.document_id == doc.id).delete()
+                    db.commit()
+
+                    # Batch generate 768-d vector embeddings
+                    texts_to_embed = [c["chunk_text"] for c in chunks]
+                    embeddings = generate_embeddings_batch(texts_to_embed)
+
+                    for idx, c in enumerate(chunks):
+                        emb = embeddings[idx] if idx < len(embeddings) else None
+                        chunk_obj = DocumentChunk(
+                            document_id=doc.id,
+                            classroom_id=doc.classroom_id,
+                            chunk_index=c["chunk_index"],
+                            chunk_text=c["chunk_text"],
+                            char_start=c["char_start"],
+                            char_end=c["char_end"],
+                            embedding=emb,
+                            metadata_json={"filename": doc.filename, "total_chunks": len(chunks)}
+                        )
+                        db.add(chunk_obj)
+                    db.commit()
+                    print(f"🧠 Generated {len(chunks)} vector chunks with 768-d embeddings for RAG search!")
+            except Exception as ch_err:
+                print(f"Note on vector chunking for doc {doc_id}: {ch_err}")
+
     except Exception as e:
         print(f"Error extracting text in background for doc {doc_id}: {e}")
         try:
@@ -179,3 +213,19 @@ def get_document_content(doc_id: int, current_user: User = Depends(get_current_u
         "content_text": doc.content_text or "",
         "created_at": doc.created_at
     }
+
+@router.get("/document/{doc_id}/chunks")
+def get_document_chunks(doc_id: int, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Fetch parsed vector chunks and embedding status for inspection."""
+    chunks = db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).order_by(DocumentChunk.chunk_index.asc()).all()
+    return [{
+        "id": c.id,
+        "chunk_index": c.chunk_index,
+        "chunk_text": c.chunk_text,
+        "char_start": c.char_start,
+        "char_end": c.char_end,
+        "has_embedding": c.embedding is not None,
+        "dimensions": 768 if c.embedding is not None else 0,
+        "metadata": c.metadata_json
+    } for c in chunks]
+

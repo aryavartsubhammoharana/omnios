@@ -3,9 +3,19 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from sqlalchemy import text
 from app.config import settings
 from app.database import engine, Base
-from app.routes import auth, classroom, upload, ai, quiz
+from app.models import *  # Ensure all models are loaded
+from app.routes import auth, classroom, upload, ai, quiz, analytics
+
+# Enable pgvector extension if supported on PostgreSQL
+with engine.connect() as conn:
+    try:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        conn.commit()
+    except Exception as e:
+        print(f"Note on pgvector extension: {e}")
 
 # Create DB tables
 Base.metadata.create_all(bind=engine)
@@ -53,6 +63,7 @@ app.include_router(classroom.router)
 app.include_router(upload.router)
 app.include_router(ai.router)
 app.include_router(quiz.router)
+app.include_router(analytics.router)
 
 @app.get("/api/health")
 def health_check():

@@ -1,11 +1,21 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { BookOpen, Sparkles, LogOut, User, PlusCircle } from 'lucide-react';
+import { BookOpen, Sparkles, LogOut, User, PlusCircle, Flame } from 'lucide-react';
+import API from '../api/client';
 
 export default function Navbar() {
   const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [streak, setStreak] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      API.get('/api/analytics/streak')
+        .then(res => setStreak(res.data.current_streak || 0))
+        .catch(() => {});
+    }
+  }, [user]);
 
   const handleLogout = () => {
     logout();
@@ -38,7 +48,16 @@ export default function Navbar() {
 
       <div className="flex items-center space-x-4">
         {user ? (
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
+            {/* Gamified Streak Counter */}
+            <div 
+              title={`${streak} consecutive active study days`}
+              className="flex items-center space-x-1 bg-amber-950/80 text-amber-300 border border-amber-800/80 px-2.5 py-1 rounded-full text-xs font-semibold font-mono"
+            >
+              <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
+              <span>{streak} {streak === 1 ? 'Day' : 'Days'}</span>
+            </div>
+
             <div className="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
               <User className="w-4 h-4 text-slate-400" />
               <span className="text-xs font-semibold text-slate-200">{user.full_name}</span>

@@ -1,0 +1,54 @@
+{
+  "name": "note-ai-backend",
+  "version": "1.0.0",
+  "description": "Production-ready backend for NOTE AI - AI-powered classroom knowledge management and learning platform",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch --env-file=.env src/server.js",
+    "db:init": "node src/database/initDb.js",
+    "db:seed": "node src/database/initDb.js --seed",
+    "test": "node tests/api.test.js"
+  },
+  "keywords": [
+    "education",
+    "ai",
+    "rag",
+    "pgvector",
+    "bullmq",
+    "redis",
+    "express",
+    "nodejs",
+    "sih2026"
+  ],
+  "author": "NOTE AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.714.0",
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.34.8",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.8.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "pdf-parse": "^1.1.1",
+    "pg": "^8.13.1",
+    "pgvector": "^0.2.0",
+    "tesseract.js": "^5.1.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NOTE AI — Classroom Knowledge & Learning Platform</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#312e81',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Lucide Icons, Marked.js, and DOMPurify for XSS-safe Markdown rendering -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+  
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body class="bg-[#090d16] text-gray-100 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Background decorative glowing orbs -->
+  <div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
+  <div class="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
+
+  <!-- HEADER & APP NAVBAR -->
+  <header class="sticky top-0 z-40 w-full border-b border-gray-800/80 bg-[#090d16]/80 backdrop-blur-xl">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-purple-500 flex items-center justify-center shadow-lg shadow-brand-500/20">
+          <i data-lucide="brain-circuit" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-brand-400">NOTE AI</span>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 border border-brand-500/30">SIH 2026</span>
+          </div>
+          <p class="text-[11px] text-gray-400 font-medium">Classroom Knowledge & RAG Intelligence</p>
+        </div>
+      </div>
+
+      <!-- Quick Role Switcher Bar -->
+      <div class="hidden md:flex items-center bg-gray-900/90 border border-gray-800 rounded-xl p-1 gap-1">
+        <span class="text-xs text-gray-400 font-medium px-2 flex items-center gap-1">
+          <i data-lucide="user-check" class="w-3.5 h-3.5"></i> Preset Login:
+        </span>
+        <button onclick="quickLogin('dr.sharma@institution.edu')" class="text-xs px-2.5 py-1 rounded-lg bg-gray-800/60 hover:bg-brand-600/30 hover:text-brand-300 transition text-gray-300 font-medium flex items-center gap-1">
+          👨‍🏫 Teacher
+        </button>
+        <button onclick="quickLogin('aarav.patel@student.edu')" class="text-xs px-2.5 py-1 rounded-lg bg-gray-800/60 hover:bg-emerald-600/30 hover:text-emerald-300 transition text-gray-300 font-medium flex items-center gap-1">
+          🧑‍🎓 Student 1 (Aarav)
+        </button>
+        <button onclick="quickLogin('priya.singh@student.edu')" class="text-xs px-2.5 py-1 rounded-lg bg-gray-800/60 hover:bg-purple-600/30 hover:text-purple-300 transition text-gray-300 font-medium flex items-center gap-1">
+          👩‍🎓 Student 2 (Priya)
+        </button>
+      </div>
+
+      <!-- User Info & Actions -->
+      <div class="flex items-center gap-3">
+        <!-- Streak Counter -->
+        <div id="user-streak-pill" class="hidden flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-inner">
+          <span>🔥</span>
+          <span id="streak-days-count">0 Days Streak</span>
+        </div>
+
+        <!-- User Profile Pill -->
+        <div id="user-profile-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gray-900 border border-gray-800 text-xs">
+          <div class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+          <span id="current-user-name" class="font-medium text-gray-200">Not Logged In</span>
+          <span id="current-user-role" class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-gray-800 text-gray-400">GUEST</span>
+        </div>
+
+        <button id="auth-action-btn" onclick="openAuthModal()" class="text-xs px-3.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-semibold transition flex items-center gap-1.5 shadow-md shadow-brand-600/20">
+          <i data-lucide="log-in" class="w-3.5 h-3.5"></i> Login
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- TAB NAVIGATION BAR -->
+  <nav class="border-b border-gray-800/60 bg-gray-950/40 backdrop-blur-md sticky top-16 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 overflow-x-auto py-2">
+      <button onclick="switchTab('classrooms')" id="tab-classrooms" class="nav-tab active px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border border-transparent transition text-gray-300 hover:text-white">
+        <i data-lucide="school" class="w-4 h-4 text-brand-400"></i> Classrooms
+      </button>
+      <button onclick="switchTab('notes')" id="tab-notes" class="nav-tab px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border border-transparent transition text-gray-300 hover:text-white">
+        <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i> Notes & OCR Ingestion
+      </button>
+      <button onclick="switchTab('rag')" id="tab-rag" class="nav-tab px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border border-transparent transition text-gray-300 hover:text-white">
+        <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i> AI Assistant (RAG)
+      </button>
+      <button onclick="switchTab('study')" id="tab-study" class="nav-tab px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border border-transparent transition text-gray-300 hover:text-white">
+        <i data-lucide="book-open-check" class="w-4 h-4 text-cyan-400"></i> Summary & Quizzes
+      </button>
+      <button onclick="switchTab('analytics')" id="tab-analytics" class="nav-tab px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 border border-transparent transition text-gray-300 hover:text-white">
+        <i data-lucide="bar-chart-3" class="w-4 h-4 text-amber-400"></i> Teacher Analytics
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN VIEWPORT CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- TAB 1: CLASSROOMS VIEW -->
+    <section id="view-classrooms" class="tab-content animate-fade-in space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <i data-lucide="layout-grid" class="w-5 h-5 text-brand-400"></i>
+            Active Classrooms
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5">Manage courses, share unique 6-character access codes, and coordinate lecture materials.</p>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <button onclick="openJoinClassModal()" class="px-3.5 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-200 border border-gray-700 flex items-center gap-1.5 transition">
+            <i data-lucide="key" class="w-3.5 h-3.5 text-brand-400"></i> Join with Code
+          </button>
+          <button id="btn-create-class" onclick="openCreateClassModal()" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white shadow-lg shadow-brand-600/20 flex items-center gap-1.5 transition">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Create Classroom
+          </button>
+        </div>
+      </div>
+
+      <!-- Classrooms Grid -->
+      <div id="classrooms-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Rendered dynamically by JS -->
+      </div>
+    </section>
+
+    <!-- TAB 2: NOTES & OCR INGESTION VIEW -->
+    <section id="view-notes" class="tab-content hidden animate-fade-in space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <i data-lucide="folder-kanban" class="w-5 h-5 text-emerald-400"></i>
+            Lecture Notes & Ingestion Pipeline
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5">Upload PDF, DOCX, and scanned/handwritten notes for automatic OCR parsing, chunking, and 1536-d vector indexing.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <select id="notes-classroom-select" onchange="loadClassroomNotes()" class="glass-input text-xs px-3 py-2 rounded-xl">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Drag and Drop Upload Card -->
+      <div id="upload-card" class="glass-card rounded-2xl p-6 border-dashed border-2 border-gray-700 hover:border-brand-500/60 transition group text-center cursor-pointer">
+        <input type="file" id="note-file-input" class="hidden" accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.webp,.txt" onchange="handleFileUpload(event)" />
+        <div onclick="document.getElementById('note-file-input').click()" class="space-y-3">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-110 transition border border-emerald-500/20">
+            <i data-lucide="cloud-upload" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-gray-200">Click to upload or drag and drop note files</p>
+            <p class="text-xs text-gray-400 mt-1">Supports PDF, Word (DOCX), Scanned/Handwritten Images (OCR), and Text (Max 50MB)</p>
+          </div>
+          <div class="flex items-center justify-center gap-3 text-[11px] text-gray-500">
+            <span class="flex items-center gap-1"><i data-lucide="file-check" class="w-3 h-3 text-emerald-400"></i> PDF Parse</span>
+            <span class="flex items-center gap-1"><i data-lucide="file-type-2" class="w-3 h-3 text-cyan-400"></i> DOCX Extraction</span>
+            <span class="flex items-center gap-1"><i data-lucide="scan-text" class="w-3 h-3 text-purple-400"></i> Tesseract OCR</span>
+            <span class="flex items-center gap-1"><i data-lucide="database" class="w-3 h-3 text-brand-400"></i> 1536-d pgvector</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes Table / List -->
+      <div class="glass-card rounded-2xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-gray-800/80 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Uploaded Lecture Materials</span>
+          <button onclick="loadClassroomNotes()" class="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh Status
+          </button>
+        </div>
+        <div id="notes-list-container" class="divide-y divide-gray-800/60">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: AI ASSISTANT & RAG CHAT -->
+    <section id="view-rag" class="tab-content hidden animate-fade-in space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-5 h-5 text-purple-400"></i>
+            RAG AI Classroom Assistant
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5">Ask questions grounded strictly in your classroom lecture notes and syllabus embeddings.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-gray-400">Target Classroom:</label>
+          <select id="rag-classroom-select" class="glass-input text-xs px-3 py-2 rounded-xl">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Chat Box -->
+        <div class="lg:col-span-2 glass-card rounded-2xl flex flex-col h-[580px]">
+          <!-- Chat Message Thread -->
+          <div id="chat-thread" class="flex-1 p-5 overflow-y-auto space-y-4">
+            <!-- Initial Greeting -->
+            <div class="flex items-start gap-3">
+              <div class="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center shrink-0">
+                <i data-lucide="bot" class="w-4 h-4 text-purple-400"></i>
+              </div>
+              <div class="glass-panel p-4 rounded-2xl max-w-xl text-xs space-y-2 border-purple-500/20">
+                <p class="font-semibold text-gray-200">Hello! I am NOTE AI, your personal classroom teaching assistant.</p>
+                <p class="text-gray-400">Ask any question about your course concepts, algorithms, formulas, or lecture slides. Every answer is retrieved and cited from your course notes.</p>
+                <div class="pt-2 flex flex-wrap gap-1.5">
+                  <button onclick="fillRagPrompt('Explain the time complexity of Binary Search Tree search and insertion.')" class="text-[11px] px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-brand-300 border border-gray-700 transition">
+                    💡 BST Complexity
+                  </button>
+                  <button onclick="fillRagPrompt('How does vector cosine similarity retrieval work in pgvector?')" class="text-[11px] px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-purple-300 border border-gray-700 transition">
+                    💡 Vector Retrieval
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input Bar -->
+          <div class="p-3.5 border-t border-gray-800/80 bg-gray-900/50">
+            <form onsubmit="handleRagSubmit(event)" class="flex items-center gap-2">
+              <input type="text" id="rag-query-input" placeholder="Ask a question from your course notes..." class="flex-1 glass-input text-xs px-4 py-2.5 rounded-xl" required />
+              <button type="submit" id="rag-send-btn" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-brand-600/30 transition">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i> Ask AI
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Grounding Sources Drawer -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col h-[580px]">
+          <div class="flex items-center justify-between pb-3 border-b border-gray-800">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-1.5">
+              <i data-lucide="quote" class="w-4 h-4 text-brand-400"></i> Grounded Citations
+            </h3>
+            <span id="sources-count-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 font-semibold">0 Sources</span>
+          </div>
+          <div id="rag-sources-container" class="flex-1 overflow-y-auto pt-3 space-y-3">
+            <div class="text-center py-12 text-gray-500 text-xs">
+              <i data-lucide="file-search" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+              Ask a question to see retrieved 1536-d semantic context passages and citations.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: STUDY TOOLS (SUMMARIES & QUIZZES) -->
+    <section id="view-study" class="tab-content hidden animate-fade-in space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <i data-lucide="book-open-check" class="w-5 h-5 text-cyan-400"></i>
+            AI Study Hub: Summaries & Quizzes
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5">Synthesize notes into high-yield summaries or test your mastery with auto-generated interactive quizzes.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <select id="study-document-select" class="glass-input text-xs px-3 py-2 rounded-xl">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Card 1: Summarizer -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="file-text" class="w-4 h-4 text-brand-400"></i> Document Summary & Key Takeaways
+            </h3>
+            <button onclick="generateDocumentSummary()" id="btn-generate-summary" class="px-3 py-1.5 rounded-xl bg-brand-600/30 hover:bg-brand-600 text-brand-300 hover:text-white border border-brand-500/30 text-xs font-semibold transition flex items-center gap-1">
+              <i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Summarize
+            </button>
+          </div>
+          <div id="summary-result-container" class="flex-1 glass-panel rounded-xl p-4 text-xs overflow-y-auto max-h-[480px] space-y-3">
+            <p class="text-gray-500 italic">Select a document and click "Summarize" to generate an executive overview and core takeaways.</p>
+          </div>
+        </div>
+
+        <!-- Card 2: Interactive Quiz Generator -->
+        <div class="glass-card rounded-2xl p-5 flex flex-col space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i data-lucide="help-circle" class="w-4 h-4 text-cyan-400"></i> Interactive Mastery Quiz
+            </h3>
+            <button onclick="generateDocumentQuiz()" id="btn-generate-quiz" class="px-3 py-1.5 rounded-xl bg-cyan-600/30 hover:bg-cyan-600 text-cyan-300 hover:text-white border border-cyan-500/30 text-xs font-semibold transition flex items-center gap-1">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i> Generate Quiz
+            </button>
+          </div>
+          <div id="quiz-result-container" class="flex-1 glass-panel rounded-xl p-4 text-xs overflow-y-auto max-h-[480px] space-y-4">
+            <p class="text-gray-500 italic">Generate interactive MCQs to test your understanding with instant grading and explanations.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: TEACHER ANALYTICS & STREAKS -->
+    <section id="view-analytics" class="tab-content hidden animate-fade-in space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-800">
+        <div>
+          <h2 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <i data-lucide="bar-chart-3" class="w-5 h-5 text-amber-400"></i>
+            Classroom Analytics & Student Engagement
+          </h2>
+          <p class="text-xs text-gray-400 mt-0.5">Real-time telemetry on document reading sessions, study time distribution, and student learning streaks.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <select id="analytics-classroom-select" onchange="loadClassroomAnalytics()" class="glass-input text-xs px-3 py-2 rounded-xl">
+            <!-- Populated dynamically -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Metrics Row -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass-card rounded-2xl p-4 space-y-1">
+          <div class="flex items-center justify-between text-gray-400 text-xs">
+            <span>Enrolled Students</span>
+            <i data-lucide="users" class="w-4 h-4 text-brand-400"></i>
+          </div>
+          <p id="stat-total-students" class="text-2xl font-black text-white">0</p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 space-y-1">
+          <div class="flex items-center justify-between text-gray-400 text-xs">
+            <span>Lecture Notes</span>
+            <i data-lucide="file-stack" class="w-4 h-4 text-emerald-400"></i>
+          </div>
+          <p id="stat-total-docs" class="text-2xl font-black text-white">0</p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 space-y-1">
+          <div class="flex items-center justify-between text-gray-400 text-xs">
+            <span>Document Views</span>
+            <i data-lucide="eye" class="w-4 h-4 text-purple-400"></i>
+          </div>
+          <p id="stat-total-views" class="text-2xl font-black text-white">0</p>
+        </div>
+        <div class="glass-card rounded-2xl p-4 space-y-1">
+          <div class="flex items-center justify-between text-gray-400 text-xs">
+            <span>Total Study Time</span>
+            <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <p id="stat-total-hours" class="text-2xl font-black text-white">0.00 hrs</p>
+        </div>
+      </div>
+
+      <!-- Analytics Breakdown Tables -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Student Engagement Leaderboard -->
+        <div class="glass-card rounded-2xl overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-gray-800 flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-300">Student Study Leaderboard</span>
+            <span class="text-[10px] text-gray-500">Ranked by study duration</span>
+          </div>
+          <div id="analytics-students-container" class="divide-y divide-gray-800/60 p-2">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Document Performance Metrics -->
+        <div class="glass-card rounded-2xl overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-gray-800 flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-gray-300">Note Read Rates & Engagement</span>
+            <span class="text-[10px] text-gray-500">Views per document</span>
+          </div>
+          <div id="analytics-docs-container" class="divide-y divide-gray-800/60 p-2">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODALS -->
+
+  <!-- 1. Create Classroom Modal -->
+  <div id="modal-create-class" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-gray-700 animate-fade-in">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-brand-400"></i> Create New Classroom
+        </h3>
+        <button onclick="closeModal('modal-create-class')" class="text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <form onsubmit="handleCreateClassroom(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Classroom Name</label>
+          <input type="text" id="new-class-name" placeholder="e.g. Operating Systems" class="w-full glass-input text-xs px-3.5 py-2.5 rounded-xl" required />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Subject / Domain</label>
+          <input type="text" id="new-class-subject" placeholder="e.g. Computer Science" class="w-full glass-input text-xs px-3.5 py-2.5 rounded-xl" required />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Description</label>
+          <textarea id="new-class-desc" placeholder="Course outline, syllabus highlights, and notes index..." rows="3" class="w-full glass-input text-xs px-3.5 py-2 rounded-xl"></textarea>
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-create-class')" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white shadow-md shadow-brand-600/30">Create & Generate Code</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Join Classroom Modal -->
+  <div id="modal-join-class" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-sm w-full p-6 space-y-4 border border-gray-700 animate-fade-in">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="key" class="w-4 h-4 text-brand-400"></i> Join Classroom
+        </h3>
+        <button onclick="closeModal('modal-join-class')" class="text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <form onsubmit="handleJoinClassroom(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">6-Character Classroom Code</label>
+          <input type="text" id="join-class-code" placeholder="e.g. DSA101" maxlength="6" class="w-full glass-input text-sm font-mono tracking-widest uppercase text-center px-3.5 py-2.5 rounded-xl" required />
+          <p class="text-[11px] text-gray-400 mt-1">Ask your teacher for the 6-character code (e.g. DSA101 or AIML20).</p>
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-join-class')" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white shadow-md shadow-brand-600/30">Join Class</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Auth / Login Modal -->
+  <div id="modal-auth" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-md w-full p-6 space-y-4 border border-gray-700 animate-fade-in">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="user" class="w-4 h-4 text-brand-400"></i> Account Authentication
+        </h3>
+        <button onclick="closeModal('modal-auth')" class="text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <form onsubmit="handleManualLogin(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Email Address</label>
+          <input type="email" id="auth-email" placeholder="name@institution.edu" class="w-full glass-input text-xs px-3.5 py-2 rounded-xl" required />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-300 mb-1">Password</label>
+          <input type="password" id="auth-password" placeholder="••••••••" class="w-full glass-input text-xs px-3.5 py-2 rounded-xl" required />
+        </div>
+        <div class="pt-2 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('modal-auth')" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-gray-300">Cancel</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white shadow-md shadow-brand-600/30">Login</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Chunk Inspector Modal -->
+  <div id="modal-chunks" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-card rounded-2xl max-w-2xl w-full p-6 space-y-4 border border-gray-700 animate-fade-in">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="binary" class="w-4 h-4 text-brand-400"></i> Vector Chunks & Embedding Inspector (1536-d)
+        </h3>
+        <button onclick="closeModal('modal-chunks')" class="text-gray-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div id="chunks-modal-content" class="max-h-[450px] overflow-y-auto space-y-3 text-xs">
+        <!-- Chunks list -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- App Script -->
+  <script src="/app.js"></script>
+</body>
+</html>
