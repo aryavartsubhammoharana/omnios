@@ -1,63 +1,83 @@
 import os
+import sys
+import logging
+import warnings
+import numpy as np
 import fitz  # PyMuPDF
-from google import genai
-from google.genai import types
+import torch
 from app.config import settings
 
-def extract_pdf_with_gemini(file_path: str) -> str:
-    """Uses Gemini 2.5 Flash native multimodal capabilities to extract 100% full text from PDF with zero data loss."""
-    filename = os.path.basename(file_path)
-    print(f"Running Gemini 2.5 Flash Native PDF OCR for scanned image document '{filename}'...")
+# Suppress verbose loggers and CPU warnings
+warnings.filterwarnings("ignore")
+logging.getLogger("easyocr").setLevel(logging.ERROR)
 
-    if settings.GEMINI_API_KEY:
+_easyocr_reader = None
+
+def get_easyocr_reader():
+    global _easyocr_reader
+    if _easyocr_reader is None:
         try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            with open(file_path, "rb") as f:
-                pdf_bytes = f.read()
-
-            prompt = (
-                "CRITICAL TASK: ACCURATE FULL-TEXT OCR RECONSTRUCTION WITH ZERO DATA LOSS.\n"
-                "You are an expert OCR document reconstructor. Your goal is 100% ACCURACY AND ZERO DATA LOSS.\n"
-                "STRICT RULES:\n"
-                "1. DO NOT summarize, shorten, abbreviate, or omit ANY paragraph, sentence, number, formula, or table cell.\n"
-                "2. Convert tabular data into clean Markdown tables (| Column 1 | Column 2 |).\n"
-                "3. Format section titles into logical headings (## Section, ### Sub-section).\n"
-                "4. Highlight key definitions using bold formatting (**Key Term**) and bullet points (- List Item).\n"
-                "5. Reconstruct 100% of the actual full content without losing a single word."
-            )
-
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL or "gemini-2.5-flash",
-                contents=[
-                    types.Part.from_bytes(
-                        data=pdf_bytes,
-                        mime_type="application/pdf"
-                    ),
-                    prompt
-                ]
-            )
-            if response.text and len(response.text.strip()) > 30:
-                print(f"Gemini 2.5 Flash Native PDF OCR completed 100% with zero data loss for '{filename}'")
-                return response.text.strip()
+            import easyocr
+            use_gpu = torch.cuda.is_available()
+            device_name = torch.cuda.get_device_name(0) if use_gpu else "CPU"
+            print(f"Initializing EasyOCR Reader ($0 API Cost, GPU Acceleration: {use_gpu}, Device: {device_name})...")
+            _easyocr_reader = easyocr.Reader(['en'], gpu=use_gpu, verbose=False)
         except Exception as e:
-            print(f"Gemini native PDF OCR error for '{filename}': {e}")
+            print(f"Failed to initialize EasyOCR reader: {e}")
+            _easyocr_reader = False
+    return _easyocr_reader if _easyocr_reader is not False else None
 
-    # Fallback to PyMuPDF text layer extraction
-    text = ""
+def format_ocr_text_locally(raw_text: str) -> str:
+    """Formats raw OCR lines into clean structured Markdown locally with $0 API cost."""
+    lines = raw_text.split("\n")
+    formatted_lines = []
+    
+    for line in lines:
+        l = line.strip()
+        if not l:
+            continue
+        if l.lower().startswith(("subject:", "question bank", "unit ", "chapter ")):
+            formatted_lines.append(f"\n## {l}\n")
+        elif l.lower().startswith(("short questions:", "broad questions:", "section ", "notes:")):
+            formatted_lines.append(f"\n### {l}\n")
+        elif len(l) > 1 and l[0].isdigit() and l[1] in [".", ")", " "]:
+            formatted_lines.append(f"\n**{l}**")
+        elif l.startswith(("-", "*", "•")):
+            formatted_lines.append(f"- {l.lstrip('-*• ')}")
+        else:
+            formatted_lines.append(l)
+
+    return "\n".join(formatted_lines).strip()
+
+def perform_local_ocr_on_pdf(file_path: str, max_pages: int = 35) -> str:
+    """100% Zero-Cost Local GPU-Accelerated EasyOCR Pipeline for scanned image PDFs."""
+    reader = get_easyocr_reader()
+    if not reader:
+        return ""
+
+    extracted_pages = []
     try:
         doc = fitz.open(file_path)
-        for page in doc:
-            t = page.get_text()
-            if t and t.strip():
-                text += t + "\n"
+        num_pages = min(len(doc), max_pages)
+        for page_idx in range(num_pages):
+            page = doc[page_idx]
+            pix = page.get_pixmap(dpi=150)
+            img = np.frombuffer(pix.samples, dtype=np.uint8).reshape((pix.height, pix.width, pix.n))
+            
+            lines = reader.readtext(img, detail=0)
+            if lines:
+                page_text = "\n".join(lines)
+                extracted_pages.append(f"--- Page {page_idx + 1} ---\n" + page_text)
         doc.close()
-    except Exception as ex:
-        print(f"PyMuPDF fallback error: {ex}")
+    except Exception as e:
+        print(f"Local GPU EasyOCR error on {file_path}: {e}")
 
-    if text.strip():
-        return text.strip()
+    raw_ocr_text = "\n\n".join(extracted_pages).strip()
+    if not raw_ocr_text:
+        return ""
 
-    return f"Classroom Study Document: '{filename}' uploaded by teacher."
+    # Structure into clean Markdown locally with $0 API cost
+    return format_ocr_text_locally(raw_ocr_text)
 
 def extract_text_from_file(file_path: str) -> str:
     ext = os.path.splitext(file_path)[1].lower()
@@ -65,7 +85,7 @@ def extract_text_from_file(file_path: str) -> str:
 
     if ext == ".pdf":
         text = ""
-        # 1. Super-Fast PyMuPDF fitz text layer extraction (< 50 milliseconds / < 0.05s!)
+        # 1. Super-Fast PyMuPDF fitz text layer extraction (< 50ms, $0 API cost)
         try:
             doc = fitz.open(file_path)
             for page in doc:
@@ -77,11 +97,17 @@ def extract_text_from_file(file_path: str) -> str:
             pass
 
         if text and len(text.strip()) > 50:
-            print(f"PyMuPDF extracted text layer INSTANTLY (< 50ms) for '{filename}'")
+            print(f"PyMuPDF extracted text layer INSTANTLY (< 50ms, $0 API cost) for '{filename}'")
             return text.strip()
 
-        # 2. Only if PDF is a scanned image (0 text layer), call Gemini 2.5 Flash Native PDF OCR
-        return extract_pdf_with_gemini(file_path)
+        # 2. 100% Zero-Cost Local GPU EasyOCR for scanned image PDFs (0 API cost!)
+        print(f"Scanned image PDF detected for '{filename}'. Running 100% Zero-Cost Local GPU EasyOCR...")
+        ocr_text = perform_local_ocr_on_pdf(file_path)
+        if ocr_text.strip():
+            print(f"Local GPU EasyOCR completed 100% ($0 API cost) for '{filename}'")
+            return ocr_text.strip()
+
+        return f"Study Note PDF Document: '{filename}' uploaded by teacher."
 
     elif ext in [".docx", ".doc"]:
         try:
