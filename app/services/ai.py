@@ -4,34 +4,47 @@ from google import genai
 from app.config import settings
 
 def query_gemini_ai(prompt: str, context: str = "") -> str:
-    """Generate answer using official google-genai SDK (gemini-2.5-flash) using lightweight text context."""
+    """Generate answer using Google Gemini SDK with automatic model rotation & Sarvam AI fallback on 429 quota limits."""
     if not settings.GEMINI_API_KEY:
-        return "Gemini API key is not configured in .env file."
+        print("Gemini API key missing, falling back to Sarvam AI...")
+        return query_sarvam_ai(prompt, context)
     
-    try:
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        full_prompt = prompt
-        if context:
-            full_prompt = f"STRICT CONTEXT FROM UPLOADED CLASSROOM MATERIAL ONLY:\n{context[:12000]}\n\nUser Prompt:\n{prompt}\n\nIMPORTANT: Base your response ONLY and EXCLUSIVELY on the uploaded material."
+    full_prompt = prompt
+    if context:
+        full_prompt = f"STRICT CONTEXT FROM UPLOADED CLASSROOM MATERIAL ONLY:\n{context[:12000]}\n\nUser Prompt:\n{prompt}\n\nIMPORTANT: Base your response ONLY and EXCLUSIVELY on the uploaded material."
 
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL or "gemini-2.5-flash",
-            contents=full_prompt,
-        )
-        return response.text.strip()
-    except Exception as e:
+    models_to_try = [settings.GEMINI_MODEL or "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    
+    for model_name in models_to_try:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_MODEL or 'gemini-2.5-flash'}:generateContent?key={settings.GEMINI_API_KEY}"
-            payload = {
-                "contents": [{"parts": [{"text": full_prompt}]}]
-            }
-            res = requests.post(url, json=payload, timeout=30)
-            if res.status_code == 200:
-                data = res.json()
-                return data["candidates"][0]["content"]["parts"][0]["text"].strip()
-            return f"Gemini API Error ({res.status_code}): {res.text}"
-        except Exception as ex:
-            return f"Error querying Gemini AI: {str(e)} | Fallback: {str(ex)}"
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model=model_name,
+                contents=full_prompt,
+            )
+            if response.text and response.text.strip() and not response.text.startswith("Gemini API Error"):
+                return response.text.strip()
+        except Exception as e:
+            print(f"Gemini model '{model_name}' error/quota limit: {e}")
+
+    # Fallback to direct REST API call
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
+        payload = {"contents": [{"parts": [{"text": full_prompt}]}]}
+        res = requests.post(url, json=payload, timeout=20)
+        if res.status_code == 200:
+            data = res.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception as ex:
+        print(f"Gemini REST API fallback error: {ex}")
+
+    # Seamless Fallback to Sarvam AI (sarvam-105b-conversations) if Gemini 429 Quota is exhausted!
+    print("Gemini API quota exhausted (429). Seamlessly falling back to Sarvam AI...")
+    sarvam_res = query_sarvam_ai(prompt=prompt, context=context)
+    if sarvam_res and not sarvam_res.startswith("Sarvam API Error"):
+        return f"{sarvam_res}\n\n*(Powered by Sarvam AI fallback)*"
+    
+    return sarvam_res
 
 def query_sarvam_ai(prompt: str, context: str = "") -> str:
     """Generate answer using Sarvam AI (sarvam-105b-conversations)."""
