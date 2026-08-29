@@ -3,13 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { AuthContext } from '../context/AuthContext';
 import { HelpCircle, CheckCircle, XCircle, ArrowLeft, Award, RotateCcw, Lock, Sparkles, AlertCircle } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import TiltCard3D from '../components/TiltCard3D';
-import { formatLatex } from '../utils/latex';
+import MathRenderer from '../components/MathRenderer';
 
 export default function QuizAttempt() {
   const { id } = useParams();
@@ -179,16 +175,8 @@ export default function QuizAttempt() {
               {/* Question Text with KaTeX Math Rendering */}
               <div className="text-sm font-bold text-white mb-4 flex items-start space-x-2">
                 <span className="text-indigo-400 font-mono flex-shrink-0 mt-0.5">Q{idx + 1}.</span>
-                <div className="flex-1 overflow-x-auto prose prose-invert max-w-none text-sm font-bold">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm, remarkMath]}
-                    rehypePlugins={[rehypeKatex]}
-                    components={{
-                      p: ({node, ...props}) => <span {...props} />
-                    }}
-                  >
-                    {formatLatex(q.question_text || q.question)}
-                  </ReactMarkdown>
+                <div className="flex-1 overflow-x-auto text-sm font-bold text-slate-100">
+                  <MathRenderer content={q.question_text || q.question} />
                 </div>
               </div>
 
@@ -227,16 +215,8 @@ export default function QuizAttempt() {
                         }`}>
                           {optLetter}
                         </span>
-                        <div className="flex-1 overflow-x-auto">
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm, remarkMath]}
-                            rehypePlugins={[rehypeKatex]}
-                            components={{
-                              p: ({node, ...props}) => <span {...props} />
-                            }}
-                          >
-                            {formatLatex(opt)}
-                          </ReactMarkdown>
+                        <div className="flex-1 overflow-x-auto text-xs">
+                          <MathRenderer content={opt} />
                         </div>
                       </div>
 
@@ -255,29 +235,8 @@ export default function QuizAttempt() {
                     <Sparkles className="w-4 h-4 text-amber-400" />
                     <span>Step-by-Step Solution & Formula Derivation:</span>
                   </div>
-                  <div className="overflow-x-auto leading-relaxed pt-1 prose prose-invert max-w-none text-xs">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                      components={{
-                        p: ({node, ...props}) => <p className="mb-2 leading-relaxed" {...props} />,
-                        strong: ({node, ...props}) => <strong className="text-indigo-200 font-bold" {...props} />,
-                        code: ({node, inline, children, ...props}) => (
-                          inline
-                            ? <code className="bg-slate-800 text-indigo-300 px-1 py-0.5 rounded font-mono text-[11px]" {...props}>{children}</code>
-                            : <pre className="bg-slate-900 border border-slate-700 p-3 rounded-lg my-2 overflow-x-auto font-mono text-emerald-300" {...props}>{children}</pre>
-                        ),
-                        table: ({node, ...props}) => (
-                          <div className="overflow-x-auto my-2">
-                            <table className="min-w-full border border-slate-700 rounded text-xs" {...props} />
-                          </div>
-                        ),
-                        th: ({node, ...props}) => <th className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-indigo-300 font-bold text-left" {...props} />,
-                        td: ({node, ...props}) => <td className="px-3 py-1.5 border border-slate-800 text-slate-300" {...props} />,
-                      }}
-                    >
-                      {formatLatex(q.explanation)}
-                    </ReactMarkdown>
+                  <div className="overflow-x-auto leading-relaxed pt-1 text-xs text-slate-300">
+                    <MathRenderer content={q.explanation} className="space-y-1.5" />
                   </div>
                 </div>
               )}

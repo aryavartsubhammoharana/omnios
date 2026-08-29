@@ -1,85 +1,117 @@
 /**
- * Comprehensive LaTeX Normalizer for KaTeX & Remark-Math
- * Handles:
- * - \[...\] & \(...\) delimiters
- * - Unenclosed LaTeX backslash commands (\frac, \sqrt, \omega, \cos, \sin, \phi, etc.)
- * - Broken/fragmented dollar signs ($E_p=...$\omega t)
- * - Raw fractions like 1/2 in physics contexts (\frac{1}{2})
- * - Trigonometric arguments like \cos\omega t -> \cos(\omega t)
+ * Worldwide Comprehensive LaTeX & KaTeX Math Normalizer
+ * Covers ALL mathematical expressions, Physics laws, Calculus,
+ * Linear Algebra, Quantum Mechanics, Trigonometry, and Fractions worldwide.
  */
+
+// Worldwide master list of all standard LaTeX math commands
+const WORLDWIDE_LATEX_COMMANDS = [
+  // Fractions & Binomials
+  'frac', 'dfrac', 'tfrac', 'cfrac', 'over', 'binom',
+  // Radicals & Powers
+  'sqrt',
+  // Greek Alphabet (Lower)
+  'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'varepsilon', 'zeta', 'eta',
+  'theta', 'vartheta', 'iota', 'kappa', 'varkappa', 'lambda', 'mu', 'nu',
+  'xi', 'pi', 'varpi', 'rho', 'varrho', 'sigma', 'varsigma', 'tau', 'upsilon',
+  'phi', 'varphi', 'chi', 'psi', 'omega',
+  // Greek Alphabet (Upper)
+  'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Pi', 'Sigma', 'Upsilon', 'Phi', 'Psi', 'Omega',
+  // Trigonometry & Hyperbolic
+  'sin', 'cos', 'tan', 'cot', 'sec', 'csc',
+  'arcsin', 'arccos', 'arctan', 'arccot',
+  'sinh', 'cosh', 'tanh', 'coth', 'sech', 'csch',
+  // Calculus, Limits & Integrals
+  'int', 'iint', 'iiint', 'oint', 'sum', 'prod', 'coprod', 'lim', 'liminf', 'limsup',
+  'partial', 'nabla', 'to', 'infty', 'ln', 'log', 'exp', 'det', 'dim', 'ker', 'hom',
+  'deg', 'gcd', 'max', 'min', 'sup', 'inf', 'arg',
+  // Operators & Relations
+  'pm', 'mp', 'times', 'div', 'cdot', 'circ', 'bullet', 'star', 'ast',
+  'cap', 'cup', 'setminus', 'subset', 'supset', 'subseteq', 'supseteq',
+  'in', 'notin', 'ni', 'forall', 'exists', 'nexists',
+  'approx', 'sim', 'simeq', 'cong', 'equiv', 'neq', 'leq', 'geq', 'll', 'gg',
+  'propto', 'perp', 'parallel',
+  'leftarrow', 'rightarrow', 'leftrightarrow', 'Leftarrow', 'Rightarrow', 'Leftrightarrow',
+  // Physics & Quantum Mechanics
+  'hbar', 'ell', 'Re', 'Im', 'vec', 'hat', 'bar', 'dot', 'ddot', 'dddot', 'tilde',
+  'widehat', 'widetilde', 'overline', 'underline', 'overbrace', 'underbrace',
+  'langle', 'rangle', 'vert', 'Vert', 'bra', 'ket', 'braket',
+  // Brackets, Spacing & Fonts
+  'left', 'right', 'big', 'Big', 'bigg', 'Bigg',
+  'text', 'mathrm', 'mathbf', 'mathit', 'mathsf', 'mathtt', 'mathcal', 'mathscr', 'mathfrak', 'mathbb',
+  'quad', 'qquad'
+];
+
+const MASTER_COMMAND_REGEX = new RegExp(`\\\\(?:${WORLDWIDE_LATEX_COMMANDS.join('|')})(?![a-zA-Z])`, 'g');
+const HAS_LATEX_COMMAND = new RegExp(`\\\\(?:${WORLDWIDE_LATEX_COMMANDS.join('|')})(?![a-zA-Z])`);
+
 export function formatLatex(content) {
   if (!content || typeof content !== 'string') return content || '';
 
   let text = content;
 
-  // 1. Convert LaTeX bracket delimiters to standard markdown math
-  text = text.replace(/\\\\\[([\s\S]*?)\\\\\]/g, '\n\n$$$$$1$$$$\n\n');
-  text = text.replace(/\\\[([\s\S]*?)\\\]/g, '\n\n$$$$$1$$$$\n\n');
-  text = text.replace(/\\\\\(([\s\S]*?)\\\\\)/g, ' $$$1$$ ');
-  text = text.replace(/\\\(([\s\S]*?)\\\)/g, ' $$$1$$ ');
+  // 1. Normalize bracket delimiters to standard KaTeX markdown math delimiters
+  text = text.replace(/\\\\\[([\s\S]*?)\\\\\]/g, '$$$$$1$$$$');
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, '$$$$$1$$$$');
+  text = text.replace(/\\\\\(([\s\S]*?)\\\\\)/g, '$$$1$$');
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
 
-  // 2. Fix spaced-out LaTeX commands e.g. \cos\omega -> \cos \omega, \sin\omega -> \sin \omega
-  text = text.replace(/\\(cos|sin|tan|cot|sec|csc|sqrt|frac|times|cdot|pm)(\\[a-zA-Z]+)/g, '\\$1 $2');
+  // 2. Fix spaces between adjacent commands e.g. \cos\omega -> \cos \omega, \sin\omega -> \sin \omega
+  text = text.replace(/\\(cos|sin|tan|cot|sec|csc|sqrt|frac|times|cdot|pm|int|sum|partial)(\\[a-zA-Z]+)/g, '\\$1 $2');
 
-  // 3. Fix fragmented closing $ followed immediately by backslash LaTeX commands
-  // e.g. "$E_p = \frac{1}{2} m \omega^2 A^2 \cos^2$\omega t + \phi" -> "$E_p = \frac{1}{2} m \omega^2 A^2 \cos^2 \omega t + \phi$"
-  text = text.replace(/\$([^\$\n]+)\$(\s*\\[a-zA-Z]+[^\$\n]+)/g, '$$$1 $2$$');
+  // 3. Fix fragmented equations where dollar signs closed prematurely before the end of the math expression:
+  // e.g. "$E_p = \frac{1}{2} k x^2 = ... \cos^2$\omega t + \phi" -> "$E_p = \frac{1}{2} k x^2 = ... \cos^2 \omega t + \phi$"
+  text = text.replace(/\$([^\$\n]+)\$(\s*\\[a-zA-Z]+[^\$\n.]+)/g, '$$$1 $2$$');
 
-  // 4. Ensure formulas following labels like "Potential energy:" or "Kinetic energy:" or "gives:" are properly wrapped
-  // e.g. "Potential energy: E_p = \frac{1}{2}..." or "Kinetic energy: E_k = ..."
-  text = text.replace(/((?:Potential energy|Kinetic energy|Total energy|Displacement|Frequency|Angular frequency|Force|Velocity|Acceleration|Wave function)\s*:\s*)([A-Za-z0-9_().+\-*/\^=\s\\]+?)(?=\s*(?:\n|[A-Z][a-z]{3,}\b|\.|\$))/g, (match, label, formula) => {
-    // If formula contains LaTeX commands or math operators and is not already in $
-    if (formula.includes('\\') || formula.includes('=') || formula.includes('^') || formula.includes('_')) {
-      const cleanFormula = formula.replace(/\$/g, '').trim();
-      return `${label}$${cleanFormula}$ `;
-    }
-    return match;
-  });
+  // 4. Split text into existing math blocks ($...$ and $$...$$) and prose
+  const tokens = text.split(/(\$\$[\s\S]*?\$\$|\$[^\$\n]*?\$)/g);
 
-  // 5. Catch any remaining naked LaTeX expressions (with \frac, \sqrt, \omega, \phi, \alpha, \beta, \theta, \pi, \cos, \sin)
-  // that are completely outside of $...$
-  const chunks = text.split(/(\$\$[\s\S]*?\$\$|\$[^\$\n]*?\$)/g);
-  for (let i = 0; i < chunks.length; i++) {
-    // Even indexes are outside of $...$
-    if (i % 2 === 0 && chunks[i]) {
-      let segment = chunks[i];
+  for (let i = 0; i < tokens.length; i++) {
+    // Only process text OUTSIDE of existing $ or $$ (even indices)
+    if (i % 2 === 0 && tokens[i]) {
+      let part = tokens[i];
 
-      // Fix naked equation segments containing backslash commands
-      segment = segment.replace(/((?:[A-Za-z0-9_()+\-*/\^=]+\s*)?\\[a-zA-Z]+(?:\{[^}]*\}|\[[^}]*\]|[A-Za-z0-9_{}()+\-*/\^= \\])*)/g, (m) => {
-        let trimmed = m.trim();
-        if (!trimmed) return m;
+      // If this part contains ANY worldwide LaTeX command:
+      if (HAS_LATEX_COMMAND.test(part)) {
+        // Auto-wrap math clauses that contain backslash commands, superscripts, subscripts, fractions, or equal signs
+        part = part.replace(/((?:[A-Za-z0-9_()+\-*/\^= ]*?)(?:\\[a-zA-Z]+|\^\{?[0-9a-zA-Z+-]+\}?|_\{?[0-9a-zA-Z+-]+\}?)(?:\{[^}]*\}|\[[^}]*\]|[A-Za-z0-9_{}()+\-*/\^= \\])*)/g, (m) => {
+          let trimmed = m.trim();
+          if (!trimmed) return m;
 
-        // Strip leading plain english words
-        let leadWord = '';
-        let mathStr = trimmed;
-        const leadMatch = trimmed.match(/^([A-Za-z\s]{3,}\b)\s*([A-Za-z0-9_()+\-*/\^=].*)$/);
-        if (leadMatch && !leadMatch[1].includes('\\')) {
-          leadWord = leadMatch[1] + ' ';
-          mathStr = leadMatch[2];
-        }
+          // Extract leading English text if present (e.g. "displacement is" or "Potential energy:")
+          let lead = '';
+          let math = trimmed;
+          const wordMatch = trimmed.match(/^([A-Za-z\s]{4,}\b)\s*([A-Za-z0-9_()+\-*/\^=].*)$/);
+          if (wordMatch && !HAS_LATEX_COMMAND.test(wordMatch[1])) {
+            lead = wordMatch[1] + ' ';
+            math = wordMatch[2];
+          }
 
-        // Strip trailing punctuation
-        let trail = '';
-        if (mathStr.endsWith('.') || mathStr.endsWith(',') || mathStr.endsWith(';')) {
-          trail = mathStr.slice(-1);
-          mathStr = mathStr.slice(0, -1);
-        }
+          // Strip trailing punctuation outside math
+          let trail = '';
+          if (math.endsWith('.') || math.endsWith(',') || math.endsWith(';')) {
+            trail = math.slice(-1);
+            math = math.slice(0, -1);
+          }
 
-        const cleanMath = mathStr.replace(/\$/g, '').trim();
-        if (!cleanMath) return m;
-        return `${leadWord}$${cleanMath}$${trail}`;
-      });
+          const cleanMath = math.replace(/\$/g, '').trim();
+          if (!cleanMath) return m;
 
-      chunks[i] = segment;
+          return `${lead}$${cleanMath}$${trail}`;
+        });
+      }
+
+      tokens[i] = part;
     }
   }
 
-  text = chunks.join('');
+  text = tokens.join('');
 
-  // 6. Clean up redundant adjacent dollar signs like "$ $", "$$$$", or unneeded spaces inside delimiters
+  // 5. Clean up duplicate or broken delimiters
   text = text.replace(/\$\s*\$/g, ' ');
   text = text.replace(/\$\$\$+/g, '$$$$');
-  text = text.replace(/\$\s*=\s*\$/g, ' = ');
+  text = text.replace(/\.\$\$/g, '$$$$.');
+  text = text.replace(/\.\$/g, '$.');
 
   return text;
 }
