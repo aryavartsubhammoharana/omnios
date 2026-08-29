@@ -5,7 +5,7 @@ import API from '../api/client';
 import { 
   BookOpen, LogOut, Sparkles, Flame, User, Bot, 
   GraduationCap, Settings, Mail, X, Check, Loader2,
-  Camera, Lock, KeyRound, Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award
+  Camera, Lock, KeyRound, Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award, ShieldCheck
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -29,7 +29,7 @@ export default function Navbar() {
   const [profileError, setProfileError] = useState('');
   const fileInputRef = useRef(null);
 
-  // Change Password State
+  // Change Password State (Local Users Only)
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -530,17 +530,41 @@ export default function Navbar() {
                 </form>
               </div>
 
-              {/* Right Column: Change Password & Danger Zone */}
+              {/* Right Column: Authentication & Security / Danger Zone */}
               <div className="md:col-span-5 space-y-4">
-                {/* Change Password Card */}
-                <div className="bg-gray-900/60 p-4 rounded-2xl border border-gray-800 space-y-3">
-                  <div className="flex items-center space-x-2 pb-1 border-b border-gray-800/80">
-                    <KeyRound className="w-3.5 h-3.5 text-purple-400" />
-                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Change Password</h4>
-                  </div>
+                {user.auth_provider === 'google' ? (
+                  /* Google OAuth Security Card (No Password Needed) */
+                  <div className="bg-gradient-to-br from-indigo-950/40 to-gray-900/60 p-4 rounded-2xl border border-indigo-800/40 space-y-3 shadow-inner">
+                    <div className="flex items-center space-x-2 pb-1 border-b border-gray-800">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Google Security</h4>
+                    </div>
 
-                  <form onSubmit={handleChangePasswordSubmit} className="space-y-2.5">
-                    {user.auth_provider === 'local' && (
+                    <div className="flex items-center space-x-3 bg-gray-900/80 p-3 rounded-xl border border-gray-800">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-gray-900 shadow">
+                        G
+                      </div>
+                      <div>
+                        <span className="text-xs font-bold text-white block">Google Verified Sign-In</span>
+                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Passwordless OAuth 2.0
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-gray-300 leading-relaxed">
+                      Your account is protected by <strong>Google Identity Services</strong>. You do not need or manage a server password. Sign in anytime directly with your Google account.
+                    </p>
+                  </div>
+                ) : (
+                  /* Change Password Card (Only for Local Email Accounts) */
+                  <div className="bg-gray-900/60 p-4 rounded-2xl border border-gray-800 space-y-3">
+                    <div className="flex items-center space-x-2 pb-1 border-b border-gray-800/80">
+                      <KeyRound className="w-3.5 h-3.5 text-purple-400" />
+                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Change Password</h4>
+                    </div>
+
+                    <form onSubmit={handleChangePasswordSubmit} className="space-y-2.5">
                       <div>
                         <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
                           Current Password
@@ -553,48 +577,48 @@ export default function Navbar() {
                           className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
                         />
                       </div>
-                    )}
 
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
-                        New Password
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="At least 6 characters"
-                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
+                          New Password
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="At least 6 characters"
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
+                        />
+                      </div>
 
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
-                        Confirm New Password
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        value={confirmNewPassword}
-                        onChange={(e) => setConfirmNewPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
+                          Confirm New Password
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
+                        />
+                      </div>
 
-                    <div className="pt-1 flex justify-end">
-                      <button
-                        type="submit"
-                        disabled={savingPassword}
-                        className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition disabled:opacity-50 flex items-center space-x-1.5"
-                      >
-                        {savingPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
-                        <span>{savingPassword ? 'Updating...' : 'Update Password'}</span>
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                      <div className="pt-1 flex justify-end">
+                        <button
+                          type="submit"
+                          disabled={savingPassword}
+                          className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition disabled:opacity-50 flex items-center space-x-1.5"
+                        >
+                          {savingPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+                          <span>{savingPassword ? 'Updating...' : 'Update Password'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
 
                 {/* Danger Zone: Delete Account */}
                 <div className="bg-red-950/30 border border-red-900/50 rounded-2xl p-4 space-y-2">
