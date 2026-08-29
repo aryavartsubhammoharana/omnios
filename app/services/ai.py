@@ -9,9 +9,25 @@ def query_gemini_ai(prompt: str, context: str = "") -> str:
         print("Gemini API key missing, falling back to Sarvam AI...")
         return query_sarvam_ai(prompt, context)
     
-    full_prompt = prompt
-    if context:
-        full_prompt = f"STRICT CONTEXT FROM UPLOADED CLASSROOM MATERIAL ONLY:\n{context[:12000]}\n\nUser Prompt:\n{prompt}\n\nIMPORTANT: Base your response ONLY and EXCLUSIVELY on the uploaded material."
+    if context and context.strip():
+        full_prompt = (
+            f"You are NoteAI, an intelligent, helpful, and friendly academic tutor.\n\n"
+            f"--- RELEVANT CLASSROOM STUDY MATERIAL ---\n"
+            f"{context[:12000]}\n"
+            f"-----------------------------------------\n\n"
+            f"STUDENT QUESTION / PROMPT: {prompt}\n\n"
+            f"INSTRUCTIONS:\n"
+            f"1. If the user is just greeting or chatting naturally (e.g. 'Hi', 'Hello', 'Can you help me?'), respond warmly and invite them to ask questions.\n"
+            f"2. Use the provided classroom study material as your primary reference when answering academic questions.\n"
+            f"3. You are free to use your own knowledge to provide clear explanations, simple examples, intuitive analogies, and step-by-step guidance to help the student learn effectively.\n"
+            f"4. Format your response cleanly using markdown (bold key terms, bullet points, headers, or tables where appropriate)."
+        )
+    else:
+        full_prompt = (
+            f"You are NoteAI, an intelligent, helpful, and friendly academic tutor.\n\n"
+            f"STUDENT QUESTION / PROMPT: {prompt}\n\n"
+            f"Provide a clear, accurate, and comprehensive answer with clean markdown formatting."
+        )
 
     models_to_try = [settings.GEMINI_MODEL or "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
     
@@ -58,9 +74,14 @@ def query_sarvam_ai(prompt: str, context: str = "") -> str:
             "Authorization": f"Bearer {settings.SARVAM_API_KEY.strip()}",
             "api-key": settings.SARVAM_API_KEY.strip()
         }
-        system_content = "You are NoteAI Assistant powered by Sarvam AI. Assist students and teachers with clear, accurate answers based exclusively on the provided classroom documents."
-        if context:
-            system_content += f"\nBase your answer STRICTLY AND ONLY on this document context:\n{context[:10000]}"
+        system_content = (
+            "You are NoteAI, an intelligent, helpful, and friendly academic tutor. "
+            "Help students with clear, well-explained answers. "
+            "You can have natural conversations and use your knowledge with simple analogies, "
+            "while referencing uploaded classroom notes when relevant."
+        )
+        if context and context.strip():
+            system_content += f"\n\nClassroom Study Notes for Reference:\n{context[:10000]}"
 
         payload = {
             "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
@@ -84,16 +105,15 @@ def generate_document_summary(context: str, summary_type: str = "bullet") -> str
     return query_gemini_ai(prompt=prompt, context=context)
 
 def generate_quiz_questions(context: str, num_questions: int = 5) -> list:
-    prompt = f"""STRICT REQUIREMENT: Generate a JSON list of exactly {num_questions} multiple choice questions BASED EXCLUSIVELY AND ONLY ON THE UPLOADED CLASSROOM STUDY MATERIAL.
-DO NOT use any external knowledge, outside facts, or topics not explicitly covered in the study material.
+    prompt = f"""Generate an educational JSON list of {num_questions} multiple choice questions based on the key concepts in the provided classroom study material.
 Return ONLY valid raw JSON array of objects without markdown fences.
 Each object must have:
 - "id": number (1 to N)
-- "question": string (derived directly from the study material)
-- "options": list of 4 strings
+- "question": string (engaging conceptual question testing understanding)
+- "options": list of 4 plausible strings
 - "correct_index": integer (0, 1, 2, or 3)
-- "explanation": string (referencing the exact concept in the notes)
-- "sub_topic": string
+- "explanation": string (clear educational reasoning why the answer is correct)
+- "sub_topic": string (academic topic or concept name)
 """
     raw_response = query_gemini_ai(prompt=prompt, context=context)
     clean_json = raw_response.replace("```json", "").replace("```", "").strip()
