@@ -122,10 +122,11 @@ def process_file_text_in_background(doc_id: int):
 
 
 # ---------------------------------------------------------------------------
-# Upload file endpoint
+# Upload file endpoint (supports both /api/upload and /api/upload/document)
 # ---------------------------------------------------------------------------
 
 @router.post("")
+@router.post("/document")
 async def upload_file(
     file: UploadFile = File(...),
     classroom_id: Optional[int] = Form(None),
@@ -187,11 +188,11 @@ async def upload_file(
     }
 
 
-# ---------------------------------------------------------------------------
-# Delete document endpoint
+# Delete document endpoint (supports both /api/upload/{doc_id} and /api/upload/document/{doc_id})
 # ---------------------------------------------------------------------------
 
 @router.delete("/{doc_id}")
+@router.delete("/document/{doc_id}")
 def delete_document(
     doc_id: int,
     current_user: User = Depends(get_current_user),
@@ -259,6 +260,7 @@ def list_documents(
 
 
 @router.get("/document/{doc_id}")
+@router.get("/{doc_id}")
 def get_document_content(
     doc_id: int,
     current_user: User = Depends(get_current_user),
