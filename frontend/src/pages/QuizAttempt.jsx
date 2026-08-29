@@ -9,6 +9,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import TiltCard3D from '../components/TiltCard3D';
+import { formatLatex } from '../utils/latex';
 
 export default function QuizAttempt() {
   const { id } = useParams();
@@ -186,7 +187,7 @@ export default function QuizAttempt() {
                       p: ({node, ...props}) => <span {...props} />
                     }}
                   >
-                    {q.question_text || q.question}
+                    {formatLatex(q.question_text || q.question)}
                   </ReactMarkdown>
                 </div>
               </div>
@@ -234,7 +235,7 @@ export default function QuizAttempt() {
                               p: ({node, ...props}) => <span {...props} />
                             }}
                           >
-                            {opt}
+                            {formatLatex(opt)}
                           </ReactMarkdown>
                         </div>
                       </div>
@@ -275,7 +276,7 @@ export default function QuizAttempt() {
                         td: ({node, ...props}) => <td className="px-3 py-1.5 border border-slate-800 text-slate-300" {...props} />,
                       }}
                     >
-                      {q.explanation}
+                      {formatLatex(q.explanation)}
                     </ReactMarkdown>
                   </div>
                 </div>
