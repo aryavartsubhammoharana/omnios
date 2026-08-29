@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import urllib.parse
 import requests
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -10,7 +11,14 @@ JUNK_KEYWORDS = [
     "hot", "beautiful", "dance", "prank", "funny", "memes", "roast",
     "bgmi", "gaming", "reaction", "whatsapp status", "teacher entry",
     "cute mam", "cute sir", "mam pw", "sir pw funny", "fan club",
-    "edit", "vlog", "trailer"
+    "edit", "vlog", "trailer", "short feed", "ytshorts"
+]
+
+TRUSTED_CHANNELS = [
+    "Khan Academy", "Physics Wallah", "Unacademy", "Vedantu", "CrashCourse",
+    "Amoeba Sisters", "MIT OpenCourseWare", "NPTEL", "Professor Dave Explains",
+    "The Organic Chemistry Tutor", "Magnet Brains", "LearnOhub", "Apni Kaksha",
+    "3Blue1Brown", "Veritasium", "Bozeman Science", "Freesciencelessons", "Dr. Hope's Sick Notes"
 ]
 
 def is_academic_video(title: str, channel: str) -> bool:
@@ -24,6 +32,37 @@ def is_academic_video(title: str, channel: str) -> bool:
             return False
 
     return True
+
+
+def expand_academic_queries_with_ai(topic: str, grade_context: str = "") -> list[str]:
+    from app.services.ai import query_groq_ai
+
+    prompt = (
+        f"Generate 3 highly specific, academic YouTube search queries for a student struggling with the topic: '{topic}'.\n"
+        f"Student Grade/Context: '{grade_context or 'High School / Pre-Medical / Engineering'}'\n"
+        f"Include relevant terms like chapter name, NCERT, one shot, animated explanation, or top educational channels.\n"
+        f"Return ONLY a JSON array of 3 strings. Example: [\"Fluid Mechanics one shot class 11 physics wallah\", \"Transport in Plants biology Khan Academy\", \"Body Fluids and Circulation full lecture\"]\n"
+        f"No markdown, pure JSON only."
+    )
+    try:
+        resp = query_groq_ai(prompt=prompt)
+        cleaned = re.sub(r"^```json\s*", "", resp.strip(), flags=re.MULTILINE)
+        cleaned = re.sub(r"^```\s*", "", cleaned, flags=re.MULTILINE)
+        cleaned = re.sub(r"```$", "", cleaned.strip(), flags=re.MULTILINE).strip()
+        match = re.search(r"\[\s*\".*?\"\s*\]", cleaned, re.DOTALL)
+        if match:
+            cleaned = match.group(0)
+        parsed = json.loads(cleaned)
+        if isinstance(parsed, list) and len(parsed) > 0:
+            return [str(q).strip() for q in parsed if str(q).strip()]
+    except Exception as e:
+        print(f"AI query expansion note: {e}")
+
+    return [
+        f"{topic} {grade_context} full chapter one shot lecture",
+        f"{topic} concept explanation animated masterclass",
+        f"{topic} complete derivation problems NCERT JEE NEET"
+    ]
 
 
 def search_youtube_videos_via_api(query: str, max_results: int = 5) -> list[dict]:
@@ -64,7 +103,8 @@ def search_youtube_videos_via_api(query: str, max_results: int = 5) -> list[dict
                     "channel_title": channel,
                     "description": snippet.get("description", ""),
                     "thumbnail_url": snippet.get("thumbnails", {}).get("high", {}).get("url", f"https://img.youtube.com/vi/{v_id}/hqdefault.jpg"),
-                    "publish_time": snippet.get("publishTime", "")
+                    "publish_time": snippet.get("publishTime", ""),
+                    "duration": "Lecture"
                 })
                 if len(videos) >= max_results:
                     break
@@ -76,7 +116,7 @@ def search_youtube_videos_via_api(query: str, max_results: int = 5) -> list[dict
 
 def search_youtube_videos_fallback(query: str, max_results: int = 5) -> list[dict]:
     try:
-        academic_query = f"{query} full lecture chapter explanation NCERT CBSE"
+        academic_query = f"{query} lecture full chapter explanation"
         encoded_query = urllib.parse.quote_plus(academic_query)
         url = f"https://www.youtube.com/results?search_query={encoded_query}&sp=EgIYAw%253D%253D"
         headers = {
@@ -87,7 +127,7 @@ def search_youtube_videos_fallback(query: str, max_results: int = 5) -> list[dic
         if res.status_code != 200:
             return []
 
-        pattern = r'\"videoRenderer\":\s*\{\s*\"videoId\":\s*\"([^\"]+)\".*?\"title\":\s*\{\s*\"runs\":\s*\[\s*\{\s*\"text\":\s*\"([^\"]+)\".*?\"ownerText\":\s*\{\s*\"runs\":\s*\[\s*\{\s*\"text\":\s*\"([^\"]+)\"'
+        pattern = r'\"videoRenderer\":\s*\{.*?\"videoId\":\s*\"([^\"]+)\".*?\"title\":\s*\{\s*\"runs\":\s*\[\s*\{\s*\"text\":\s*\"([^\"]+)\".*?\"ownerText\":\s*\{\s*\"runs\":\s*\[\s*\{\s*\"text\":\s*\"([^\"]+)\"'
         matches = re.findall(pattern, res.text)
         
         seen = set()
@@ -105,9 +145,10 @@ def search_youtube_videos_fallback(query: str, max_results: int = 5) -> list[dic
                 "video_id": v_id,
                 "title": title,
                 "channel_title": channel,
-                "description": f"Masterclass lecture on {query}",
+                "description": f"Targeted lecture on {query}",
                 "thumbnail_url": f"https://img.youtube.com/vi/{v_id}/hqdefault.jpg",
-                "publish_time": ""
+                "publish_time": "",
+                "duration": "Full Lecture"
             })
             if len(videos) >= max_results:
                 break
@@ -124,24 +165,19 @@ def get_curated_weak_topic_videos(weak_topics: list[str], grade_context: str = "
     results = []
     seen_ids = set()
 
-    search_templates = [
-        "{topic} {grade} full chapter one shot lecture",
-        "{topic} complete concept explanation animated masterclass",
-        "{topic} detailed derivation problems NCERT JEE NEET",
-        "{topic} masterclass lecture Khan Academy Physics Wallah"
-    ]
-
-    template_idx = seed_offset % len(search_templates)
-    current_template = search_templates[template_idx]
-
-    videos_per_topic = max(2, (target_count // len(weak_topics)) + 1)
-
+    all_queries = []
     for topic in weak_topics:
-        search_query = current_template.format(topic=topic, grade=grade_context).strip()
-        vids = search_youtube_videos_via_api(search_query, max_results=videos_per_topic)
-        if not vids or len(vids) < videos_per_topic:
-            extra = search_youtube_videos_fallback(search_query, max_results=videos_per_topic)
-            vids.extend(extra)
+        expanded = expand_academic_queries_with_ai(topic, grade_context)
+        for q in expanded:
+            all_queries.append((topic, q))
+
+    if seed_offset > 0 and len(all_queries) > 1:
+        all_queries = all_queries[seed_offset % len(all_queries):] + all_queries[:seed_offset % len(all_queries)]
+
+    for topic, query_str in all_queries:
+        vids = search_youtube_videos_via_api(query_str, max_results=3)
+        if not vids:
+            vids = search_youtube_videos_fallback(query_str, max_results=3)
 
         for v in vids:
             if v["video_id"] not in seen_ids:
@@ -155,9 +191,8 @@ def get_curated_weak_topic_videos(weak_topics: list[str], grade_context: str = "
 
     if len(results) < target_count:
         for topic in weak_topics:
-            alt_template = search_templates[(template_idx + 1) % len(search_templates)]
-            alt_query = alt_template.format(topic=topic, grade=grade_context).strip()
-            extra = search_youtube_videos_fallback(alt_query, max_results=target_count - len(results))
+            fallback_query = f"{topic} NCERT class 11 12 full lecture one shot physics wallah khan academy"
+            extra = search_youtube_videos_fallback(fallback_query, max_results=target_count - len(results))
             for v in extra:
                 if v["video_id"] not in seen_ids:
                     seen_ids.add(v["video_id"])

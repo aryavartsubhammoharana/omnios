@@ -4,7 +4,7 @@ import API from '../api/client';
 import { 
   Sparkles, CheckCircle2, XCircle, Play, Flame, Award, Clock,
   BookOpen, ChevronRight, AlertTriangle, ArrowRight, Video,
-  RotateCcw, Loader2, Target, RefreshCw
+  RotateCcw, Loader2, Target, RefreshCw, Search
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
 
@@ -17,6 +17,9 @@ export default function StudentDailyHub() {
   const [refreshing, setRefreshing] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [streak, setStreak] = useState(1);
+  const [customSearchQuery, setCustomSearchQuery] = useState('');
+  const [searchingVideos, setSearchingVideos] = useState(false);
+  const [customSearchResults, setCustomSearchResults] = useState(null);
 
   const fetchDailyQuiz = async () => {
     setLoading(true);
@@ -79,6 +82,7 @@ export default function StudentDailyHub() {
       setSubmissionResult(res.data);
       if (res.data.streak) setStreak(res.data.streak);
       setDailyQuiz(prev => ({ ...prev, is_completed: true }));
+      setCustomSearchResults(null);
     } catch (err) {
       console.error('Error submitting quiz', err);
     } finally {
@@ -88,6 +92,7 @@ export default function StudentDailyHub() {
 
   const handleRefreshRecommendations = async () => {
     setRefreshing(true);
+    setCustomSearchResults(null);
     try {
       const res = await API.post('/api/student/refresh-recommendations');
       const newRecs = res.data.recommendations || [];
@@ -103,6 +108,22 @@ export default function StudentDailyHub() {
     }
   };
 
+  const handleCustomSearch = async (e) => {
+    e.preventDefault();
+    if (!customSearchQuery.trim() || searchingVideos) return;
+    setSearchingVideos(true);
+    try {
+      const res = await API.get('/api/student/search-videos', {
+        params: { q: customSearchQuery.trim() }
+      });
+      setCustomSearchResults(res.data.results || []);
+    } catch (err) {
+      console.error('Error searching educational videos', err);
+    } finally {
+      setSearchingVideos(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-61px)] bg-[#090d16] flex items-center justify-center text-indigo-400">
@@ -113,7 +134,8 @@ export default function StudentDailyHub() {
 
   const isCompleted = dailyQuiz?.is_completed || !!submissionResult;
   const questions = dailyQuiz?.questions || [];
-  const recommendations = submissionResult?.recommendations || dailyQuiz?.recommendations || [];
+  const baseRecommendations = submissionResult?.recommendations || dailyQuiz?.recommendations || [];
+  const displayedVideos = customSearchResults !== null ? customSearchResults : baseRecommendations;
   const weakTopics = submissionResult?.weak_topics || dailyQuiz?.weak_topics || [];
 
   return (
@@ -152,47 +174,88 @@ export default function StudentDailyHub() {
           </div>
         </div>
 
-        {isCompleted && submissionResult && (
-          <div className="glass-card p-6 sm:p-8 rounded-3xl border border-indigo-900/50 bg-gradient-to-r from-indigo-950/40 via-gray-900 to-purple-950/40 shadow-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-800/80 pb-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-extrabold text-xl font-mono shadow-inner">
-                  {submissionResult.percentage}%
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Award className="w-5 h-5 text-amber-400" />
-                    <span>Diagnostic Result: {submissionResult.score} / {submissionResult.max_score}</span>
-                  </h2>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Completed on {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • +300 Study Seconds Earned
-                  </p>
-                </div>
-              </div>
+        <div className="glass-card p-4 sm:p-6 rounded-3xl border border-gray-800/80 shadow-xl bg-gray-950/80">
+          <form onSubmit={handleCustomSearch} className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="relative flex-1 w-full">
+              <Search className="w-4 h-4 text-indigo-400 absolute left-4 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={customSearchQuery}
+                onChange={(e) => setCustomSearchQuery(e.target.value)}
+                placeholder="Search any academic concept, formula or topic for instant distraction-free lectures..."
+                className="w-full pl-11 pr-4 py-3 bg-gray-900/90 border border-gray-800 rounded-2xl text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={searchingVideos || !customSearchQuery.trim()}
+              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition shrink-0"
+            >
+              {searchingVideos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              <span>{searchingVideos ? 'Searching...' : 'Search Lectures'}</span>
+            </button>
+            {customSearchResults !== null && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomSearchResults(null);
+                  setCustomSearchQuery('');
+                }}
+                className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition shrink-0"
+              >
+                Clear Search
+              </button>
+            )}
+          </form>
+        </div>
 
-              {weakTopics.length > 0 && (
-                <div className="bg-gray-900/90 border border-red-900/40 px-4 py-2.5 rounded-2xl">
-                  <span className="text-[10px] uppercase text-red-400 font-mono block font-bold flex items-center gap-1">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>Identified Focus Areas</span>
-                  </span>
-                  <div className="flex flex-wrap gap-1.5 mt-1.5">
-                    {weakTopics.map((t, idx) => (
-                      <span key={idx} className="text-[11px] bg-red-950/60 text-red-300 border border-red-800/60 px-2 py-0.5 rounded-lg font-medium">
-                        {t}
-                      </span>
-                    ))}
+        {(isCompleted || customSearchResults !== null) && (
+          <div className="glass-card p-6 sm:p-8 rounded-3xl border border-indigo-900/50 bg-gradient-to-r from-indigo-950/40 via-gray-900 to-purple-950/40 shadow-2xl space-y-6">
+            {isCompleted && submissionResult && customSearchResults === null && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-800/80 pb-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-extrabold text-xl font-mono shadow-inner">
+                    {submissionResult.percentage}%
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                      <Award className="w-5 h-5 text-amber-400" />
+                      <span>Diagnostic Result: {submissionResult.score} / {submissionResult.max_score}</span>
+                    </h2>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Completed on {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • +300 Study Seconds Earned
+                    </p>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {recommendations.length > 0 && (
+                {weakTopics.length > 0 && (
+                  <div className="bg-gray-900/90 border border-red-900/40 px-4 py-2.5 rounded-2xl">
+                    <span className="text-[10px] uppercase text-red-400 font-mono block font-bold flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>Identified Focus Areas</span>
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {weakTopics.map((t, idx) => (
+                        <span key={idx} className="text-[11px] bg-red-950/60 text-red-300 border border-red-800/60 px-2 py-0.5 rounded-lg font-medium">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {displayedVideos.length > 0 && (
               <div className="space-y-4 pt-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center space-x-2">
                     <Video className="w-5 h-5 text-red-400" />
-                    <h3 className="text-base font-bold text-white">Top 10 Curated Lecture Videos (Focus Mode)</h3>
+                    <h3 className="text-base font-bold text-white">
+                      {customSearchResults !== null 
+                        ? `Search Results for "${customSearchQuery}" (${displayedVideos.length} Lectures)`
+                        : 'Top 10 Curated Lecture Videos (Focus Mode)'}
+                    </h3>
                   </div>
 
                   <div className="flex items-center space-x-3">
@@ -209,7 +272,7 @@ export default function StudentDailyHub() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {recommendations.map((vid, idx) => (
+                  {displayedVideos.map((vid, idx) => (
                     <div 
                       key={idx}
                       className="glass-panel p-3.5 rounded-2xl border border-gray-800 hover:border-indigo-500/50 transition duration-300 flex flex-col justify-between group"

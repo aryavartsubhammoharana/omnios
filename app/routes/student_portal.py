@@ -334,6 +334,33 @@ def refresh_student_recommendations(
     }
 
 
+@router.get("/search-videos")
+def search_educational_videos(
+    q: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Search query is required.")
+
+    enrollments = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()
+    class_ids = [e.classroom_id for e in enrollments]
+    enrolled_classes = db.query(Classroom).filter(Classroom.id.in_(class_ids)).all() if class_ids else []
+    class_names = [c.name for c in enrolled_classes]
+    grade_context = f"Class {' '.join(class_names)}" if class_names else "Academic"
+
+    results = get_curated_weak_topic_videos(
+        weak_topics=[q.strip()],
+        grade_context=grade_context,
+        target_count=10
+    )
+    return {
+        "query": q.strip(),
+        "count": len(results),
+        "results": results
+    }
+
+
 @router.get("/video-transcript/{video_id}")
 def fetch_video_transcript(
     video_id: str,
