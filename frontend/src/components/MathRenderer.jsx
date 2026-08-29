@@ -23,6 +23,7 @@ export default function MathRenderer({ content, className = '' }) {
           { left: '\\[', right: '\\]', display: true },
           { left: '\\(', right: '\\)', display: false }
         ],
+        output: 'html', // Render pure HTML only, eliminates MathML screen-reader duplicate text
         throwOnError: false,
         errorColor: '#f43f5e',
         strict: false
