@@ -129,10 +129,30 @@ Each object must have:
             "sub_topic": "Unit 1: Cells & Biomolecules"
         }]
 
+def is_valid_ai_text(text: str) -> bool:
+    """Checks whether the AI response is valid content or an error string."""
+    if not text or not text.strip():
+        return False
+    t_lower = text.lower()
+    error_signatures = [
+        "error querying", "sarvam api error", "gemini api error", 
+        "httpsconnectionpool", "read timed out", "quota exceeded", 
+        "rate limit", "429", "500 internal", "timeout"
+    ]
+    for sig in error_signatures:
+        if sig in t_lower:
+            return False
+    return len(text.strip()) > 30
+
 def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
-    """Uses Sarvam AI (with Gemini fallback) to convert raw OCR lines into structured Markdown with tables, bold questions, and headings."""
+    """Uses Sarvam/Gemini AI to structure OCR text, with guaranteed local fallback so errors never leak to user."""
+    from app.services.extractor import format_ocr_text_locally
+    
     if not raw_ocr_text or not raw_ocr_text.strip():
         return raw_ocr_text
+
+    # Compute clean local formatted text first as guaranteed baseline
+    local_clean = format_ocr_text_locally(raw_ocr_text)
 
     prompt = (
         "You are an expert Document Formatter. Convert the following RAW OCR text extracted from lecture notes "
@@ -147,10 +167,24 @@ def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
         "5. Preserve page separators (e.g. '### 📄 Page 1 of 4').\n"
         "6. Do NOT summarize, drop, or delete any questions or content. Keep all questions, options, definitions, and terms 100% intact.\n"
         "7. Return ONLY the clean, structured markdown content without any conversational filler.\n\n"
-        f"RAW OCR TEXT:\n{raw_ocr_text[:12000]}"
+        f"RAW OCR TEXT:\n{raw_ocr_text[:8000]}"
     )
 
-    # 1. Try Sarvam AI First
+    # 1. Try Gemini AI
+    if settings.GEMINI_API_KEY:
+        try:
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model=settings.GEMINI_MODEL or "gemini-2.5-flash",
+                contents=prompt,
+            )
+            if response.text and is_valid_ai_text(response.text):
+                print("[OK] Document text successfully structured via Gemini AI!")
+                return response.text.strip()
+        except Exception as e:
+            print(f"Note on Gemini structuring: {e}")
+
+    # 2. Try Sarvam AI with fast 25s timeout
     if settings.SARVAM_API_KEY:
         try:
             url = "https://api.sarvam.ai/v1/chat/completions"
@@ -167,26 +201,18 @@ def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
                 ],
                 "temperature": 0.2
             }
-            res = requests.post(url, json=payload, headers=headers, timeout=60)
+            res = requests.post(url, json=payload, headers=headers, timeout=25)
             if res.status_code == 200:
                 data = res.json()
                 result = data["choices"][0]["message"]["content"].strip()
-                if result and len(result) > 50:
-                    print("[OK] Raw OCR text structured via Sarvam AI!")
+                if is_valid_ai_text(result):
+                    print("[OK] Document text successfully structured via Sarvam AI!")
                     return result
         except Exception as e:
-            print(f"Sarvam structuring fallback to Gemini: {e}")
+            print(f"Note on Sarvam structuring: {e}")
 
-    # 2. Try Gemini AI Fallback
-    try:
-        gemini_result = query_gemini_ai(prompt=prompt)
-        if gemini_result and not gemini_result.startswith("Gemini API Error"):
-            print("[OK] Raw OCR text structured via Gemini AI!")
-            return gemini_result
-    except Exception:
-        pass
+    # 3. Guaranteed Rock-Solid Local Formatter (Instant, 0s, $0, No timeouts, No network errors)
+    print("[OK] Document text structured via local high-speed sentence repair engine!")
+    return local_clean
 
-    # 3. Fallback to Local Regex Formatter
-    from app.services.extractor import format_ocr_text_locally
-    return format_ocr_text_locally(raw_ocr_text)
 

@@ -130,7 +130,7 @@ def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
     try:
         doc = fitz.open(file_path)
         total_pages = len(doc)
-        print(f"📄 '{filename}' has {total_pages} page(s). Starting Page-by-Page Extraction...")
+        print(f"[+] '{filename}' has {total_pages} page(s). Starting Page-by-Page Extraction...")
 
         for page_idx in range(total_pages):
             page_num = page_idx + 1
@@ -154,7 +154,7 @@ def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
             if page_text and page_text.strip():
                 extracted_pages.append(f"--- Page {page_num} of {total_pages} ---\n" + page_text.strip())
             
-            print(f"   ↳ [Page {page_num}/{total_pages}] Extracted {'via GPU OCR' if ocr_used else 'via Text Layer'} ({len(page_text.strip()) if page_text else 0} chars)")
+            print(f"   -> [Page {page_num}/{total_pages}] Extracted {'via GPU OCR' if ocr_used else 'via Text Layer'} ({len(page_text.strip()) if page_text else 0} chars)")
 
             # Step 3: Trigger real-time progress callback
             if on_page_progress:
