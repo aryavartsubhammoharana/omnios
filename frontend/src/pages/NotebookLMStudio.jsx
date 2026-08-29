@@ -207,7 +207,7 @@ export default function NotebookLMStudio() {
                 onChange={(e) => setSelectedClassroomId(e.target.value)}
                 className="w-full glass-input rounded-xl px-3 py-2 text-xs text-white appearance-none cursor-pointer pr-8 font-medium"
               >
-                <option value="all" className="bg-gray-900">📚 All Classrooms (Combined Notes)</option>
+                <option value="all" className="bg-gray-900">📚 All My Enrolled Classrooms</option>
                 {classrooms.map((c) => (
                   <option key={c.id} value={c.id} className="bg-gray-900">
                     🏫 {c.name} ({c.code})

@@ -9,7 +9,7 @@ from app.database import get_db, SessionLocal
 from app.models.user import User
 from app.models.file import DocumentFile
 from app.models.chunk import DocumentChunk
-from app.models.classroom import Classroom
+from app.models.classroom import Classroom, Enrollment
 from app.routes.auth import get_current_user
 from app.services.extractor import extract_text_from_file
 from app.services.vector_store import (
@@ -49,7 +49,7 @@ def process_file_text_in_background(doc_id: int):
                     sub_db.commit()
                 sub_db.close()
             except Exception as ex:
-                print(f"Error updating page progress for doc {doc_id}: {ex}")
+                print(f"Error updating progress: {ex}")
 
         classroom = None
         if doc.classroom_id:
@@ -80,10 +80,10 @@ def process_file_text_in_background(doc_id: int):
                     classroom_code=class_code
                 )
             except Exception as e:
-                print(f"Error during vector DB indexing for doc {doc_id}: {e}")
+                print(f"Error during vector DB indexing: {e}")
 
     except Exception as e:
-        print(f"Fatal error in background file processing for doc {doc_id}: {e}")
+        print(f"Fatal error in background file processing: {e}")
     finally:
         db.close()
 
@@ -166,7 +166,7 @@ async def upload_files(
         "uploaded_count": len(saved_documents),
         "folder_name": target_folder,
         "documents": saved_documents,
-        "message": f"Successfully uploaded {len(saved_documents)} note(s) to '{target_folder}'. Text extraction and vector indexing initiated.",
+        "message": f"Successfully uploaded {len(saved_documents)} note(s) to '{target_folder}'.",
     }
 
 
@@ -176,10 +176,29 @@ def list_documents(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    query = db.query(DocumentFile)
     if classroom_id:
-        query = query.filter(DocumentFile.classroom_id == classroom_id)
-    docs = query.order_by(DocumentFile.created_at.desc()).all()
+        is_teacher = db.query(Classroom).filter(Classroom.id == classroom_id, Classroom.teacher_id == current_user.id).first()
+        is_enrolled = db.query(Enrollment).filter(Enrollment.classroom_id == classroom_id, Enrollment.student_id == current_user.id).first()
+        if not is_teacher and not is_enrolled:
+            return []
+        docs = db.query(DocumentFile).filter(DocumentFile.classroom_id == classroom_id).order_by(DocumentFile.created_at.desc()).all()
+    else:
+        if current_user.role == "teacher":
+            taught_class_ids = [c.id for c in db.query(Classroom.id).filter(Classroom.teacher_id == current_user.id).all()]
+            docs = db.query(DocumentFile).filter(
+                (DocumentFile.uploaded_by_id == current_user.id) | (DocumentFile.classroom_id.in_(taught_class_ids))
+            ).order_by(DocumentFile.created_at.desc()).all()
+        else:
+            enrolled_class_ids = [e.classroom_id for e in db.query(Enrollment.classroom_id).filter(Enrollment.student_id == current_user.id).all()]
+            if enrolled_class_ids:
+                docs = db.query(DocumentFile).filter(
+                    (DocumentFile.uploaded_by_id == current_user.id) | (DocumentFile.classroom_id.in_(enrolled_class_ids))
+                ).order_by(DocumentFile.created_at.desc()).all()
+            else:
+                docs = db.query(DocumentFile).filter(
+                    DocumentFile.uploaded_by_id == current_user.id
+                ).order_by(DocumentFile.created_at.desc()).all()
+
     return [
         {
             "id": doc.id,
@@ -215,7 +234,7 @@ def delete_document(
         try:
             os.remove(doc.file_path)
         except Exception as e:
-            print(f"Error removing document file from disk: {e}")
+            print(f"Error removing document file: {e}")
 
     try:
         class_code = None
@@ -236,7 +255,7 @@ def delete_document(
     db.delete(doc)
     db.commit()
 
-    return {"message": "Document and all associated vector index chunks deleted successfully"}
+    return {"message": "Document and all associated vector chunks deleted successfully"}
 
 
 @router.put("/folder/rename")
@@ -267,6 +286,18 @@ def get_document_details(
     doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    has_access = False
+    if doc.uploaded_by_id == current_user.id:
+        has_access = True
+    elif doc.classroom_id:
+        is_teacher = db.query(Classroom).filter(Classroom.id == doc.classroom_id, Classroom.teacher_id == current_user.id).first()
+        is_enrolled = db.query(Enrollment).filter(Enrollment.classroom_id == doc.classroom_id, Enrollment.student_id == current_user.id).first()
+        if is_teacher or is_enrolled:
+            has_access = True
+
+    if not has_access:
+        raise HTTPException(status_code=403, detail="You do not have permission to access this document")
 
     file_url = f"/{doc.file_path.replace(chr(92), '/')}"
 
