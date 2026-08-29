@@ -209,9 +209,34 @@ def generate_document_summary(context: str, summary_type: str = "bullet") -> str
     return query_gemini_ai(prompt=prompt, context=context)
 
 
-def generate_quiz_questions(context: str, num_questions: int = 5, difficulty: int = 5) -> list:
-    """Generate high-quality assessment quiz questions exclusively using Groq AI with 1-10 difficulty calibration."""
-    # Difficulty guidance prompt
+def generate_quiz_questions(
+    notes_list: list,
+    num_questions: int = 5,
+    difficulty: int = 5,
+    competency_percentage: int = 50,
+    previous_quizzes_json: list = None
+) -> list:
+    """
+    Generate high-quality assessment quiz questions using Groq AI.
+    Features:
+      - Accepts list of extracted texts from all selected notes
+      - Difficulty Level calibration (1 to 10)
+      - Competency-based questions ratio (% of scenario/applied problem solving)
+      - Deduplication against previous quizzes in classroom (JSON format)
+    """
+    # 1. Format Source Notes from List
+    if isinstance(notes_list, str):
+        notes_list = [notes_list]
+
+    formatted_notes = []
+    for idx, note_text in enumerate(notes_list or []):
+        clean_note = note_text.strip() if isinstance(note_text, str) else str(note_text)
+        if clean_note:
+            formatted_notes.append(f"=== [SOURCE STUDY NOTE #{idx+1}] ===\n{clean_note[:6000]}")
+
+    notes_context = "\n\n".join(formatted_notes) if formatted_notes else "General Classroom Material"
+
+    # 2. Difficulty Level Guidance (1 to 10)
     diff_val = max(1, min(10, difficulty))
     if diff_val <= 3:
         diff_desc = f"Difficulty Level {diff_val}/10 (Foundational/Easy): Focus on core definitions, direct facts, basic recall, and straightforward terminology."
@@ -220,9 +245,33 @@ def generate_quiz_questions(context: str, num_questions: int = 5, difficulty: in
     else:
         diff_desc = f"Difficulty Level {diff_val}/10 (Advanced/Hard): Focus on complex analytical reasoning, multi-step problem solving, subtle edge cases, formula application, and tricky distractors."
 
+    # 3. Competency Percentage Guidance
+    comp_pct = max(0, min(100, competency_percentage or 50))
+    comp_count = max(1, round((comp_pct / 100) * num_questions)) if comp_pct > 0 else 0
+    comp_desc = (
+        f"Competency-Based Questions: {comp_pct}% ({comp_count} out of {num_questions} questions) MUST be "
+        f"higher-order Competency/Scenario/Case-Study based questions testing real-world applied problem-solving."
+    )
+
+    # 4. Previous Quizzes Deduplication (JSON)
+    prev_quiz_prompt = ""
+    if previous_quizzes_json and len(previous_quizzes_json) > 0:
+        prev_summary = []
+        for pq in previous_quizzes_json[:25]:
+            q_str = pq.get("question_text") or pq.get("question") or ""
+            if q_str:
+                prev_summary.append(q_str)
+        if prev_summary:
+            prev_quiz_prompt = (
+                "\n\n--- PREVIOUSLY CREATED QUIZ QUESTIONS IN THIS CLASS (STRICTLY DO NOT REPEAT THESE QUESTIONS OR THEIR DIRECT CLONES) ---\n" +
+                "\n".join([f"- {q}" for q in prev_summary])
+            )
+
     system_prompt = (
-        "You are an expert educational assessment generator. Your task is to analyze the provided text or topic and generate a high-quality quiz.\n\n"
-        f"ASSESSMENT CALIBRATION:\n- {diff_desc}\n\n"
+        "You are an expert educational assessment generator. Your task is to analyze the provided list of study notes and generate a high-quality quiz.\n\n"
+        f"ASSESSMENT CALIBRATION:\n"
+        f"- {diff_desc}\n"
+        f"- {comp_desc}\n\n"
         "You must return ONLY a JSON object matching this exact structure, with no markdown formatting, no code blocks, and no conversational filler:\n\n"
         "{\n"
         '  "quiz_title": "string",\n'
@@ -245,8 +294,11 @@ def generate_quiz_questions(context: str, num_questions: int = 5, difficulty: in
     )
 
     user_prompt = (
-        f"Generate a {num_questions}-question multiple-choice quiz (Target Difficulty: {diff_val}/10) based strictly on the following classroom study material:\n\n"
-        f"{context[:8000]}"
+        f"Generate a {num_questions}-question multiple-choice quiz based on the following list of selected classroom notes.\n"
+        f"Target Difficulty: {diff_val}/10 | Target Competency: {comp_pct}%\n\n"
+        f"--- SELECTED CLASSROOM STUDY NOTES ---\n"
+        f"{notes_context[:9000]}"
+        f"{prev_quiz_prompt}"
     )
 
     raw_json_str = ""

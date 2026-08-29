@@ -45,30 +45,39 @@ def generate_quiz(
             detail="No matching study notes or PDF documents found. Please select at least one uploaded document.",
         )
 
-    # Re-extract text if content_text was empty
-    texts = []
+    # Extract list of texts from all selected notes
+    notes_list = []
     for d in docs:
         if not d.content_text or not d.content_text.strip():
             extracted = extract_text_from_file(d.file_path)
             d.content_text = extracted
             db.commit()
-        texts.append(f"Document File ({d.filename}):\n{d.content_text}")
+        if d.content_text and d.content_text.strip():
+            notes_list.append(f"Document File ({d.filename}):\n{d.content_text}")
 
-    context = "\n---\n".join(texts)
+    # Fetch previously created quizzes in this classroom to avoid question repetition
+    prev_quizzes = db.query(Quiz).filter(Quiz.classroom_id == data.classroom_id).all()
+    previous_questions = []
+    for pz in prev_quizzes:
+        if pz.questions_json and isinstance(pz.questions_json, list):
+            previous_questions.extend(pz.questions_json)
 
-    # Generate questions via Groq with calibrated difficulty (1 to 10)
+    # Generate questions via Groq with calibrated difficulty & competency
     questions = generate_quiz_questions(
-        context=context,
+        notes_list=notes_list,
         num_questions=data.num_questions,
-        difficulty=data.difficulty or 5
+        difficulty=data.difficulty or 5,
+        competency_percentage=data.competency_percentage or 50,
+        previous_quizzes_json=previous_questions if len(previous_questions) > 0 else None
     )
 
     diff_label = f"Difficulty: {data.difficulty or 5}/10"
+    comp_label = f"Competency: {data.competency_percentage or 50}%"
     quiz = Quiz(
         classroom_id=data.classroom_id,
         created_by_id=current_user.id,
         title=data.title,
-        description=f"AI Generated practice paper ({len(questions)} Questions | {diff_label})",
+        description=f"AI Generated practice paper ({len(questions)} Questions | {diff_label} | {comp_label})",
         questions_json=questions,
     )
     db.add(quiz)

@@ -30,11 +30,12 @@ export default function ClassroomDetail() {
   const [editDescription, setEditDescription] = useState('');
   const [updatingClassroom, setUpdatingClassroom] = useState(false);
 
-  // AI Quiz Generation Modal State (Difficulty 1-10 + Custom Document Selector)
+  // AI Quiz Generation Modal State (Difficulty 1-10 + Custom Document Selector + Competency %)
   const [isAiQuizModalOpen, setIsAiQuizModalOpen] = useState(false);
   const [aiQuizTitle, setAiQuizTitle] = useState('');
   const [aiQuizNumQuestions, setAiQuizNumQuestions] = useState(5);
   const [aiQuizDifficulty, setAiQuizDifficulty] = useState(5);
+  const [aiQuizCompetency, setAiQuizCompetency] = useState(50);
   const [aiQuizSelectedDocIds, setAiQuizSelectedDocIds] = useState([]);
 
   // Teacher Quiz Submissions Analytics Modal State
@@ -225,11 +226,12 @@ export default function ClassroomDetail() {
     }
   };
 
-  // AI Quiz Generation Handlers (Difficulty 1-10 + Document Selection)
+  // AI Quiz Generation Handlers (Difficulty 1-10 + Document Selection + Competency %)
   const handleOpenAiQuizModal = () => {
     setAiQuizTitle(`AI Practice Quiz - ${new Date().toLocaleDateString()}`);
     setAiQuizNumQuestions(5);
     setAiQuizDifficulty(5);
+    setAiQuizCompetency(50);
     setAiQuizSelectedDocIds(documents.map(d => d.id));
     setQuizError('');
     setIsAiQuizModalOpen(true);
@@ -266,6 +268,7 @@ export default function ClassroomDetail() {
         classroom_id: parseInt(id),
         num_questions: parseInt(aiQuizNumQuestions),
         difficulty: parseInt(aiQuizDifficulty),
+        competency_percentage: parseInt(aiQuizCompetency),
         document_ids: aiQuizSelectedDocIds,
         title: aiQuizTitle.trim()
       });
@@ -1166,6 +1169,35 @@ export default function ClassroomDetail() {
                   <span>1 (Basic Definitions)</span>
                   <span>5 (Applied Concepts)</span>
                   <span>10 (Tricky & Expert)</span>
+                </div>
+              </div>
+
+              {/* Competency-Based Percentage Slider (0% to 100%) */}
+              <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-300 font-bold flex items-center space-x-1.5">
+                    <Award className="w-4 h-4 text-indigo-400" />
+                    <span>Competency Ratio ({aiQuizCompetency}%)</span>
+                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold border bg-indigo-950/80 border-indigo-600 text-indigo-300 font-mono">
+                    {Math.round((aiQuizCompetency / 100) * aiQuizNumQuestions)} of {aiQuizNumQuestions} Scenario MCQs
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="10"
+                  value={aiQuizCompetency}
+                  onChange={(e) => setAiQuizCompetency(parseInt(e.target.value))}
+                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                />
+
+                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>0% (All Direct Recall)</span>
+                  <span>50% (Balanced)</span>
+                  <span>100% (All Case Studies)</span>
                 </div>
               </div>
 

@@ -23,6 +23,7 @@ class QuizCreateFromDoc(BaseModel):
     title: str = "AI Practice Quiz"
     num_questions: int = 5
     difficulty: int = 5
+    competency_percentage: int = 50
 
 class QuizOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
