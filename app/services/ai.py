@@ -271,8 +271,11 @@ def generate_quiz_questions(
         "You are an expert educational assessment generator. Your task is to analyze the provided list of study notes and generate a high-quality quiz.\n\n"
         f"ASSESSMENT CALIBRATION:\n"
         f"- {diff_desc}\n"
-        f"- {comp_desc}\n\n"
-        "You must return ONLY a JSON object matching this exact structure, with no markdown formatting, no code blocks, and no conversational filler:\n\n"
+        f"- {comp_desc}\n"
+        "- MATHEMATICAL & NUMERICAL FORMULAS: If the notes contain formulas, physics/chemistry/engineering laws, or numerical problems:\n"
+        "  * Express all mathematical equations and variables in standard LaTeX formatting (e.g. `$E = mc^2$`, `$\\frac{a}{b}$`, `$$H_c(T) = H_0 \\left[1 - \\left(\\frac{T}{T_c}\\right)^2\\right]$$`).\n"
+        "  * For any numerical calculation question, the 'explanation' field MUST provide a complete, step-by-step mathematical derivation showing: (1) Given values, (2) Formula used in LaTeX, (3) Step-by-step substitution, (4) Final calculated answer with units.\n\n"
+        "You must return ONLY a JSON object matching this exact structure, with no markdown formatting around the outer JSON, no code blocks, and no conversational filler:\n\n"
         "{\n"
         '  "quiz_title": "string",\n'
         '  "questions": [\n'
@@ -286,7 +289,7 @@ def generate_quiz_questions(
         '        "D": "string"\n'
         "      },\n"
         '      "correct_option": "A",\n'
-        '      "explanation": "string"\n'
+        '      "explanation": "Detailed step-by-step explanation with LaTeX formulas and derivations where applicable"\n'
         "    }\n"
         "  ]\n"
         "}\n\n"

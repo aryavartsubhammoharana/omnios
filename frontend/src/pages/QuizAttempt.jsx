@@ -3,6 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { AuthContext } from '../context/AuthContext';
 import { HelpCircle, CheckCircle, XCircle, ArrowLeft, Award, RotateCcw, Lock, Sparkles, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import TiltCard3D from '../components/TiltCard3D';
 
 export default function QuizAttempt() {
@@ -170,11 +175,23 @@ export default function QuizAttempt() {
 
           return (
             <TiltCard3D key={idx} className="p-6">
-              <h3 className="text-sm font-bold text-white mb-4">
-                <span className="text-indigo-400 font-mono mr-2">Q{idx + 1}.</span>
-                {q.question_text || q.question}
-              </h3>
+              {/* Question Text with KaTeX Math Rendering */}
+              <div className="text-sm font-bold text-white mb-4 flex items-start space-x-2">
+                <span className="text-indigo-400 font-mono flex-shrink-0 mt-0.5">Q{idx + 1}.</span>
+                <div className="flex-1 overflow-x-auto prose prose-invert max-w-none text-sm font-bold">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkMath]}
+                    rehypePlugins={[rehypeKatex]}
+                    components={{
+                      p: ({node, ...props}) => <span {...props} />
+                    }}
+                  >
+                    {q.question_text || q.question}
+                  </ReactMarkdown>
+                </div>
+              </div>
 
+              {/* Options List */}
               <div className="space-y-2.5">
                 {q.options?.map((opt, optIdx) => {
                   const isSelected = chosenOpt === optIdx;
@@ -203,27 +220,64 @@ export default function QuizAttempt() {
                         attemptResult ? 'cursor-default' : 'cursor-pointer'
                       }`}
                     >
-                      <div className="flex items-center space-x-3">
-                        <span className={`w-5 h-5 rounded-md flex items-center justify-center font-mono text-[11px] font-bold ${
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <span className={`w-5 h-5 rounded-md flex items-center justify-center font-mono text-[11px] font-bold flex-shrink-0 ${
                           isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400'
                         }`}>
                           {optLetter}
                         </span>
-                        <span>{opt}</span>
+                        <div className="flex-1 overflow-x-auto">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeKatex]}
+                            components={{
+                              p: ({node, ...props}) => <span {...props} />
+                            }}
+                          >
+                            {opt}
+                          </ReactMarkdown>
+                        </div>
                       </div>
 
                       {attemptResult && q.correct_index === optIdx && (
-                        <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                        <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0 ml-2" />
                       )}
                     </button>
                   );
                 })}
               </div>
 
+              {/* Detailed Step-by-Step Mathematical Explanation */}
               {attemptResult && q.explanation && (
-                <div className="mt-4 p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-400">
-                  <span className="font-semibold text-indigo-400 block mb-1">Explanation:</span>
-                  {q.explanation}
+                <div className="mt-4 p-4 bg-slate-950/90 rounded-xl border border-indigo-900/60 text-xs text-slate-300 shadow-inner space-y-2">
+                  <div className="flex items-center space-x-2 text-indigo-400 font-bold border-b border-slate-800/80 pb-2">
+                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <span>Step-by-Step Solution & Formula Derivation:</span>
+                  </div>
+                  <div className="overflow-x-auto leading-relaxed pt-1 prose prose-invert max-w-none text-xs">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        p: ({node, ...props}) => <p className="mb-2 leading-relaxed" {...props} />,
+                        strong: ({node, ...props}) => <strong className="text-indigo-200 font-bold" {...props} />,
+                        code: ({node, inline, children, ...props}) => (
+                          inline
+                            ? <code className="bg-slate-800 text-indigo-300 px-1 py-0.5 rounded font-mono text-[11px]" {...props}>{children}</code>
+                            : <pre className="bg-slate-900 border border-slate-700 p-3 rounded-lg my-2 overflow-x-auto font-mono text-emerald-300" {...props}>{children}</pre>
+                        ),
+                        table: ({node, ...props}) => (
+                          <div className="overflow-x-auto my-2">
+                            <table className="min-w-full border border-slate-700 rounded text-xs" {...props} />
+                          </div>
+                        ),
+                        th: ({node, ...props}) => <th className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-indigo-300 font-bold text-left" {...props} />,
+                        td: ({node, ...props}) => <td className="px-3 py-1.5 border border-slate-800 text-slate-300" {...props} />,
+                      }}
+                    >
+                      {q.explanation}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )}
             </TiltCard3D>
