@@ -37,6 +37,7 @@ export default function ClassroomDetail() {
   const [aiQuizDifficulty, setAiQuizDifficulty] = useState(5);
   const [aiQuizCompetency, setAiQuizCompetency] = useState(50);
   const [aiQuizSelectedDocIds, setAiQuizSelectedDocIds] = useState([]);
+  const [inProgressQuiz, setInProgressQuiz] = useState(null);
 
   // Teacher Quiz Submissions Analytics Modal State
   const [isSubmissionsModalOpen, setIsSubmissionsModalOpen] = useState(false);
@@ -261,24 +262,78 @@ export default function ClassroomDetail() {
       alert("Please select at least one study note or PDF document");
       return;
     }
+
+    const title = aiQuizTitle.trim();
+    const numQ = parseInt(aiQuizNumQuestions);
+    const diff = parseInt(aiQuizDifficulty);
+    const comp = parseInt(aiQuizCompetency);
+    const docIds = [...aiQuizSelectedDocIds];
+
+    // Close configuration modal immediately so UI remains completely interactive and non-blocking
+    setIsAiQuizModalOpen(false);
     setGeneratingQuiz(true);
     setQuizError('');
+
+    // In-place live card initialized
+    setInProgressQuiz({
+      title: title,
+      num_questions: numQ,
+      difficulty: diff,
+      competency: comp,
+      progress: 12,
+      statusText: `Extracting text from ${docIds.length} source note(s)...`
+    });
+
+    const progressInterval = setInterval(() => {
+      setInProgressQuiz((prev) => {
+        if (!prev) return null;
+        let nextProg = prev.progress;
+        let nextStatus = prev.statusText;
+
+        if (nextProg < 30) {
+          nextProg += 6;
+          nextStatus = `Extracted notes text. Analyzing previous classroom quizzes for deduplication...`;
+        } else if (nextProg < 65) {
+          nextProg += 7;
+          nextStatus = `Groq AI batch-generating ${numQ} MCQs (Difficulty ${diff}/10, ${comp}% Competency)...`;
+        } else if (nextProg < 92) {
+          nextProg += 4;
+          nextStatus = `Synthesizing KaTeX LaTeX formula derivations & options...`;
+        }
+
+        return {
+          ...prev,
+          progress: Math.min(nextProg, 94),
+          statusText: nextStatus
+        };
+      });
+    }, 900);
+
     try {
       await API.post('/api/quiz/generate', {
         classroom_id: parseInt(id),
-        num_questions: parseInt(aiQuizNumQuestions),
-        difficulty: parseInt(aiQuizDifficulty),
-        competency_percentage: parseInt(aiQuizCompetency),
-        document_ids: aiQuizSelectedDocIds,
-        title: aiQuizTitle.trim()
+        num_questions: numQ,
+        difficulty: diff,
+        competency_percentage: comp,
+        document_ids: docIds,
+        title: title
       });
-      setIsAiQuizModalOpen(false);
-      loadData();
+
+      clearInterval(progressInterval);
+      setInProgressQuiz((prev) => prev ? ({ ...prev, progress: 100, statusText: 'Quiz created & published successfully!' }) : null);
+
+      setTimeout(() => {
+        setInProgressQuiz(null);
+        setGeneratingQuiz(false);
+        loadData();
+      }, 700);
+
     } catch (err) {
+      clearInterval(progressInterval);
+      setInProgressQuiz(null);
+      setGeneratingQuiz(false);
       const msg = err.response?.data?.detail || "Quiz generation failed.";
       setQuizError(msg);
-    } finally {
-      setGeneratingQuiz(false);
     }
   };
 
@@ -692,10 +747,51 @@ export default function ClassroomDetail() {
               </div>
             )}
 
-            {quizzes.length === 0 ? (
+            {!inProgressQuiz && quizzes.length === 0 ? (
               <p className="text-xs text-slate-500 text-center py-4">No practice quizzes available yet.</p>
             ) : (
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                {/* GEMINI / NOTEBOOKLM STYLE SHIMMER & SPARKLE WAVE IN-PROGRESS CARD */}
+                {inProgressQuiz && (
+                  <div className="relative overflow-hidden rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-4 shadow-2xl backdrop-blur-xl animate-pulse-glow transition">
+                    {/* Shimmer Sweep Layer */}
+                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+
+                    {/* Header Row with Gemini Sparkle Icon & Progress % */}
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <svg className="w-4 h-4 fill-indigo-400 animate-sparkle flex-shrink-0" viewBox="0 0 24 24">
+                          <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z"/>
+                        </svg>
+                        <h4 className="text-xs font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-cyan-300 bg-clip-text text-transparent truncate">
+                          {inProgressQuiz.title}
+                        </h4>
+                      </div>
+                      <span className="bg-indigo-950 text-cyan-300 border border-indigo-700/80 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex-shrink-0 animate-pulse">
+                        {inProgressQuiz.progress}%
+                      </span>
+                    </div>
+
+                    {/* Status Description */}
+                    <p className="text-[11px] text-slate-400 font-sans line-clamp-1 mb-2.5">
+                      {inProgressQuiz.statusText}
+                    </p>
+
+                    {/* Glowing Progress Bar */}
+                    <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden mb-2.5">
+                      <div
+                        className="bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 h-full rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${inProgressQuiz.progress}%` }}
+                      />
+                    </div>
+
+                    {/* Skeleton Lines simulating content synthesis */}
+                    <div className="space-y-1.5 opacity-60">
+                      <div className="h-1.5 rounded bg-white/10 w-full" />
+                      <div className="h-1.5 rounded bg-white/10 w-4/5" />
+                    </div>
+                  </div>
+                )}
                 {quizzes.map((quiz) => (
                   <div key={quiz.id} className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 hover:border-slate-700 transition flex flex-col justify-between space-y-2.5">
                     <div className="flex items-start justify-between">
@@ -1283,82 +1379,6 @@ export default function ClassroomDetail() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* FULL-SCREEN LIVE AI QUIZ GENERATION & SKELETON LOADER */}
-      {generatingQuiz && (
-        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 z-[200]">
-          <div className="bg-slate-900/95 border border-indigo-500/50 rounded-2xl max-w-lg w-full p-6 flex flex-col items-center shadow-2xl shadow-indigo-600/30 text-center animate-in fade-in zoom-in duration-300">
-            {/* Glowing Orbiting AI Icon */}
-            <div className="relative mb-5 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-amber-500 flex items-center justify-center shadow-xl shadow-indigo-500/30 animate-pulse">
-                <Zap className="w-8 h-8 text-white fill-amber-300 animate-bounce" />
-              </div>
-              <div className="absolute -inset-2 rounded-2xl bg-indigo-500/20 blur-lg animate-pulse" />
-            </div>
-
-            <h3 className="text-base font-bold text-white mb-1">
-              AI Assessment Quiz Generator
-            </h3>
-            <p className="text-xs text-indigo-300 font-medium mb-4">
-              Synthesizing {aiQuizNumQuestions} High-Density Questions via Groq LPU...
-            </p>
-
-            {/* Live Pipeline Steps */}
-            <div className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2 text-left mb-4 text-xs">
-              <div className="flex items-center space-x-2 text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">Extracted text from {aiQuizSelectedDocIds.length || 1} selected study note(s)</span>
-              </div>
-              <div className="flex items-center space-x-2 text-indigo-300">
-                <Sliders className="w-3.5 h-3.5 flex-shrink-0 text-indigo-400" />
-                <span>Calibrating Difficulty (Level {aiQuizDifficulty}/10) & Competency ({aiQuizCompetency}%)</span>
-              </div>
-              <div className="flex items-center space-x-2 text-amber-300 animate-pulse">
-                <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-amber-400 animate-spin" />
-                <span>Batch-generating {aiQuizNumQuestions} MCQs with step-by-step KaTeX LaTeX solutions...</span>
-              </div>
-            </div>
-
-            {/* Glowing Animated Progress Bar */}
-            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-4 relative">
-              <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-400 h-full rounded-full w-full animate-pulse" />
-            </div>
-
-            {/* Skeleton Question Preview Card */}
-            <div className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-2.5 opacity-80 animate-pulse text-left">
-              <div className="flex items-center space-x-2">
-                <div className="w-6 h-3 bg-indigo-600/50 rounded"></div>
-                <div className="h-3.5 bg-slate-800 rounded w-3/4"></div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <div className="h-7 bg-slate-900 rounded-lg border border-slate-800 flex items-center px-2 space-x-2">
-                  <div className="w-3 h-3 bg-slate-700 rounded-full"></div>
-                  <div className="h-2.5 bg-slate-800 rounded w-20"></div>
-                </div>
-                <div className="h-7 bg-slate-900 rounded-lg border border-slate-800 flex items-center px-2 space-x-2">
-                  <div className="w-3 h-3 bg-slate-700 rounded-full"></div>
-                  <div className="h-2.5 bg-slate-800 rounded w-20"></div>
-                </div>
-                <div className="h-7 bg-slate-900 rounded-lg border border-slate-800 flex items-center px-2 space-x-2">
-                  <div className="w-3 h-3 bg-slate-700 rounded-full"></div>
-                  <div className="h-2.5 bg-slate-800 rounded w-20"></div>
-                </div>
-                <div className="h-7 bg-slate-900 rounded-lg border border-slate-800 flex items-center px-2 space-x-2">
-                  <div className="w-3 h-3 bg-slate-700 rounded-full"></div>
-                  <div className="h-2.5 bg-slate-800 rounded w-20"></div>
-                </div>
-              </div>
-              <div className="h-6 bg-indigo-950/40 border border-indigo-900/40 rounded-lg flex items-center px-2">
-                <div className="h-2 bg-indigo-500/40 rounded w-1/2"></div>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-slate-500 font-mono mt-4">
-              ⚡ Multi-batch verification guarantees exactly {aiQuizNumQuestions} questions with 0 token truncation.
-            </p>
           </div>
         </div>
       )}
