@@ -169,11 +169,14 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
                 db.commit()
 
                 parsed_map = parse_groq_batch_response(raw_resp, local_map)
+                new_visual_notes = []
                 for img_r in sub_batch:
                     txt = parsed_map.get(str(img_r.image_id))
                     if txt:
                         img_r.analysis_text = txt
                         db.commit()
+
+                        new_visual_notes.append(f"### 🔍 Figure Analysis (Page {page_num}):\n{txt}\n")
 
                         try:
                             class_code = None
@@ -210,6 +213,12 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
                             )
                         except Exception as ex:
                             print(f"Error vector indexing image analysis {img_r.image_id}: {ex}")
+
+                if new_visual_notes:
+                    doc_obj = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
+                    if doc_obj and doc_obj.content_text:
+                        doc_obj.content_text += "\n\n" + "\n".join(new_visual_notes)
+                        db.commit()
 
     except Exception as e:
         print(f"Error in extract_and_analyze_document_images for doc {doc_id}: {e}")

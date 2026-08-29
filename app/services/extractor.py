@@ -167,22 +167,13 @@ def extract_pdf_page_by_page(file_path: str, doc_id: int | None = None, classroo
                                     except Exception:
                                         pass
 
-                                vision_desc = analyze_image_with_groq_vision(img_bytes)
-
-                                if vision_desc or img_ocr_text:
-                                    callout = [
-                                        f"![Diagram {img_idx+1}]({img_url})\n",
-                                        f"> 🖼️ **[Figure/Diagram {img_idx+1} Analysis - Groq Vision]**:",
-                                    ]
-                                    if vision_desc:
-                                        callout.append(f"> **Visual Comprehension**: {vision_desc}")
-                                    if img_ocr_text:
-                                        callout.append(f"> **OCR Labels/Formulas**: `{img_ocr_text}`")
-                                    image_analyses.append("\n".join(callout))
+                                callout = [f"![Diagram {img_idx+1}]({img_url})"]
+                                if img_ocr_text:
+                                    callout.append(f"> 📝 **Diagram Text/Formula**: `{img_ocr_text}`")
+                                image_analyses.append("\n".join(callout))
             except Exception as img_err:
                 print(f"Note on page {page_num} image extraction: {img_err}")
 
-            # Assemble Page Content (Text + Image Analyses)
             full_page_parts = []
             if page_text and page_text.strip():
                 full_page_parts.append(page_text.strip())
@@ -204,10 +195,6 @@ def extract_pdf_page_by_page(file_path: str, doc_id: int | None = None, classroo
     raw = "\n\n".join(extracted_pages).strip()
     return format_ocr_text_locally(raw) if raw else f"Classroom Study Note: '{filename}'"
 
-
-# ---------------------------------------------------------------------------
-# Main entry point
-# ---------------------------------------------------------------------------
 
 def extract_text_from_file(file_path: str, doc_id: int | None = None, classroom_code: str | None = None, on_page_progress=None) -> str:
     ext = os.path.splitext(file_path)[1].lower()
@@ -238,20 +225,14 @@ def extract_text_from_file(file_path: str, doc_id: int | None = None, classroom_
                                         ocr_text = ", ".join(ocr_results[:10])
                                 except Exception:
                                     pass
-                            vision_desc = analyze_image_with_groq_vision(img_bytes)
-                            if vision_desc or ocr_text:
-                                block = ["> 🖼️ **[Document Figure Analysis - Groq Vision]**:"]
-                                if vision_desc:
-                                    block.append(f"> **Visual Comprehension**: {vision_desc}")
-                                if ocr_text:
-                                    block.append(f"> **OCR Labels**: `{ocr_text}`")
-                                image_callouts.append("\n".join(block))
+                            if ocr_text:
+                                image_callouts.append(f"> 📝 **Embedded Diagram Text**: `{ocr_text}`")
             except Exception as e:
                 print(f"Note on docx image extraction: {e}")
 
             full_docx = text
             if image_callouts:
-                full_docx += "\n\n### 🖼️ Embedded Figures & Diagrams Analysis\n" + "\n\n".join(image_callouts)
+                full_docx += "\n\n### 🖼️ Embedded Figures & Diagrams\n" + "\n\n".join(image_callouts)
 
             if full_docx:
                 if on_page_progress:

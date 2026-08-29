@@ -8,6 +8,14 @@ from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 from app.config import settings
 
+def _parse_retry_seconds(text: str) -> float:
+    match_ms = re.search(r"try again in (?:(\d+)m)?([\d\.]+)s", text)
+    if match_ms:
+        minutes = float(match_ms.group(1)) if match_ms.group(1) else 0.0
+        seconds = float(match_ms.group(2)) if match_ms.group(2) else 0.0
+        return (minutes * 60.0) + seconds
+    return 10.0
+
 def merge_images_into_grid(image_paths: list[str], output_path: str, images_per_row: int = 3) -> str:
     if not image_paths:
         return ""
@@ -68,7 +76,7 @@ def merge_images_into_grid(image_paths: list[str], output_path: str, images_per_
     return output_path
 
 
-def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number: int, max_retries: int = 3) -> str:
+def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number: int, max_retries: int = 2) -> str:
     vision_key = settings.GROQ_VISION_API_KEY.strip() or settings.GROQ_API_KEY.strip()
     if not vision_key:
         print("[WARNING] Neither GROQ_VISION_API_KEY nor GROQ_API_KEY is configured in .env")
@@ -79,12 +87,12 @@ def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number
 
     try:
         pil_img = Image.open(image_path).convert("RGB")
-        max_dim = 800
+        max_dim = 600
         if max(pil_img.width, pil_img.height) > max_dim:
             pil_img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
 
         buf = BytesIO()
-        pil_img.save(buf, format="JPEG", quality=80)
+        pil_img.save(buf, format="JPEG", quality=75)
         b64_str = base64.b64encode(buf.getvalue()).decode("utf-8")
 
         if image_count > 1:
@@ -126,21 +134,23 @@ def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number
                 }
             ],
             "temperature": 0.2,
-            "max_tokens": 800
+            "max_tokens": 600
         }
 
         for attempt in range(max_retries):
-            res = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=45)
+            res = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=30)
             if res.status_code == 200:
                 content = res.json()["choices"][0]["message"]["content"].strip()
                 content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
                 return content
 
             if res.status_code == 429:
-                match = re.search(r"try again in ([\d\.]+)s", res.text)
-                sleep_secs = float(match.group(1)) + 1.0 if match else (6.0 * (attempt + 1))
-                print(f"[Rate-Limit 429] Groq TPM limit reached. Sleeping {sleep_secs:.1f}s before retry (attempt {attempt + 1}/{max_retries})...")
-                time.sleep(sleep_secs)
+                wait_sec = _parse_retry_seconds(res.text)
+                if wait_sec > 60:
+                    print(f"[Rate-Limit 429 Daily Limit] Wait time is {wait_sec:.0f}s. Skipping batch to avoid blocking.")
+                    break
+                print(f"[Rate-Limit 429] Sleeping {wait_sec:.1f}s before retry (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(wait_sec + 1.0)
                 continue
 
             print(f"Groq Vision API Error ({res.status_code}): {res.text}")
