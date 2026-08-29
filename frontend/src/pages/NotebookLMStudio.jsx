@@ -136,12 +136,14 @@ export default function NotebookLMStudio() {
     setSending(true);
 
     try {
-      const primaryDocId = selectedDocIds.length > 0 ? selectedDocIds[0] : null;
+      // Only pass document_id if EXACTLY 1 document was specifically chosen by the user
+      // Otherwise, pass classroom_id (for Classroom Vector DB) or null (for Global Anonymous Vector DB)
+      const singleDocId = (selectedDocIds.length === 1) ? selectedDocIds[0] : null;
       const cId = (selectedClassroomId && selectedClassroomId !== 'all') ? parseInt(selectedClassroomId) : null;
 
       const res = await API.post('/api/ai/chat', {
         question: userText,
-        document_id: primaryDocId,
+        document_id: singleDocId,
         classroom_id: cId,
         ai_provider: aiProvider
       });
@@ -156,11 +158,12 @@ export default function NotebookLMStudio() {
         return s;
       }));
     } catch (err) {
+      console.error("Error calling AI chat:", err);
       setChatSessions(prev => prev.map(s => {
         if (s.id === activeSessionId) {
           return {
             ...s,
-            messages: [...s.messages, { sender: 'ai', text: 'Sorry, I encountered an error answering your query.' }]
+            messages: [...s.messages, { sender: 'ai', text: 'Sorry, I encountered an error answering your query. Please try again.' }]
           };
         }
         return s;

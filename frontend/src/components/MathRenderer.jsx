@@ -67,18 +67,25 @@ function convertMarkdownToSafeHtml(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // 3. Process standard markdown
-  // Bold
+  // 3. Headings
+  tokenized = tokenized.replace(/^### (.*$)/gim, '<h3 class="text-xs font-bold text-indigo-300 mt-3 mb-1">$1</h3>');
+  tokenized = tokenized.replace(/^## (.*$)/gim, '<h2 class="text-sm font-bold text-indigo-200 mt-3 mb-1.5">$1</h2>');
+  tokenized = tokenized.replace(/^# (.*$)/gim, '<h1 class="text-base font-bold text-white mt-4 mb-2 border-b border-slate-700 pb-1">$1</h1>');
+
+  // 4. Bold & Italic & Code
   tokenized = tokenized.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-indigo-200">$1</strong>');
-  // Italic
   tokenized = tokenized.replace(/\*([^*\n]+)\*/g, '<em class="italic text-slate-300">$1</em>');
-  // Inline code
   tokenized = tokenized.replace(/`([^`\n]+)`/g, '<code class="bg-slate-800 text-indigo-300 px-1 py-0.5 rounded font-mono text-[11px]">$1</code>');
-  // Paragraphs / linebreaks
+
+  // 5. Lists (Bullets & Numbers)
+  tokenized = tokenized.replace(/^[\*\-] (.*$)/gim, '<li class="text-slate-200 ml-4 list-disc my-0.5">$1</li>');
+  tokenized = tokenized.replace(/^\d+\. (.*$)/gim, '<li class="text-slate-200 ml-4 list-decimal my-0.5">$1</li>');
+
+  // 6. Paragraphs and linebreaks
   tokenized = tokenized.replace(/\n\n+/g, '<div class="my-2"></div>');
   tokenized = tokenized.replace(/\n/g, '<br/>');
 
-  // 4. Restore math blocks
+  // 7. Restore math blocks
   mathTokens.forEach((mathStr, idx) => {
     tokenized = tokenized.replace(`___MATH_TOKEN_${idx}___`, mathStr);
   });
