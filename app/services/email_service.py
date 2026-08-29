@@ -4,14 +4,17 @@ from email.mime.multipart import MIMEMultipart
 from app.config import settings
 
 def send_verification_otp_email(recipient_email: str, otp_code: str, user_name: str = "Student") -> bool:
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        print(f"[DEV NOTICE] SMTP credentials not set in .env. Console OTP for {recipient_email}: {otp_code}")
+    smtp_user = settings.SMTP_USER.strip() if settings.SMTP_USER else ""
+    smtp_password = settings.SMTP_PASSWORD.replace(" ", "").strip() if settings.SMTP_PASSWORD else ""
+
+    if not smtp_user or not smtp_password:
+        print(f"[DEV NOTICE] Gmail SMTP credentials not set in .env. Console OTP for {recipient_email}: {otp_code}")
         return False
 
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = f"{otp_code} is your NoteAI Verification Code"
-        msg["From"] = settings.EMAIL_FROM or settings.SMTP_USER
+        msg["From"] = f"NoteAI <{smtp_user}>"
         msg["To"] = recipient_email
 
         html_content = f"""
@@ -38,7 +41,7 @@ def send_verification_otp_email(recipient_email: str, otp_code: str, user_name: 
             <p style="font-size: 12px; color: #94a3b8;">This code is valid for 10 minutes. If you did not request this code, please ignore this email.</p>
             
             <div class="footer">
-              © {2026} NoteAI Platform. All rights reserved.
+              © 2026 NoteAI Platform. All rights reserved.
             </div>
           </div>
         </body>
@@ -48,14 +51,18 @@ def send_verification_otp_email(recipient_email: str, otp_code: str, user_name: 
         part_html = MIMEText(html_content, "html")
         msg.attach(part_html)
 
-        server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
-        server.starttls()
-        server.login(settings.SMTP_USER.strip(), settings.SMTP_PASSWORD.strip())
-        server.sendmail(settings.SMTP_USER.strip(), recipient_email, msg.as_string())
+        if settings.SMTP_PORT == 465:
+            server = smtplib.SMTP_SSL(settings.SMTP_HOST, 465, timeout=15)
+        else:
+            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15)
+            server.starttls()
+
+        server.login(smtp_user, smtp_password)
+        server.sendmail(smtp_user, recipient_email, msg.as_string())
         server.quit()
 
-        print(f"[EMAIL SERVICE] Sent OTP verification email to {recipient_email}")
+        print(f"[GMAIL OTP SERVICE] Successfully sent OTP verification email to {recipient_email}")
         return True
     except Exception as e:
-        print(f"[EMAIL SERVICE ERROR] Failed to send email to {recipient_email}: {e}")
+        print(f"[GMAIL OTP SERVICE ERROR] Failed to send email to {recipient_email}: {e}")
         return False
