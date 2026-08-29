@@ -1,13 +1,14 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { BookOpen, KeyRound, Mail, Loader2, Sparkles } from 'lucide-react';
+import { BookOpen, KeyRound, Mail, Loader2, ArrowRight } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const { login, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -58,16 +59,19 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setSubmitting(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Login failed. Please check credentials.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center bg-[#090d16] px-4 relative overflow-hidden">
+    <div className="min-h-[85vh] flex items-center justify-center bg-[#090d16] px-4 relative overflow-hidden py-8">
       <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
       <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
 
@@ -76,7 +80,7 @@ export default function Login() {
           <div className="inline-flex p-3 bg-indigo-950/80 border border-indigo-700/50 rounded-2xl mb-3 shadow-inner">
             <BookOpen className="w-8 h-8 text-indigo-400" />
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Welcome to NoteAI</h1>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">Sign In to NoteAI</h1>
           <p className="text-xs text-gray-400 mt-1">Classroom & DLM Notebook Studio</p>
         </div>
 
@@ -116,7 +120,7 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="student@noteai.com or teacher@noteai.com"
+                  placeholder="name@example.com"
                   className="w-full bg-gray-900/90 border border-gray-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 shadow-inner transition"
                 />
               </div>
@@ -141,17 +145,16 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/30"
+              disabled={submitting}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs py-3 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2"
             >
-              Sign In
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+              <span>{submitting ? 'Signing in...' : 'Sign In'}</span>
             </button>
           </form>
         </div>
 
-        <div className="mt-6 pt-5 border-t border-gray-800/80 text-center space-y-3">
-          <p className="text-[11px] text-gray-400 font-mono">
-            Demo: <code className="text-indigo-300">student@noteai.com</code> / <code className="text-indigo-300">password123</code>
-          </p>
+        <div className="mt-6 pt-5 border-t border-gray-800/80 text-center">
           <p className="text-xs text-gray-400">
             Don't have an account?{' '}
             <Link to="/signup" className="text-indigo-400 hover:underline font-semibold">
