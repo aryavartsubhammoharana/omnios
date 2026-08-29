@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { BookOpen, KeyRound, Mail, User, GraduationCap, Loader2, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
 
@@ -23,8 +23,14 @@ export default function Signup() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [otpMessage, setOtpMessage] = useState('');
 
-  const { signup, verifyOtp, resendOtp, googleLogin } = useContext(AuthContext);
+  const { user, loading, signup, verifyOtp, resendOtp, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   useEffect(() => {
     let timer = null;
@@ -39,6 +45,7 @@ export default function Signup() {
   }, [resendCooldown]);
 
   useEffect(() => {
+    if (user) return;
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -63,7 +70,19 @@ export default function Signup() {
         document.body.removeChild(script);
       } catch (e) {}
     };
-  }, [role, studentClass]);
+  }, [user, role, studentClass]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center bg-[#090d16]">
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleGoogleCredentialResponse = async (response) => {
     if (!response.credential) return;

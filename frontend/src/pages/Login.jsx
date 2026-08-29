@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { BookOpen, KeyRound, Mail, Loader2, ArrowRight } from 'lucide-react';
 
@@ -11,10 +11,17 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const { login, googleLogin } = useContext(AuthContext);
+  const { user, loading, login, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (user) return;
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -39,7 +46,19 @@ export default function Login() {
         document.body.removeChild(script);
       } catch (e) {}
     };
-  }, []);
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center bg-[#090d16]">
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleGoogleCredentialResponse = async (response) => {
     if (!response.credential) return;
