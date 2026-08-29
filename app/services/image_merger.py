@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import math
 import base64
 import requests
@@ -15,11 +16,11 @@ def merge_images_into_grid(image_paths: list[str], output_path: str, images_per_
     cols = min(images_per_row, num_images)
     rows = math.ceil(num_images / cols)
 
-    thumb_w, thumb_h = 400, 400
-    label_h = 40
+    thumb_w, thumb_h = 350, 350
+    label_h = 36
     cell_w = thumb_w
     cell_h = thumb_h + label_h
-    gap = 20
+    gap = 16
 
     grid_w = (cols * cell_w) + ((cols + 1) * gap)
     grid_h = (rows * cell_h) + ((rows + 1) * gap)
@@ -28,7 +29,7 @@ def merge_images_into_grid(image_paths: list[str], output_path: str, images_per_
     draw = ImageDraw.Draw(grid_img)
 
     try:
-        font = ImageFont.truetype("arial.ttf", 22)
+        font = ImageFont.truetype("arial.ttf", 20)
     except Exception:
         font = ImageFont.load_default()
 
@@ -56,18 +57,18 @@ def merge_images_into_grid(image_paths: list[str], output_path: str, images_per_
             bbox = draw.textbbox((0, 0), label_text, font=font)
             text_w = bbox[2] - bbox[0]
             text_x = x + (cell_w - text_w) // 2
-            text_y = y + thumb_h + 8
+            text_y = y + thumb_h + 6
 
             draw.text((text_x, text_y), label_text, fill=(200, 215, 255), font=font)
         except Exception:
             continue
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    grid_img.save(output_path, format="PNG", optimize=True)
+    grid_img.save(output_path, format="JPEG", quality=80, optimize=True)
     return output_path
 
 
-def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number: int) -> str:
+def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number: int, max_retries: int = 3) -> str:
     if not settings.GROQ_API_KEY:
         print("[WARNING] GROQ_API_KEY is not configured in .env")
         return ""
@@ -76,8 +77,14 @@ def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number
         return ""
 
     try:
-        with open(image_path, "rb") as f:
-            b64_str = base64.b64encode(f.read()).decode("utf-8")
+        pil_img = Image.open(image_path).convert("RGB")
+        max_dim = 800
+        if max(pil_img.width, pil_img.height) > max_dim:
+            pil_img.thumbnail((max_dim, max_dim), Image.Resampling.LANCZOS)
+
+        buf = BytesIO()
+        pil_img.save(buf, format="JPEG", quality=80)
+        b64_str = base64.b64encode(buf.getvalue()).decode("utf-8")
 
         if image_count > 1:
             prompt = (
@@ -111,22 +118,33 @@ def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:image/png;base64,{b64_str}"
+                                "url": f"data:image/jpeg;base64,{b64_str}"
                             }
                         }
                     ]
                 }
             ],
             "temperature": 0.2,
-            "max_tokens": 1200
+            "max_tokens": 800
         }
 
-        res = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=40)
-        if res.status_code == 200:
-            content = res.json()["choices"][0]["message"]["content"].strip()
-            content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
-            return content
-        print(f"Groq Vision API Error ({res.status_code}): {res.text}")
+        for attempt in range(max_retries):
+            res = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=45)
+            if res.status_code == 200:
+                content = res.json()["choices"][0]["message"]["content"].strip()
+                content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+                return content
+
+            if res.status_code == 429:
+                match = re.search(r"try again in ([\d\.]+)s", res.text)
+                sleep_secs = float(match.group(1)) + 1.0 if match else (6.0 * (attempt + 1))
+                print(f"[Rate-Limit 429] Groq TPM limit reached. Sleeping {sleep_secs:.1f}s before retry (attempt {attempt + 1}/{max_retries})...")
+                time.sleep(sleep_secs)
+                continue
+
+            print(f"Groq Vision API Error ({res.status_code}): {res.text}")
+            break
+
     except Exception as e:
         print(f"Groq Vision call failed: {e}")
 
