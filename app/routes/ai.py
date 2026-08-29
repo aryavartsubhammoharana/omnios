@@ -6,6 +6,7 @@ from app.models.file import DocumentFile
 from app.models.chunk import DocumentChunk
 from app.schemas.ai import DocumentChatRequest, DocumentSummaryRequest, AIChatResponse
 from app.services.ai import query_gemini_ai, query_sarvam_ai, generate_document_summary
+from app.services.vector_store import query_chroma_rag
 from app.services.embedding import generate_embedding, search_top_k_chunks
 from app.utils.deps import get_current_user
 
@@ -26,19 +27,16 @@ def document_chat(data: DocumentChatRequest, current_user: User = Depends(get_cu
                     sources=[doc.filename]
                 )
             
-            # --- Vector RAG Search ---
-            q_emb = generate_embedding(data.question)
-            retrieved_chunks = []
-            all_chunks = db.query(DocumentChunk).filter(DocumentChunk.document_id == doc.id).all()
-
-            if q_emb and all_chunks:
-                retrieved_chunks = search_top_k_chunks(q_emb, all_chunks, k=5)
-
-            if retrieved_chunks:
+            # --- 1. ChromaDB Semantic Vector Search ---
+            chroma_matches = query_chroma_rag(data.question, doc_id=doc.id, n_results=5)
+            
+            if chroma_matches:
                 context_parts = []
-                for i, ch in enumerate(retrieved_chunks):
-                    context_parts.append(f"[Source {i+1}: {doc.filename} (Chunk {ch.chunk_index+1})]\n{ch.chunk_text}")
-                    src_tag = f"{doc.filename} (Chunk #{ch.chunk_index+1})"
+                for i, ch in enumerate(chroma_matches):
+                    idx_num = ch.get("chunk_index", i) + 1
+                    fname = ch.get("filename", doc.filename)
+                    context_parts.append(f"[Source {i+1}: {fname} (Chunk #{idx_num})]\n{ch['chunk_text']}")
+                    src_tag = f"{fname} (Chunk #{idx_num})"
                     if src_tag not in source_names:
                         source_names.append(src_tag)
                 context = "\n\n---\n\n".join(context_parts)
@@ -56,28 +54,16 @@ def document_chat(data: DocumentChatRequest, current_user: User = Depends(get_cu
                 sources=[d.filename for d in docs]
             )
         
-        # --- Vector RAG Search Across Entire Classroom ---
-        q_emb = generate_embedding(data.question)
-        retrieved_chunks = []
-        ready_doc_ids = [d.id for d in ready_docs]
-        all_chunks = (
-            db.query(DocumentChunk)
-            .filter(DocumentChunk.document_id.in_(ready_doc_ids))
-            .all()
-        )
+        # --- 1. ChromaDB Vector Search Across Classroom ---
+        chroma_matches = query_chroma_rag(data.question, classroom_id=data.classroom_id, n_results=6)
 
-        # Build filename map
-        fname_map = {d.id: d.filename for d in ready_docs}
-
-        if q_emb and all_chunks:
-            retrieved_chunks = search_top_k_chunks(q_emb, all_chunks, k=6)
-
-        if retrieved_chunks:
+        if chroma_matches:
             context_parts = []
-            for i, ch in enumerate(retrieved_chunks):
-                fname = fname_map.get(ch.document_id, "Lecture Note")
-                context_parts.append(f"[Source {i+1}: {fname} (Chunk {ch.chunk_index+1})]\n{ch.chunk_text}")
-                src_label = f"{fname} (Chunk #{ch.chunk_index+1})"
+            for i, ch in enumerate(chroma_matches):
+                idx_num = ch.get("chunk_index", i) + 1
+                fname = ch.get("filename", "Classroom Note")
+                context_parts.append(f"[Source {i+1}: {fname} (Chunk #{idx_num})]\n{ch['chunk_text']}")
+                src_label = f"{fname} (Chunk #{idx_num})"
                 if src_label not in source_names:
                     source_names.append(src_label)
             context = "\n\n---\n\n".join(context_parts)

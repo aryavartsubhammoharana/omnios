@@ -50,15 +50,26 @@ def process_file_text_in_background(doc_id: int):
             db.commit()
             print(f"✅ Document {doc_id} ('{doc.filename}') all pages processed 100%!")
 
-            # 2. Semantic Text Chunking for RAG Vector Index
+            # 2. Semantic Text Chunking & ChromaDB Vector Indexing
+            try:
+                from app.services.vector_store import index_document_in_chroma
+                n_indexed = index_document_in_chroma(
+                    doc_id=doc.id,
+                    classroom_id=doc.classroom_id,
+                    filename=doc.filename,
+                    content_text=doc.content_text
+                )
+                print(f"[OK] Document {doc_id} ('{doc.filename}') indexed in ChromaDB ({n_indexed} vector chunks)!")
+            except Exception as chroma_err:
+                print(f"Note on ChromaDB indexing for doc {doc_id}: {chroma_err}")
+
+            # 3. Also store in PostgreSQL document_chunks table as relational backup
             try:
                 chunks = chunk_text(doc.content_text, max_tokens=600, overlap_tokens=80)
                 if chunks:
-                    # Clean any old chunks for this document
                     db.query(DocumentChunk).filter(DocumentChunk.document_id == doc.id).delete()
                     db.commit()
 
-                    # Batch generate 768-d vector embeddings
                     texts_to_embed = [c["chunk_text"] for c in chunks]
                     embeddings = generate_embeddings_batch(texts_to_embed)
 
@@ -76,9 +87,8 @@ def process_file_text_in_background(doc_id: int):
                         )
                         db.add(chunk_obj)
                     db.commit()
-                    print(f"🧠 Generated {len(chunks)} vector chunks with 768-d embeddings for RAG search!")
             except Exception as ch_err:
-                print(f"Note on vector chunking for doc {doc_id}: {ch_err}")
+                print(f"Note on relational chunking for doc {doc_id}: {ch_err}")
 
     except Exception as e:
         print(f"Error extracting text in background for doc {doc_id}: {e}")
@@ -162,10 +172,12 @@ def delete_document(
         except Exception as e:
             print(f"Error removing physical file from disk: {e}")
 
-    # 2. Delete child records (vector chunks & study sessions) first to avoid FK constraint errors
+    # 2. Delete child records (vector chunks, ChromaDB vectors, & study sessions)
     from app.models.analytics import StudySession
     from app.models.chunk import DocumentChunk
+    from app.services.vector_store import delete_document_from_chroma
     try:
+        delete_document_from_chroma(doc_id)
         db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).delete()
         db.query(StudySession).filter(StudySession.document_id == doc_id).delete()
     except Exception as cascade_err:
