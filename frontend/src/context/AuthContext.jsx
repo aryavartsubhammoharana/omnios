@@ -80,6 +80,12 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   };
 
+  const deleteAccount = async () => {
+    await API.delete('/api/auth/delete-account');
+    localStorage.removeItem('noteai_token');
+    setUser(null);
+  };
+
   const logout = () => {
     localStorage.removeItem('noteai_token');
     setUser(null);
@@ -88,7 +94,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{ 
       user, loading, login, signup, verifyOtp, resendOtp, 
-      googleLogin, updateProfile, changePassword, uploadAvatar, logout 
+      googleLogin, updateProfile, changePassword, uploadAvatar, deleteAccount, logout 
     }}>
       {children}
     </AuthContext.Provider>

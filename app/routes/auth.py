@@ -264,6 +264,61 @@ def upload_avatar(
     return UserOut.model_validate(current_user)
 
 
+@router.delete("/delete-account")
+def delete_account(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.models.classroom import Classroom, Enrollment, Post
+    from app.models.quiz import Quiz, QuizAttempt, StudentDailyQuiz
+    from app.models.analytics import StudentStreak, StudySession, VideoFocusSession
+    from app.models.file import DocumentFile
+    from app.models.chunk import DocumentChunk
+    from app.models.image import ImageRecord, ImageBatch
+
+    user_id = current_user.id
+
+    db.query(Enrollment).filter(Enrollment.student_id == user_id).delete(synchronize_session=False)
+    db.query(QuizAttempt).filter(QuizAttempt.student_id == user_id).delete(synchronize_session=False)
+    db.query(StudentDailyQuiz).filter(StudentDailyQuiz.student_id == user_id).delete(synchronize_session=False)
+    db.query(StudentStreak).filter(StudentStreak.student_id == user_id).delete(synchronize_session=False)
+    db.query(StudySession).filter(StudySession.student_id == user_id).delete(synchronize_session=False)
+    db.query(VideoFocusSession).filter(VideoFocusSession.student_id == user_id).delete(synchronize_session=False)
+    db.query(Post).filter(Post.author_id == user_id).delete(synchronize_session=False)
+
+    teacher_classes = db.query(Classroom).filter(Classroom.teacher_id == user_id).all()
+    for c in teacher_classes:
+        c_id = c.id
+        doc_files = db.query(DocumentFile).filter(DocumentFile.classroom_id == c_id).all()
+        for df in doc_files:
+            db.query(DocumentChunk).filter(DocumentChunk.document_id == df.id).delete(synchronize_session=False)
+            db.query(ImageRecord).filter(ImageRecord.file_id == df.id).delete(synchronize_session=False)
+            db.query(ImageBatch).filter(ImageBatch.file_id == df.id).delete(synchronize_session=False)
+            db.delete(df)
+
+        quizzes = db.query(Quiz).filter(Quiz.classroom_id == c_id).all()
+        for qz in quizzes:
+            db.query(QuizAttempt).filter(QuizAttempt.quiz_id == qz.id).delete(synchronize_session=False)
+            db.delete(qz)
+
+        db.query(Enrollment).filter(Enrollment.classroom_id == c_id).delete(synchronize_session=False)
+        db.query(Post).filter(Post.classroom_id == c_id).delete(synchronize_session=False)
+        db.delete(c)
+
+    if current_user.avatar_url and current_user.avatar_url.startswith("/uploads/avatars/"):
+        try:
+            local_avatar = current_user.avatar_url.lstrip("/")
+            if os.path.exists(local_avatar):
+                os.remove(local_avatar)
+        except Exception:
+            pass
+
+    db.delete(current_user)
+    db.commit()
+
+    return {"message": "Account and all associated records permanently deleted."}
+
+
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return UserOut.model_validate(current_user)

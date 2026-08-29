@@ -5,11 +5,12 @@ import API from '../api/client';
 import { 
   BookOpen, LogOut, Sparkles, Flame, User, Bot, 
   GraduationCap, Settings, Mail, X, Check, Loader2,
-  Camera, Lock, ShieldCheck, KeyRound, ChevronDown, ChevronUp
+  Camera, Lock, ShieldCheck, KeyRound, ChevronDown, ChevronUp,
+  Trash2, AlertTriangle
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout, updateProfile, changePassword, uploadAvatar } = useContext(AuthContext);
+  const { user, logout, updateProfile, changePassword, uploadAvatar, deleteAccount } = useContext(AuthContext);
   const navigate = useNavigate();
   const [streak, setStreak] = useState(1);
   
@@ -29,6 +30,10 @@ export default function Navbar() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
+
+  // Delete Account State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -109,6 +114,21 @@ export default function Navbar() {
       setProfileError(err.response?.data?.detail || 'Failed to change password.');
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleDeleteAccountConfirm = async () => {
+    setDeletingAccount(true);
+    try {
+      await deleteAccount();
+      setShowProfileModal(false);
+      setShowDeleteConfirm(false);
+      navigate('/login');
+    } catch (err) {
+      setProfileError(err.response?.data?.detail || 'Failed to delete account.');
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeletingAccount(false);
     }
   };
 
@@ -437,6 +457,71 @@ export default function Navbar() {
                   </div>
                 </form>
               )}
+            </div>
+
+            {/* Danger Zone: Delete Account */}
+            <div className="mt-6 pt-5 border-t border-red-950/80">
+              <div className="bg-red-950/30 border border-red-900/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-bold text-red-300 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
+                    <span>Delete Account</span>
+                  </h4>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    Permanently delete your profile and unenroll from all classrooms.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="px-3.5 py-2 bg-red-950/80 hover:bg-red-900/80 border border-red-800/80 text-red-300 text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  <span>Delete</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="w-full max-w-md glass-card p-6 rounded-3xl border border-red-900/80 shadow-2xl space-y-4 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center space-x-3 text-red-400">
+              <div className="p-2.5 bg-red-950 rounded-2xl border border-red-800">
+                <AlertTriangle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Permanently Delete Account?</h3>
+                <span className="text-xs text-red-300">This action cannot be undone.</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-300 leading-relaxed">
+              Deleting your account will permanently remove you from all enrolled classrooms, delete all your daily diagnostic quizzes, study streaks, and uploaded notes.
+            </p>
+
+            <div className="flex items-center justify-end space-x-3 pt-2">
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deletingAccount}
+                onClick={handleDeleteAccountConfirm}
+                className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-600/30 transition flex items-center space-x-1.5 disabled:opacity-50"
+              >
+                {deletingAccount ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                <span>{deletingAccount ? 'Deleting...' : 'Yes, Delete My Account'}</span>
+              </button>
             </div>
           </div>
         </div>
