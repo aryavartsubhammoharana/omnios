@@ -1,21 +1,34 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API from '../api/client';
 import { 
   BookOpen, LogOut, Sparkles, Flame, User, Bot, 
-  GraduationCap, Settings, Mail, X, Check, Loader2 
+  GraduationCap, Settings, Mail, X, Check, Loader2,
+  Camera, Lock, ShieldCheck, KeyRound, ChevronDown, ChevronUp
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout, updateProfile } = useContext(AuthContext);
+  const { user, logout, updateProfile, changePassword, uploadAvatar } = useContext(AuthContext);
   const navigate = useNavigate();
   const [streak, setStreak] = useState(1);
+  
+  // Profile Settings Modal State
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editName, setEditName] = useState('');
   const [editClass, setEditClass] = useState('Class 11 Science');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [profileSuccess, setProfileSuccess] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [profileSuccess, setProfileSuccess] = useState('');
+  const [profileError, setProfileError] = useState('');
+  const fileInputRef = useRef(null);
+
+  // Change Password State
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -36,23 +49,66 @@ export default function Navbar() {
     navigate('/login');
   };
 
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingPhoto(true);
+    setProfileError('');
+    try {
+      await uploadAvatar(file);
+      setProfileSuccess('Profile picture updated successfully!');
+      setTimeout(() => setProfileSuccess(''), 3000);
+    } catch (err) {
+      setProfileError('Failed to upload image. Please choose a valid PNG/JPEG file.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setSavingProfile(true);
+    setProfileError('');
     try {
       await updateProfile({
         full_name: editName,
         student_class: editClass
       });
-      setProfileSuccess(true);
+      setProfileSuccess('Profile details saved!');
       setTimeout(() => {
-        setProfileSuccess(false);
-        setShowProfileModal(false);
-      }, 1200);
+        setProfileSuccess('');
+      }, 2000);
     } catch (err) {
-      console.error('Error updating profile', err);
+      setProfileError('Failed to save profile changes.');
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setProfileError('');
+    if (newPassword !== confirmNewPassword) {
+      setProfileError('New passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setProfileError('Password must be at least 6 characters long.');
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await changePassword(oldPassword || null, newPassword);
+      setProfileSuccess('Password changed successfully!');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setShowPasswordSection(false);
+      setTimeout(() => setProfileSuccess(''), 3000);
+    } catch (err) {
+      setProfileError(err.response?.data?.detail || 'Failed to change password.');
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -121,7 +177,7 @@ export default function Navbar() {
                 <span>{streak} {streak === 1 ? 'Day' : 'Days'} Streak</span>
               </div>
 
-              {/* Profile Badge & Settings Trigger */}
+              {/* Profile Pill & Settings Trigger */}
               <button
                 onClick={() => setShowProfileModal(true)}
                 className="flex items-center space-x-2 bg-gray-900/90 hover:bg-gray-800 border border-gray-800 px-3 py-1.5 rounded-xl text-xs transition group cursor-pointer shadow-inner"
@@ -168,38 +224,85 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Student Profile Settings Modal */}
+      {/* Comprehensive Student Profile Modal */}
       {showProfileModal && user && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-md glass-card p-6 sm:p-8 rounded-3xl border border-gray-800 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
+          <div className="w-full max-w-lg glass-card p-6 sm:p-8 rounded-3xl border border-gray-800 shadow-2xl relative animate-in fade-in zoom-in duration-200 my-8">
             <button
               onClick={() => setShowProfileModal(false)}
-              className="absolute top-5 right-5 p-1 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition"
+              className="absolute top-5 right-5 p-1.5 text-gray-400 hover:text-white rounded-xl hover:bg-gray-800 transition"
             >
               <X className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center space-x-3 mb-6 border-b border-gray-800 pb-4">
-              {user.avatar_url ? (
-                <img src={user.avatar_url} alt={user.full_name} className="w-12 h-12 rounded-2xl object-cover border border-indigo-500/50 shadow" />
-              ) : (
-                <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center font-bold text-lg">
-                  {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
-                </div>
-              )}
+            {/* Profile Header & Photo Upload */}
+            <div className="flex items-center space-x-4 mb-6 border-b border-gray-800 pb-5">
+              <div className="relative group">
+                {user.avatar_url ? (
+                  <img 
+                    src={user.avatar_url} 
+                    alt={user.full_name} 
+                    className="w-16 h-16 rounded-2xl object-cover border-2 border-indigo-500/50 shadow-md" 
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border-2 border-indigo-500/40 text-indigo-400 flex items-center justify-center font-bold text-2xl">
+                    {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="absolute -bottom-1.5 -right-1.5 p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg transition"
+                  title="Upload New Profile Photo"
+                >
+                  {uploadingPhoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleAvatarChange}
+                  accept="image/png, image/jpeg, image/webp"
+                  className="hidden"
+                />
+              </div>
+
               <div>
-                <h3 className="text-base font-bold text-white">{user.role === 'student' ? 'Student Profile' : 'User Profile'}</h3>
-                <span className="text-[10px] text-gray-400 font-mono flex items-center gap-1">
-                  <Mail className="w-3 h-3 text-indigo-400" />
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white">{user.full_name}</h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    {user.role}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 flex items-center gap-1.5 mt-1 font-mono">
+                  <Mail className="w-3.5 h-3.5 text-indigo-400" />
                   <span>{user.email}</span>
+                </p>
+                <span className="text-[10px] text-gray-500 font-mono mt-0.5 block">
+                  Auth Provider: {user.auth_provider === 'google' ? 'Google Account' : 'Server Account'}
                 </span>
               </div>
             </div>
 
+            {profileSuccess && (
+              <div className="mb-4 p-3 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-2">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{profileSuccess}</span>
+              </div>
+            )}
+
+            {profileError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-950/80 border border-red-800 text-red-300 text-xs flex items-center space-x-2">
+                <X className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{profileError}</span>
+              </div>
+            )}
+
+            {/* Profile Edit Form */}
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div>
                 <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5 font-mono">
-                  Full Name (Google / Profile)
+                  Full Name
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
@@ -214,9 +317,24 @@ export default function Navbar() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5 font-mono flex items-center gap-1">
+                <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5 font-mono">
+                  Email Address (Permanent)
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
+                  <input
+                    type="email"
+                    value={user.email}
+                    disabled
+                    className="w-full bg-gray-900/40 border border-gray-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-gray-400 cursor-not-allowed shadow-inner"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5 font-mono flex items-center gap-1.5">
                   <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Student Class / Grade</span>
+                  <span>Student Class / Grade (Dropdown)</span>
                 </label>
                 <select
                   value={editClass}
@@ -232,35 +350,94 @@ export default function Navbar() {
                   <option value="General Science">General Science</option>
                 </select>
                 <p className="text-[10px] text-gray-500 mt-1">
-                  AI uses your class to tailor daily diagnostic tests and recommended lecture videos.
+                  Your daily diagnostic tests and recommendations adapt directly to this class.
                 </p>
               </div>
 
-              {profileSuccess && (
-                <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-800 text-emerald-300 text-xs flex items-center space-x-2">
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Profile & Class updated successfully!</span>
-                </div>
-              )}
-
-              <div className="pt-2 flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowProfileModal(false)}
-                  className="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition"
-                >
-                  Cancel
-                </button>
+              <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
                   disabled={savingProfile}
                   className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center space-x-1.5 disabled:opacity-50"
                 >
                   {savingProfile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                  <span>{savingProfile ? 'Saving...' : 'Save Profile'}</span>
+                  <span>{savingProfile ? 'Saving Details...' : 'Save Profile Changes'}</span>
                 </button>
               </div>
             </form>
+
+            {/* Change Password Collapsible Section */}
+            <div className="mt-6 pt-5 border-t border-gray-800">
+              <button
+                type="button"
+                onClick={() => setShowPasswordSection(!showPasswordSection)}
+                className="w-full flex items-center justify-between text-xs font-semibold text-gray-300 hover:text-white py-1 transition"
+              >
+                <div className="flex items-center space-x-2">
+                  <KeyRound className="w-4 h-4 text-purple-400" />
+                  <span>Change Password</span>
+                </div>
+                {showPasswordSection ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+              </button>
+
+              {showPasswordSection && (
+                <form onSubmit={handleChangePasswordSubmit} className="mt-3.5 space-y-3 bg-gray-900/60 p-4 rounded-2xl border border-gray-800">
+                  {user.auth_provider === 'local' && (
+                    <div>
+                      <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
+                        Current Password
+                      </label>
+                      <input
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
+                      New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
+                      Confirm New Password
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={confirmNewPassword}
+                      onChange={(e) => setConfirmNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="submit"
+                      disabled={savingPassword}
+                      className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition disabled:opacity-50 flex items-center space-x-1.5"
+                    >
+                      {savingPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
+                      <span>{savingPassword ? 'Updating...' : 'Update Password'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}

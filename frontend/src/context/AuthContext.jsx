@@ -37,9 +37,19 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (email, password, full_name, role, student_class) => {
     const res = await API.post('/api/auth/signup', { email, password, full_name, role, student_class });
+    return res.data;
+  };
+
+  const verifyOtp = async (email, otp) => {
+    const res = await API.post('/api/auth/verify-otp', { email, otp });
     localStorage.setItem('noteai_token', res.data.access_token);
     setUser(res.data.user);
     return res.data.user;
+  };
+
+  const resendOtp = async (email) => {
+    const res = await API.post('/api/auth/resend-otp', { email });
+    return res.data;
   };
 
   const googleLogin = async ({ credential, access_token, role = 'student', student_class = null }) => {
@@ -55,13 +65,31 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   };
 
+  const changePassword = async (old_password, new_password) => {
+    const res = await API.put('/api/auth/change-password', { old_password, new_password });
+    return res.data;
+  };
+
+  const uploadAvatar = async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await API.post('/api/auth/upload-avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    setUser(res.data);
+    return res.data;
+  };
+
   const logout = () => {
     localStorage.removeItem('noteai_token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, updateProfile, logout }}>
+    <AuthContext.Provider value={{ 
+      user, loading, login, signup, verifyOtp, resendOtp, 
+      googleLogin, updateProfile, changePassword, uploadAvatar, logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );

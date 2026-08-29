@@ -13,6 +13,17 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class VerifyOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+class ResendOtpRequest(BaseModel):
+    email: EmailStr
+
+class ChangePasswordRequest(BaseModel):
+    old_password: Optional[str] = None
+    new_password: str
+
 class GoogleAuthRequest(BaseModel):
     credential: Optional[str] = None
     access_token: Optional[str] = None
@@ -32,6 +43,7 @@ class UserOut(BaseModel):
     student_class: Optional[str] = None
     avatar_url: Optional[str] = None
     auth_provider: Optional[str] = "local"
+    is_verified: bool = True
     created_at: datetime
 
     class Config:

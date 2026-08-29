@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from app.database import Base
 
 class User(Base):
@@ -13,4 +13,7 @@ class User(Base):
     student_class = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
     auth_provider = Column(String, default="local", nullable=False)
+    is_verified = Column(Boolean, default=True, nullable=False)
+    verification_otp = Column(String, nullable=True)
+    otp_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
