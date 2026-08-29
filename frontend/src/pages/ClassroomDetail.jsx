@@ -593,7 +593,7 @@ export default function ClassroomDetail() {
                   <span>{uploading ? 'Uploading...' : 'Upload'}</span>
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md"
+                    accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp"
                     multiple
                     onChange={handleFileUpload}
                     className="hidden"

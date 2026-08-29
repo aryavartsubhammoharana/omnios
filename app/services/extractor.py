@@ -186,8 +186,23 @@ def extract_text_from_file(file_path: str, on_page_progress=None) -> str:
         except Exception:
             pass
 
-    # Plain text fallback
+    if ext in (".png", ".jpg", ".jpeg", ".webp", ".bmp"):
+        reader = get_easyocr_reader()
+        if reader:
+            try:
+                if on_page_progress:
+                    on_page_progress(1, 1, True)
+                results = reader.readtext(file_path, detail=0)
+                text = " ".join(results).strip()
+                if text:
+                    return format_ocr_text_locally(text)
+            except Exception as e:
+                print(f"Error OCR extracting standalone image {filename}: {e}")
+
+    # Plain text and Markdown fallback (.txt, .md)
     try:
+        if on_page_progress:
+            on_page_progress(1, 1, False)
         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
             text = f.read().strip()
             if text:

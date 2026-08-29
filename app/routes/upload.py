@@ -131,7 +131,7 @@ async def upload_file(
 
     # 1. Validate file extension
     ext = os.path.splitext(file.filename)[1].lower()
-    allowed_extensions = [".pdf", ".docx", ".doc", ".txt", ".png", ".jpg", ".jpeg"]
+    allowed_extensions = [".pdf", ".docx", ".doc", ".txt", ".md", ".png", ".jpg", ".jpeg", ".webp"]
     if ext not in allowed_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
