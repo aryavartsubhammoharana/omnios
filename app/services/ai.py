@@ -63,7 +63,11 @@ def query_gemini_ai(prompt: str, context: str = "") -> str:
     return sarvam_res
 
 def query_sarvam_ai(prompt: str, context: str = "") -> str:
-    """Generate answer using Sarvam AI (sarvam-105b-conversations)."""
+    """Generate answer using Sarvam AI (sarvam-105b-conversations).
+    
+    Context is capped at 3000 chars and moved to the user message to avoid
+    Sarvam's content_filter (400) triggered by overly large system prompts.
+    """
     if not settings.SARVAM_API_KEY:
         return "Sarvam API key is not configured in .env file."
     
@@ -74,28 +78,37 @@ def query_sarvam_ai(prompt: str, context: str = "") -> str:
             "Authorization": f"Bearer {settings.SARVAM_API_KEY.strip()}",
             "api-key": settings.SARVAM_API_KEY.strip()
         }
+
+        # Keep system prompt SHORT — Sarvam's content filter triggers on oversized payloads
         system_content = (
-            "You are NoteAI, an intelligent, helpful, and friendly academic tutor. "
-            "Help students with clear, well-explained answers. "
-            "You can have natural conversations and use your knowledge with simple analogies, "
-            "while referencing uploaded classroom notes when relevant."
+            "You are NoteAI, a helpful academic tutor. "
+            "Answer student questions clearly and accurately. "
+            "Reference the provided notes when relevant, and use your own knowledge for explanations, "
+            "analogies, and step-by-step guidance."
         )
+
+        # Cap context at 3000 chars and merge into user message (safer for Sarvam's filter)
         if context and context.strip():
-            system_content += f"\n\nClassroom Study Notes for Reference:\n{context[:10000]}"
+            trimmed_context = context.strip()[:3000]
+            user_message = f"Study Notes (reference):\n{trimmed_context}\n\nStudent Question: {prompt}"
+        else:
+            user_message = prompt
 
         payload = {
             "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
             "messages": [
                 {"role": "system", "content": system_content},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": user_message}
             ],
-            "temperature": 0.7
+            "temperature": 0.7,
+            "max_tokens": 1500
         }
         res = requests.post(url, json=payload, headers=headers, timeout=60)
         if res.status_code == 200:
             data = res.json()
             return data["choices"][0]["message"]["content"].strip()
         else:
+            print(f"Sarvam API Error ({res.status_code}): {res.text}")
             return f"Sarvam API Error ({res.status_code}): {res.text}"
     except Exception as e:
         return f"Error querying Sarvam AI: {str(e)}"
