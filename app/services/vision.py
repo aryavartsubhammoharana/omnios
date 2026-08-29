@@ -62,21 +62,6 @@ def analyze_image_with_groq_vision(image_input: bytes | str | Image.Image) -> st
         except Exception as e:
             print(f"Groq Vision note: {e}")
 
-    if settings.GEMINI_API_KEY:
-        try:
-            import google.generativeai as genai
-            genai.configure(api_key=settings.GEMINI_API_KEY.strip())
-            model = genai.GenerativeModel("gemini-2.5-flash")
-            
-            image_data = base64.b64decode(b64_image)
-            pil_img = Image.open(BytesIO(image_data))
-            
-            response = model.generate_content([prompt, pil_img])
-            if response and response.text:
-                return response.text.strip()
-        except Exception as e:
-            print(f"Gemini Vision fallback note: {e}")
-
     return ""
 
 def analyze_image_with_llava(image_input: bytes | str | Image.Image) -> str:
