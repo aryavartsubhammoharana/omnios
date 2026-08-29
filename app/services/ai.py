@@ -197,26 +197,150 @@ def generate_document_summary(context: str, summary_type: str = "bullet") -> str
 
 
 def generate_quiz_questions(context: str, num_questions: int = 5) -> list:
-    prompt = (
-        f"Generate an educational JSON list of {num_questions} multiple-choice questions "
-        f"based on the key concepts in the provided classroom study material.\n"
-        f"Return ONLY a valid raw JSON array (no markdown fences). Each object must have:\n"
-        f'- "id": number\n- "question": string\n- "options": list of 4 strings\n'
-        f'- "correct_index": integer (0–3)\n- "explanation": string\n- "sub_topic": string'
+    """Generate high-quality assessment quiz questions exclusively using Groq AI (with Sarvam fallback, NO Gemini)."""
+    system_prompt = (
+        "You are an expert educational assessment generator. Your task is to analyze the provided text or topic and generate a high-quality quiz.\n\n"
+        "You must return ONLY a JSON object matching this exact structure, with no markdown formatting, no code blocks, and no conversational filler:\n\n"
+        "{\n"
+        '  "quiz_title": "string",\n'
+        '  "questions": [\n'
+        "    {\n"
+        '      "question_number": 1,\n'
+        '      "question_text": "string",\n'
+        '      "options": {\n'
+        '        "A": "string",\n'
+        '        "B": "string",\n'
+        '        "C": "string",\n'
+        '        "D": "string"\n'
+        "      },\n"
+        '      "correct_option": "A",\n'
+        '      "explanation": "string"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "Ensure all distractors (wrong answers) are plausible but definitively incorrect."
     )
-    raw = query_gemini_ai(prompt=prompt, context=context)
-    clean = raw.replace("```json", "").replace("```", "").strip()
-    try:
-        return json.loads(clean)
-    except Exception:
-        return [{
-            "id": 1,
-            "question": "Which core topic is covered in the uploaded study notes?",
-            "options": ["The uploaded classroom material", "General Knowledge", "Unrelated Subject", "None"],
-            "correct_index": 0,
-            "explanation": "Extracted directly from the uploaded classroom PDF.",
-            "sub_topic": "Classroom Notes",
-        }]
+
+    user_prompt = (
+        f"Generate a {num_questions}-question multiple-choice quiz based strictly on the following classroom study material:\n\n"
+        f"{context[:8000]}"
+    )
+
+    raw_json_str = ""
+
+    # 1. Primary: Groq AI LPU LLaMA 3.3 70B (Fast, reliable JSON generation)
+    if settings.GROQ_API_KEY:
+        try:
+            client = Groq(api_key=settings.GROQ_API_KEY.strip())
+            response = client.chat.completions.create(
+                model=settings.GROQ_MODEL or "llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.3,
+                max_tokens=3000,
+                response_format={"type": "json_object"}
+            )
+            raw_json_str = response.choices[0].message.content.strip()
+            print("[OK] Quiz generated successfully via Groq AI!")
+        except Exception as e:
+            print(f"Groq Quiz generation error: {e}")
+
+    # 2. Fallback: Sarvam AI (if Groq fails or key is missing)
+    if not raw_json_str and settings.SARVAM_API_KEY:
+        try:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {settings.SARVAM_API_KEY.strip()}",
+                "api-key": settings.SARVAM_API_KEY.strip(),
+            }
+            payload = {
+                "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                "temperature": 0.3,
+                "max_tokens": 2000,
+            }
+            res = requests.post("https://api.sarvam.ai/v1/chat/completions", json=payload, headers=headers, timeout=45)
+            if res.status_code == 200:
+                raw_json_str = res.json()["choices"][0]["message"]["content"].strip()
+                print("[OK] Quiz generated via Sarvam AI fallback!")
+        except Exception as e:
+            print(f"Sarvam Quiz fallback error: {e}")
+
+    # 3. Parse and standardize output
+    if raw_json_str:
+        try:
+            clean = raw_json_str.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(clean)
+
+            quiz_title = parsed.get("quiz_title", "Classroom Study Quiz") if isinstance(parsed, dict) else "Classroom Study Quiz"
+            raw_questions = parsed.get("questions", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
+
+            standardized = []
+            option_keys = ["A", "B", "C", "D"]
+
+            for idx, q in enumerate(raw_questions):
+                q_num = q.get("question_number", idx + 1)
+                q_text = q.get("question_text") or q.get("question", f"Question {q_num}")
+                raw_opts = q.get("options", {})
+
+                if isinstance(raw_opts, dict):
+                    opts_list = [raw_opts.get(k, "") for k in option_keys if k in raw_opts]
+                    if not opts_list:
+                        opts_list = list(raw_opts.values())
+                elif isinstance(raw_opts, list):
+                    opts_list = raw_opts
+                else:
+                    opts_list = ["Option A", "Option B", "Option C", "Option D"]
+
+                corr_opt = str(q.get("correct_option", "A")).strip().upper()
+                if corr_opt in option_keys:
+                    correct_idx = option_keys.index(corr_opt)
+                elif "correct_index" in q:
+                    correct_idx = int(q["correct_index"])
+                else:
+                    correct_idx = 0
+
+                standardized.append({
+                    "id": q_num,
+                    "question_number": q_num,
+                    "question": q_text,
+                    "question_text": q_text,
+                    "options": opts_list,
+                    "options_dict": raw_opts if isinstance(raw_opts, dict) else {option_keys[i]: opt for i, opt in enumerate(opts_list[:4])},
+                    "correct_option": corr_opt,
+                    "correct_index": correct_idx,
+                    "explanation": q.get("explanation", "Refer to the classroom study material for detailed solution."),
+                    "sub_topic": quiz_title
+                })
+
+            if standardized:
+                return standardized
+        except Exception as parse_err:
+            print(f"Error parsing quiz JSON: {parse_err}")
+
+    # Fallback placeholder item
+    return [{
+        "id": 1,
+        "question_number": 1,
+        "question": "Which subject or topic is covered in the uploaded classroom study notes?",
+        "question_text": "Which subject or topic is covered in the uploaded classroom study notes?",
+        "options": ["Course Material from Uploaded PDF", "General Knowledge", "Unrelated Subject", "None of the above"],
+        "options_dict": {
+            "A": "Course Material from Uploaded PDF",
+            "B": "General Knowledge",
+            "C": "Unrelated Subject",
+            "D": "None of the above"
+        },
+        "correct_option": "A",
+        "correct_index": 0,
+        "explanation": "Extracted directly from the uploaded classroom study material.",
+        "sub_topic": "Classroom Notes"
+    }]
 
 
 def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
