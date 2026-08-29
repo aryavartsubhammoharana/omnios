@@ -9,6 +9,7 @@ class DocumentFile(Base):
     unique_code = Column(String(10), unique=True, index=True, nullable=True)
     classroom_id = Column(Integer, ForeignKey("classrooms.id"), nullable=True)
     uploaded_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    folder_name = Column(String, default="General Notes", nullable=True)
     filename = Column(String, nullable=False)
     file_path = Column(String, nullable=False)
     content_text = Column(Text, nullable=True)

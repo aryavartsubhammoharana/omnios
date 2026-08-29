@@ -2,7 +2,13 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { AuthContext } from '../context/AuthContext';
-import { BookOpen, Sparkles, MessageSquare, Send, Upload, FileText, HelpCircle, ArrowLeft, Eye, X, Book, Users, LogOut, Mail, UserCheck, AlertCircle, PlusCircle, Zap, Plus, Trash2, Clock, Edit3, Save, Sliders, BarChart3, CheckCircle2, CheckSquare, Square, Search, Award, Loader2 } from 'lucide-react';
+import { 
+  BookOpen, Sparkles, MessageSquare, Send, Upload, FileText, HelpCircle, 
+  ArrowLeft, Eye, X, Book, Users, LogOut, Mail, UserCheck, AlertCircle, 
+  PlusCircle, Zap, Plus, Trash2, Clock, Edit3, Save, Sliders, BarChart3, 
+  CheckCircle2, CheckSquare, Square, Search, Award, Loader2,
+  FolderPlus, Folder, FolderOpen, ChevronDown, ChevronRight, FileCode
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TiltCard3D from '../components/TiltCard3D';
@@ -25,6 +31,12 @@ export default function ClassroomDetail() {
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const [quizError, setQuizError] = useState('');
+
+  // Note Folder / Grouping States
+  const [newFolderModalOpen, setNewFolderModalOpen] = useState(false);
+  const [newFolderNameInput, setNewFolderNameInput] = useState('');
+  const [activeTargetFolder, setActiveTargetFolder] = useState('General Notes');
+  const [collapsedFolders, setCollapsedFolders] = useState({});
 
   // Edit Classroom Modal State
   const [isEditClassroomModalOpen, setIsEditClassroomModalOpen] = useState(false);
@@ -206,31 +218,34 @@ export default function ClassroomDetail() {
     }
   };
 
-  // Support Multiple File Upload (PDF, DOCX, PPTX, TXT, MD)
-  const handleFileUpload = async (e) => {
+  // Support Multiple File Upload (PDF, DOCX, PPTX, TXT, MD) with Folder Grouping
+  const handleFileUpload = async (e, customFolder = null) => {
     const files = Array.from(e.target.files);
     if (!files || files.length === 0) return;
+
+    const targetFolder = customFolder || activeTargetFolder || 'General Notes';
 
     setUploading(true);
     setUploadProgress(10);
     setQuizError('');
 
     try {
+      const formData = new FormData();
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('classroom_id', id);
-
-        await API.post('/api/upload/document', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          onUploadProgress: (progressEvent) => {
-            const fileProgress = Math.round((progressEvent.loaded * 50) / progressEvent.total);
-            const overallProgress = Math.round(((i * 50) + fileProgress) / files.length);
-            setUploadProgress(overallProgress);
-          }
-        });
+        formData.append('files', files[i]);
       }
+      formData.append('classroom_id', id);
+      formData.append('folder_name', targetFolder);
+
+      await API.post('/api/upload/document', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(pct);
+          }
+        }
+      });
       setUploadProgress(100);
       loadData();
     } catch (err) {
@@ -241,6 +256,22 @@ export default function ClassroomDetail() {
         setUploadProgress(0);
       }, 800);
     }
+  };
+
+  const toggleFolderCollapse = (folderName) => {
+    setCollapsedFolders((prev) => ({
+      ...prev,
+      [folderName]: !prev[folderName]
+    }));
+  };
+
+  const handleCreateNewFolder = (e) => {
+    e?.preventDefault();
+    const trimmed = newFolderNameInput.trim();
+    if (!trimmed) return;
+    setActiveTargetFolder(trimmed);
+    setNewFolderNameInput('');
+    setNewFolderModalOpen(false);
   };
 
   // AI Quiz Generation Handlers (Difficulty 1-10 + Document Selection + Competency %)
@@ -642,36 +673,82 @@ export default function ClassroomDetail() {
               </button>
             </div>
 
-            {/* TAB 1: STUDY NOTES & DOCUMENTS */}
+            {/* TAB 1: STUDY NOTES & DOCUMENTS (Grouped by Unit / Folder) */}
             {activeSidebarTab === 'docs' && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 border-b border-gray-800/80 gap-2">
                   <div>
                     <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
                       Classroom Study Notes
                     </h3>
-                    <p className="text-[10px] text-gray-400">PDFs, Word Docs & Lecture Notes</p>
+                    <p className="text-[10px] text-gray-400">PDFs, Word Docs, PPTs & Text Notes</p>
                   </div>
                   {user?.role === 'teacher' && (
-                    <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20">
-                      <Upload className="w-3.5 h-3.5" />
-                      <span>{uploading ? 'Uploading...' : 'Upload Notes'}</span>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp"
-                        multiple
-                        onChange={handleFileUpload}
-                        className="hidden"
-                      />
-                    </label>
+                    <div className="flex items-center space-x-1.5 flex-wrap gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setNewFolderModalOpen(!newFolderModalOpen)}
+                        className="bg-gray-800 hover:bg-gray-700 text-indigo-300 border border-indigo-800/60 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1"
+                        title="Create a new unit/chapter folder to group your notes"
+                      >
+                        <FolderPlus className="w-3.5 h-3.5" />
+                        <span>New Group</span>
+                      </button>
+
+                      <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{uploading ? 'Uploading...' : 'Upload Notes'}</span>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp"
+                          multiple
+                          onChange={(e) => handleFileUpload(e, activeTargetFolder)}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                   )}
                 </div>
+
+                {/* Inline New Group Creation Box */}
+                {newFolderModalOpen && (
+                  <form onSubmit={handleCreateNewFolder} className="bg-indigo-950/40 border border-indigo-700/60 p-3 rounded-xl space-y-2 animate-in fade-in zoom-in duration-150">
+                    <span className="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5">
+                      <FolderPlus className="w-3.5 h-3.5" />
+                      Create New Unit / Group Name
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newFolderNameInput}
+                        onChange={(e) => setNewFolderNameInput(e.target.value)}
+                        placeholder="e.g., Unit 1: Thermodynamics, Chapter 3: Motion..."
+                        className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newFolderNameInput.trim()}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewFolderModalOpen(false)}
+                        className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 {/* Upload Progress Bar (0% to 100%) */}
                 {uploading && (
                   <div className="bg-slate-900 p-3 rounded-xl border border-indigo-800/60">
                     <div className="flex justify-between text-xs text-indigo-300 font-mono mb-1">
-                      <span>Uploading Files...</span>
+                      <span>Extracting & Indexing Notes...</span>
                       <span>{uploadProgress}%</span>
                     </div>
                     <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
@@ -686,85 +763,146 @@ export default function ClassroomDetail() {
                 {documents.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-8">No study documents uploaded yet.</p>
                 ) : (
-                  <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
-                    {documents.map((doc) => {
-                      const status = doc.processing_status || 'ready';
-                      const isProcessing = status === 'processing';
-                      const isOcrProcessing = status === 'ocr_processing';
-                      const isPageOcr = status.startsWith('ocr_page_');
-                      const isReady = status === 'ready';
-                      const progress = doc.processing_progress || 100;
-                      const isDocOwner = user?.role === 'teacher' && doc.uploaded_by_id === user?.id;
+                  <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                    {(() => {
+                      const grouped = documents.reduce((acc, doc) => {
+                        const f = (doc.folder_name && doc.folder_name.trim()) || 'General Notes';
+                        if (!acc[f]) acc[f] = [];
+                        acc[f].push(doc);
+                        return acc;
+                      }, {});
 
-                      let statusText = `OCR Ready (100%)`;
-                      if (isProcessing) statusText = `Uploading (${progress}%)`;
-                      if (isOcrProcessing) statusText = `Processing (${progress}%)`;
-                      if (isPageOcr) {
-                        const parts = status.split('_');
-                        const curPage = parts[2];
-                        const totPages = parts[3];
-                        statusText = `Page ${curPage}/${totPages} OCR (${progress}%)`;
-                      }
+                      return Object.entries(grouped).map(([folderName, folderDocs]) => {
+                        const isCollapsed = Boolean(collapsedFolders[folderName]);
 
-                      return (
-                        <div key={doc.id} className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 hover:border-indigo-500/40 transition">
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs text-slate-200 font-medium truncate max-w-[170px]" title={doc.filename}>{doc.filename}</span>
-                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                              isReady
-                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                                : 'bg-amber-950 text-amber-300 border-amber-800 animate-pulse'
-                            }`}>
-                              {statusText}
-                            </span>
-                          </div>
+                        return (
+                          <div key={folderName} className="bg-slate-900/90 border border-slate-800/90 rounded-xl overflow-hidden shadow-sm">
+                            {/* Folder Accordion Header */}
+                            <div className="flex items-center justify-between p-2.5 bg-slate-950/80 border-b border-slate-800/60 select-none">
+                              <button
+                                type="button"
+                                onClick={() => toggleFolderCollapse(folderName)}
+                                className="flex items-center space-x-2 text-left min-w-0 flex-1 group"
+                              >
+                                {isCollapsed ? (
+                                  <ChevronRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition" />
+                                ) : (
+                                  <ChevronDown className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition" />
+                                )}
+                                {isCollapsed ? (
+                                  <Folder className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                                ) : (
+                                  <FolderOpen className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                                )}
+                                <span className="text-xs font-bold text-slate-200 group-hover:text-indigo-200 truncate">
+                                  {folderName}
+                                </span>
+                                <span className="text-[10px] bg-slate-800 text-slate-400 font-mono px-1.5 py-0.2 rounded-full">
+                                  {folderDocs.length}
+                                </span>
+                              </button>
 
-                          {!isReady && (
-                            <div className="my-2 space-y-1 animate-pulse">
-                              <div className="h-2 bg-slate-800 rounded w-full"></div>
-                              <div className="h-2 bg-slate-800 rounded w-3/4"></div>
+                              {user?.role === 'teacher' && (
+                                <label
+                                  title={`Upload notes into '${folderName}'`}
+                                  className="cursor-pointer p-1 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg transition"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <input
+                                    type="file"
+                                    accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp"
+                                    multiple
+                                    onChange={(e) => handleFileUpload(e, folderName)}
+                                    className="hidden"
+                                  />
+                                </label>
+                              )}
                             </div>
-                          )}
 
-                          <div className="flex items-center justify-end space-x-1.5 mt-2">
-                            <button
-                              onClick={() => handleOpenDocumentReader(doc.id)}
-                              className="flex items-center space-x-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-800 transition"
-                            >
-                              <Eye className="w-3 h-3 text-indigo-400" />
-                              <span>Open Document</span>
-                            </button>
+                            {/* Folder Notes Content */}
+                            {!isCollapsed && (
+                              <div className="p-2 space-y-2 bg-slate-900/50">
+                                {folderDocs.map((doc) => {
+                                  const status = doc.processing_status || 'ready';
+                                  const isProcessing = status === 'processing';
+                                  const isPageOcr = status.startsWith('page_');
+                                  const isReady = status === 'ready';
+                                  const progress = doc.processing_progress || 100;
+                                  const isDocOwner = user?.role === 'teacher' && doc.uploaded_by_id === user?.id;
 
-                            {isReady ? (
-                              <Link
-                                to={`/quick-reader?document_id=${doc.id}`}
-                                className="text-[11px] bg-indigo-950 text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-700 hover:bg-indigo-900 transition font-medium"
-                              >
-                                Quick Q&A
-                              </Link>
-                            ) : (
-                              <button
-                                disabled
-                                title="Please wait until GPU OCR completes (100%)"
-                                className="text-[11px] bg-slate-900 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-800 cursor-not-allowed font-mono opacity-60"
-                              >
-                                Quick Q&A (Processing...)
-                              </button>
-                            )}
+                                  let statusText = `Ready (100%)`;
+                                  if (isProcessing) statusText = `Extracting (${progress}%)`;
+                                  if (isPageOcr) {
+                                    const parts = status.split('_');
+                                    statusText = `Page ${parts[1]}/${parts[2]} (${progress}%)`;
+                                  }
 
-                            {isDocOwner && (
-                              <button
-                                onClick={(e) => handleDeleteDocument(doc.id, e)}
-                                title="Delete Study Note (Remove from Vector DB & Disk)"
-                                className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-slate-800 transition"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                                  const ext = doc.filename.split('.').pop()?.toUpperCase() || 'DOC';
+
+                                  return (
+                                    <div key={doc.id} className="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 hover:border-indigo-500/40 transition">
+                                      <div className="flex items-center justify-between mb-1.5 gap-2">
+                                        <div className="flex items-center space-x-1.5 min-w-0">
+                                          <span className="text-[9px] font-bold font-mono px-1 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800/80">
+                                            {ext}
+                                          </span>
+                                          <span className="text-xs text-slate-200 font-medium truncate max-w-[150px] sm:max-w-[190px]" title={doc.filename}>
+                                            {doc.filename}
+                                          </span>
+                                        </div>
+                                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border flex-shrink-0 ${
+                                          isReady
+                                            ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                            : 'bg-amber-950 text-amber-300 border-amber-800 animate-pulse'
+                                        }`}>
+                                          {statusText}
+                                        </span>
+                                      </div>
+
+                                      <div className="flex items-center justify-end space-x-1.5 mt-2">
+                                        <button
+                                          onClick={() => handleOpenDocumentReader(doc.id)}
+                                          className="flex items-center space-x-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-indigo-300 px-2 py-1 rounded-lg border border-indigo-800 transition"
+                                        >
+                                          <Eye className="w-3 h-3 text-indigo-400" />
+                                          <span>Open</span>
+                                        </button>
+
+                                        {isReady ? (
+                                          <Link
+                                            to={`/quick-reader?document_id=${doc.id}`}
+                                            className="text-[11px] bg-indigo-950 text-indigo-300 px-2 py-1 rounded-lg border border-indigo-700 hover:bg-indigo-900 transition font-medium"
+                                          >
+                                            Quick Q&A
+                                          </Link>
+                                        ) : (
+                                          <button
+                                            disabled
+                                            className="text-[11px] bg-slate-900 text-slate-600 px-2 py-1 rounded-lg border border-slate-800 cursor-not-allowed font-mono opacity-60"
+                                          >
+                                            Indexing...
+                                          </button>
+                                        )}
+
+                                        {isDocOwner && (
+                                          <button
+                                            onClick={(e) => handleDeleteDocument(doc.id, e)}
+                                            title="Delete Study Note (Remove from Vector DB & Disk)"
+                                            className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-slate-800 transition"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             )}
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </div>
                 )}
               </div>

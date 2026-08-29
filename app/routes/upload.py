@@ -2,6 +2,7 @@ import os
 import shutil
 import secrets
 from typing import Optional, List
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database import get_db, SessionLocal
@@ -11,7 +12,6 @@ from app.models.chunk import DocumentChunk
 from app.models.classroom import Classroom
 from app.routes.auth import get_current_user
 from app.services.extractor import extract_text_from_file
-from app.services.ai import structure_ocr_text_with_sarvam
 from app.services.vector_store import (
     index_document_in_dual_vector_store,
     delete_document_from_dual_vector_store
@@ -23,6 +23,12 @@ DOCUMENTS_DIR = os.path.join(UPLOAD_DIR, "documents")
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(DOCUMENTS_DIR, exist_ok=True)
+
+
+class FolderRenameRequest(BaseModel):
+    old_folder_name: str
+    new_folder_name: str
+    classroom_id: Optional[int] = None
 
 
 def process_file_text_in_background(doc_id: int):
@@ -38,7 +44,7 @@ def process_file_text_in_background(doc_id: int):
                 sub_db = SessionLocal()
                 sub_doc = sub_db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
                 if sub_doc:
-                    sub_doc.processing_status = f"ocr_page_{current_page}_{total_pages}"
+                    sub_doc.processing_status = f"page_{current_page}_{total_pages}"
                     sub_doc.processing_progress = pct
                     sub_db.commit()
                 sub_db.close()
@@ -74,7 +80,7 @@ def process_file_text_in_background(doc_id: int):
                     classroom_code=class_code
                 )
             except Exception as e:
-                print(f"Error during dual vector DB indexing for doc {doc_id}: {e}")
+                print(f"Error during vector DB indexing for doc {doc_id}: {e}")
 
     except Exception as e:
         print(f"Fatal error in background file processing for doc {doc_id}: {e}")
@@ -84,9 +90,10 @@ def process_file_text_in_background(doc_id: int):
 
 @router.post("")
 @router.post("/document")
-async def upload_file(
-    file: UploadFile = File(...),
+async def upload_files(
+    files: List[UploadFile] = File(...),
     classroom_id: Optional[int] = Form(None),
+    folder_name: Optional[str] = Form("General Notes"),
     background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -97,47 +104,69 @@ async def upload_file(
             detail="Only teachers can upload study materials and notes.",
         )
 
-    ext = os.path.splitext(file.filename)[1].lower()
-    allowed_extensions = [".pdf", ".docx", ".doc", ".txt", ".md", ".png", ".jpg", ".jpeg", ".webp"]
-    if ext not in allowed_extensions:
+    allowed_extensions = [
+        ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".txt", ".md",
+        ".png", ".jpg", ".jpeg", ".webp", ".json", ".csv", ".py", ".cpp", ".java"
+    ]
+
+    target_folder = (folder_name or "General Notes").strip()
+    if not target_folder:
+        target_folder = "General Notes"
+
+    saved_documents = []
+
+    for file in files:
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in allowed_extensions:
+            continue
+
+        unique_code = secrets.token_hex(5)
+        saved_filename = f"{unique_code}{ext}"
+        saved_path = os.path.join(DOCUMENTS_DIR, saved_filename)
+
+        with open(saved_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        file_size = os.path.getsize(saved_path)
+
+        doc = DocumentFile(
+            unique_code=unique_code,
+            filename=file.filename,
+            file_path=saved_path,
+            uploaded_by_id=current_user.id,
+            classroom_id=classroom_id,
+            folder_name=target_folder,
+            processing_status="processing",
+            processing_progress=0,
+        )
+        db.add(doc)
+        db.commit()
+        db.refresh(doc)
+
+        background_tasks.add_task(process_file_text_in_background, doc.id)
+
+        saved_documents.append({
+            "id": doc.id,
+            "unique_code": doc.unique_code,
+            "filename": doc.filename,
+            "folder_name": doc.folder_name,
+            "file_size": file_size,
+            "classroom_id": doc.classroom_id,
+            "processing_status": doc.processing_status,
+            "processing_progress": doc.processing_progress,
+        })
+
+    if not saved_documents:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported file format '{ext}'. Allowed: {', '.join(allowed_extensions)}",
+            detail="No valid files uploaded. Please upload PDF, DOCX, PPTX, or TXT files.",
         )
 
-    unique_code = secrets.token_hex(5)
-    saved_filename = f"{unique_code}{ext}"
-    saved_path = os.path.join(DOCUMENTS_DIR, saved_filename)
-
-    with open(saved_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
-
-    file_size = os.path.getsize(saved_path)
-
-    doc = DocumentFile(
-        unique_code=unique_code,
-        filename=file.filename,
-        file_path=saved_path,
-        uploaded_by_id=current_user.id,
-        classroom_id=classroom_id,
-        processing_status="processing",
-        processing_progress=0,
-    )
-    db.add(doc)
-    db.commit()
-    db.refresh(doc)
-
-    background_tasks.add_task(process_file_text_in_background, doc.id)
-
     return {
-        "id": doc.id,
-        "unique_code": doc.unique_code,
-        "filename": doc.filename,
-        "file_size": file_size,
-        "classroom_id": doc.classroom_id,
-        "processing_status": doc.processing_status,
-        "processing_progress": doc.processing_progress,
-        "message": "File securely stored. Full text extraction & vector indexing initiated.",
+        "uploaded_count": len(saved_documents),
+        "folder_name": target_folder,
+        "documents": saved_documents,
+        "message": f"Successfully uploaded {len(saved_documents)} note(s) to '{target_folder}'. Text extraction and vector indexing initiated.",
     }
 
 
@@ -156,10 +185,12 @@ def list_documents(
             "id": doc.id,
             "unique_code": doc.unique_code,
             "filename": doc.filename,
+            "folder_name": doc.folder_name or "General Notes",
             "classroom_id": doc.classroom_id,
             "file_url": f"/{doc.file_path.replace(chr(92), '/')}",
             "processing_status": doc.processing_status,
             "processing_progress": doc.processing_progress,
+            "uploaded_by_id": doc.uploaded_by_id,
             "created_at": doc.created_at,
         }
         for doc in docs
@@ -199,13 +230,32 @@ def delete_document(
             classroom_code=class_code
         )
     except Exception as e:
-        print(f"Error removing document from dual vector store: {e}")
+        print(f"Error removing document from vector store: {e}")
 
     db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).delete(synchronize_session=False)
     db.delete(doc)
     db.commit()
 
-    return {"message": "Document and all associated vector chunks deleted successfully"}
+    return {"message": "Document and all associated vector index chunks deleted successfully"}
+
+
+@router.put("/folder/rename")
+def rename_folder(
+    req: FolderRenameRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can manage note folders")
+
+    query = db.query(DocumentFile).filter(DocumentFile.folder_name == req.old_folder_name)
+    if req.classroom_id:
+        query = query.filter(DocumentFile.classroom_id == req.classroom_id)
+
+    updated_count = query.update({"folder_name": req.new_folder_name.strip()})
+    db.commit()
+
+    return {"message": f"Renamed folder from '{req.old_folder_name}' to '{req.new_folder_name}' ({updated_count} notes updated)"}
 
 
 @router.get("/document/{doc_id}")
@@ -224,10 +274,12 @@ def get_document_details(
         "id": doc.id,
         "unique_code": doc.unique_code,
         "filename": doc.filename,
+        "folder_name": doc.folder_name or "General Notes",
         "classroom_id": doc.classroom_id,
         "file_url": file_url,
         "content_text": doc.content_text,
         "processing_status": doc.processing_status,
         "processing_progress": doc.processing_progress,
+        "uploaded_by_id": doc.uploaded_by_id,
         "created_at": doc.created_at,
     }
