@@ -515,28 +515,28 @@ export default function ClassroomDetail() {
           </div>
         </div>
 
-        {/* HERO BANNER */}
-        <div className="glass-card p-6 rounded-2xl border border-gray-800/80 shadow-2xl">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* COMPACT HERO BANNER */}
+        <div className="glass-card px-5 py-4 rounded-2xl border border-gray-800/80 shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
               <div className="flex items-center space-x-2.5">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{classroom.name}</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">{classroom.name}</h1>
                 {isTeacher && (
                   <button
                     onClick={handleOpenEditClassroomModal}
-                    title="Edit Classroom Name & Details"
-                    className="p-1.5 text-gray-400 hover:text-indigo-300 bg-gray-900/80 hover:bg-indigo-950 border border-gray-700 hover:border-indigo-600 rounded-lg transition"
+                    title="Edit Classroom Details"
+                    className="p-1 text-gray-400 hover:text-indigo-300 bg-gray-900/80 hover:bg-indigo-950 border border-gray-700 hover:border-indigo-600 rounded-lg transition"
                   >
-                    <Edit3 className="w-4 h-4" />
+                    <Edit3 className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-gray-400 mt-1">{classroom.description || 'Classroom feed and study workspace'}</p>
-              <p className="text-xs text-gray-500 mt-2 font-medium">Instructor: {classroom.teacher_name}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{classroom.description || 'Classroom feed and study workspace'}</p>
+              <p className="text-[11px] text-gray-500 mt-1 font-medium">Instructor: <span className="text-indigo-300">{classroom.teacher_name}</span></p>
             </div>
-            <div className="bg-gray-900/90 px-4 py-2.5 rounded-2xl border border-gray-800 text-center shadow-inner">
-              <span className="text-[10px] text-gray-400 uppercase font-mono block">Class Join Code</span>
-              <span className="text-lg font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
+            <div className="bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-center shadow-inner flex sm:flex-col items-center gap-1 sm:gap-0">
+              <span className="text-[9px] text-gray-400 uppercase font-mono tracking-wider">Class Join Code</span>
+              <span className="text-sm sm:text-base font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
             </div>
           </div>
         </div>
