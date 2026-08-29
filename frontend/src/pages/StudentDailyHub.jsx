@@ -4,7 +4,7 @@ import API from '../api/client';
 import { 
   Sparkles, CheckCircle2, XCircle, Play, Flame, Award, Clock,
   BookOpen, ChevronRight, AlertTriangle, ArrowRight, Video,
-  RotateCcw, Loader2, Target, RefreshCw, Search
+  RotateCcw, Loader2, Target, RefreshCw, Search, GraduationCap, Compass, Layers
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
 
@@ -17,9 +17,14 @@ export default function StudentDailyHub() {
   const [refreshing, setRefreshing] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [streak, setStreak] = useState(1);
-  const [customSearchQuery, setCustomSearchQuery] = useState('');
+
+  // 3-Field Advanced Academic Search State
+  const [searchTopic, setSearchTopic] = useState('');
+  const [searchContext, setSearchContext] = useState('Full Chapter One Shot');
+  const [searchClass, setSearchClass] = useState('Class 11 / 12');
   const [searchingVideos, setSearchingVideos] = useState(false);
   const [customSearchResults, setCustomSearchResults] = useState(null);
+  const [searchMetadata, setSearchMetadata] = useState(null);
 
   const fetchDailyQuiz = async () => {
     setLoading(true);
@@ -108,15 +113,24 @@ export default function StudentDailyHub() {
     }
   };
 
-  const handleCustomSearch = async (e) => {
+  const handleStructuredSearch = async (e) => {
     e.preventDefault();
-    if (!customSearchQuery.trim() || searchingVideos) return;
+    if (!searchTopic.trim() || searchingVideos) return;
     setSearchingVideos(true);
     try {
       const res = await API.get('/api/student/search-videos', {
-        params: { q: customSearchQuery.trim() }
+        params: { 
+          topic: searchTopic.trim(),
+          context: searchContext,
+          class_level: searchClass
+        }
       });
       setCustomSearchResults(res.data.results || []);
+      setSearchMetadata({
+        topic: res.data.topic,
+        context: res.data.context,
+        class_level: res.data.class_level
+      });
     } catch (err) {
       console.error('Error searching educational videos', err);
     } finally {
@@ -144,6 +158,7 @@ export default function StudentDailyHub() {
       <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
 
       <div className="max-w-6xl mx-auto space-y-8 relative z-10">
+        {/* Top Header Card */}
         <div className="glass-card p-6 sm:p-8 rounded-3xl border border-gray-800/80 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div>
             <div className="flex items-center space-x-3 mb-2">
@@ -174,41 +189,98 @@ export default function StudentDailyHub() {
           </div>
         </div>
 
-        <div className="glass-card p-4 sm:p-6 rounded-3xl border border-gray-800/80 shadow-xl bg-gray-950/80">
-          <form onSubmit={handleCustomSearch} className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="relative flex-1 w-full">
-              <Search className="w-4 h-4 text-indigo-400 absolute left-4 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={customSearchQuery}
-                onChange={(e) => setCustomSearchQuery(e.target.value)}
-                placeholder="Search any academic concept, formula or topic for instant distraction-free lectures..."
-                className="w-full pl-11 pr-4 py-3 bg-gray-900/90 border border-gray-800 rounded-2xl text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
-              />
+        {/* 3-Field Structured Academic Search Card */}
+        <div className="glass-card p-6 rounded-3xl border border-gray-800/80 shadow-2xl bg-gray-950/90 space-y-4">
+          <div className="flex items-center space-x-2 pb-2 border-b border-gray-800/80">
+            <Search className="w-4 h-4 text-indigo-400" />
+            <h3 className="text-sm font-bold text-white tracking-wide">Targeted Academic Video Search</h3>
+            <span className="text-[10px] text-gray-400 font-mono">Topic • Context • Class</span>
+          </div>
+
+          <form onSubmit={handleStructuredSearch} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              {/* Field 1: Topic */}
+              <div className="md:col-span-6 space-y-1.5">
+                <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
+                  <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Topic / Concept / Chapter:</span>
+                </label>
+                <input
+                  type="text"
+                  value={searchTopic}
+                  onChange={(e) => setSearchTopic(e.target.value)}
+                  placeholder="e.g. Transport in Plants / Fluid Mechanics / Bernoulli Law"
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
+                />
+              </div>
+
+              {/* Field 2: Context / Goal */}
+              <div className="md:col-span-3 space-y-1.5">
+                <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
+                  <Compass className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Context / Goal:</span>
+                </label>
+                <select
+                  value={searchContext}
+                  onChange={(e) => setSearchContext(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-xs text-gray-200 focus:outline-none focus:border-indigo-500 transition shadow-inner cursor-pointer"
+                >
+                  <option value="Full Chapter One Shot">Full Chapter One Shot</option>
+                  <option value="Concept & Derivation">Concept & Derivation</option>
+                  <option value="Numerical & Problem Solving">Numerical & Problem Solving</option>
+                  <option value="Animated Masterclass">Animated Masterclass</option>
+                  <option value="Quick Revision Crash Course">Quick Revision Crash Course</option>
+                </select>
+              </div>
+
+              {/* Field 3: According to Class */}
+              <div className="md:col-span-3 space-y-1.5">
+                <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
+                  <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>According to Class:</span>
+                </label>
+                <select
+                  value={searchClass}
+                  onChange={(e) => setSearchClass(e.target.value)}
+                  className="w-full px-3 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-xs text-gray-200 focus:outline-none focus:border-indigo-500 transition shadow-inner cursor-pointer"
+                >
+                  <option value="Class 11 / 12">Class 11 / 12</option>
+                  <option value="Class 10 Board">Class 10 Board</option>
+                  <option value="Class 9 Foundation">Class 9 Foundation</option>
+                  <option value="JEE / NEET Advanced">JEE / NEET Advanced</option>
+                  <option value="College / Engineering">College / Engineering</option>
+                  <option value="General Science">General Science</option>
+                </select>
+              </div>
             </div>
-            <button
-              type="submit"
-              disabled={searchingVideos || !customSearchQuery.trim()}
-              className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition shrink-0"
-            >
-              {searchingVideos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              <span>{searchingVideos ? 'Searching...' : 'Search Lectures'}</span>
-            </button>
-            {customSearchResults !== null && (
+
+            <div className="flex items-center justify-end space-x-3 pt-1">
+              {customSearchResults !== null && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCustomSearchResults(null);
+                    setSearchTopic('');
+                    setSearchMetadata(null);
+                  }}
+                  className="px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition"
+                >
+                  Clear Search
+                </button>
+              )}
               <button
-                type="button"
-                onClick={() => {
-                  setCustomSearchResults(null);
-                  setCustomSearchQuery('');
-                }}
-                className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition shrink-0"
+                type="submit"
+                disabled={searchingVideos || !searchTopic.trim()}
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center space-x-2 transition"
               >
-                Clear Search
+                {searchingVideos ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                <span>{searchingVideos ? 'Searching High-Quality Lectures...' : 'Find Targeted Lectures'}</span>
               </button>
-            )}
+            </div>
           </form>
         </div>
 
+        {/* Video Recommendations & Results Stage */}
         {(isCompleted || customSearchResults !== null) && (
           <div className="glass-card p-6 sm:p-8 rounded-3xl border border-indigo-900/50 bg-gradient-to-r from-indigo-950/40 via-gray-900 to-purple-950/40 shadow-2xl space-y-6">
             {isCompleted && submissionResult && customSearchResults === null && (
@@ -249,13 +321,25 @@ export default function StudentDailyHub() {
             {displayedVideos.length > 0 && (
               <div className="space-y-4 pt-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center space-x-2">
-                    <Video className="w-5 h-5 text-red-400" />
-                    <h3 className="text-base font-bold text-white">
-                      {customSearchResults !== null 
-                        ? `Search Results for "${customSearchQuery}" (${displayedVideos.length} Lectures)`
-                        : 'Top 10 Curated Lecture Videos (Focus Mode)'}
-                    </h3>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <Video className="w-5 h-5 text-red-400" />
+                      <h3 className="text-base font-bold text-white">
+                        {customSearchResults !== null 
+                          ? `Results for "${searchMetadata?.topic || searchTopic}"`
+                          : 'Top 10 Curated Lecture Videos (Focus Mode)'}
+                      </h3>
+                    </div>
+                    {searchMetadata && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-purple-950 text-purple-300 border border-purple-800">
+                          {searchMetadata.context}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-950 text-emerald-300 border border-emerald-800">
+                          {searchMetadata.class_level}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center space-x-3">
@@ -303,7 +387,7 @@ export default function StudentDailyHub() {
                       </div>
 
                       <button
-                        onClick={() => navigate(`/student/focus-video/${vid.video_id}?topic=${encodeURIComponent(vid.weak_topic || '')}&title=${encodeURIComponent(vid.title)}`)}
+                        onClick={() => navigate(`/student/focus-video/${vid.video_id}?topic=${encodeURIComponent(vid.weak_topic || searchTopic || '')}&title=${encodeURIComponent(vid.title)}`)}
                         className="mt-3 w-full py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center justify-center space-x-1.5 transition shadow-md shadow-indigo-600/20"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
@@ -317,6 +401,7 @@ export default function StudentDailyHub() {
           </div>
         )}
 
+        {/* Diagnostic Questions Section */}
         <div className="glass-card p-6 sm:p-8 rounded-3xl border border-gray-800/80 shadow-2xl space-y-6">
           <div className="flex items-center justify-between border-b border-gray-800/80 pb-4">
             <h3 className="text-base font-bold text-white flex items-center space-x-2">

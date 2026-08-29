@@ -336,26 +336,32 @@ def refresh_student_recommendations(
 
 @router.get("/search-videos")
 def search_educational_videos(
-    q: str,
+    topic: str,
+    context: Optional[str] = "Full Concept & Derivation",
+    class_level: Optional[str] = "Class 11 / 12",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if not q or not q.strip():
-        raise HTTPException(status_code=400, detail="Search query is required.")
+    if not topic or not topic.strip():
+        raise HTTPException(status_code=400, detail="Topic is required.")
 
     enrollments = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()
     class_ids = [e.classroom_id for e in enrollments]
     enrolled_classes = db.query(Classroom).filter(Classroom.id.in_(class_ids)).all() if class_ids else []
     class_names = [c.name for c in enrolled_classes]
-    grade_context = f"Class {' '.join(class_names)}" if class_names else "Academic"
+    
+    resolved_class = class_level if class_level else (f"Class {' '.join(class_names)}" if class_names else "Academic")
+    combined_context = f"{resolved_class} {context or ''}".strip()
 
     results = get_curated_weak_topic_videos(
-        weak_topics=[q.strip()],
-        grade_context=grade_context,
+        weak_topics=[topic.strip()],
+        grade_context=combined_context,
         target_count=10
     )
     return {
-        "query": q.strip(),
+        "topic": topic.strip(),
+        "context": context,
+        "class_level": resolved_class,
         "count": len(results),
         "results": results
     }
