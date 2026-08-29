@@ -83,7 +83,7 @@ export default function Dashboard() {
               </span>
             </div>
             <p className="text-xs sm:text-sm text-gray-400 font-medium">
-              Manage courses, distribute notes with Groq Vision, and explore DLM Notebook AI.
+              Manage courses, study notes, and explore DLM Notebook AI.
             </p>
           </div>
 
@@ -100,8 +100,8 @@ export default function Dashboard() {
             </div>
             <div className="w-px h-8 bg-gray-800"></div>
             <div className="text-center">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Vision OCR</p>
-              <p className="text-lg font-extrabold text-purple-400">Groq Vision</p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Extractors</p>
+              <p className="text-lg font-extrabold text-purple-400">Multi-Format</p>
             </div>
           </div>
 
@@ -198,7 +198,7 @@ export default function Dashboard() {
                         {c.name}
                       </h3>
                       <p className="text-xs text-gray-400 line-clamp-2 mt-1 leading-relaxed">
-                        {c.description || 'Classroom for lecture materials, Groq Vision notes, and AI quizzes.'}
+                        {c.description || 'Classroom for lecture materials, study notes, and AI quizzes.'}
                       </p>
                     </div>
                   </div>
