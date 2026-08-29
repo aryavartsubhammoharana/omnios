@@ -1287,6 +1287,82 @@ export default function ClassroomDetail() {
         </div>
       )}
 
+      {/* FULL-SCREEN LIVE AI QUIZ GENERATION & SKELETON LOADER */}
+      {generatingQuiz && (
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 z-[200]">
+          <div className="bg-slate-900/95 border border-indigo-500/50 rounded-2xl max-w-lg w-full p-6 flex flex-col items-center shadow-2xl shadow-indigo-600/30 text-center animate-in fade-in zoom-in duration-300">
+            {/* Glowing Orbiting AI Icon */}
+            <div className="relative mb-5 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-amber-500 flex items-center justify-center shadow-xl shadow-indigo-500/30 animate-pulse">
+                <Zap className="w-8 h-8 text-white fill-amber-300 animate-bounce" />
+              </div>
+              <div className="absolute -inset-2 rounded-2xl bg-indigo-500/20 blur-lg animate-pulse" />
+            </div>
+
+            <h3 className="text-base font-bold text-white mb-1">
+              AI Assessment Quiz Generator
+            </h3>
+            <p className="text-xs text-indigo-300 font-medium mb-4">
+              Synthesizing {aiQuizNumQuestions} High-Density Questions via Groq LPU...
+            </p>
+
+            {/* Live Pipeline Steps */}
+            <div className="w-full bg-slate-950/80 border border-slate-800 rounded-xl p-3.5 space-y-2 text-left mb-4 text-xs">
+              <div className="flex items-center space-x-2 text-emerald-400">
+                <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">Extracted text from {aiQuizSelectedDocIds.length || 1} selected study note(s)</span>
+              </div>
+              <div className="flex items-center space-x-2 text-indigo-300">
+                <Sliders className="w-3.5 h-3.5 flex-shrink-0 text-indigo-400" />
+                <span>Calibrating Difficulty (Level {aiQuizDifficulty}/10) & Competency ({aiQuizCompetency}%)</span>
+              </div>
+              <div className="flex items-center space-x-2 text-amber-300 animate-pulse">
+                <Sparkles className="w-3.5 h-3.5 flex-shrink-0 text-amber-400 animate-spin" />
+                <span>Batch-generating {aiQuizNumQuestions} MCQs with step-by-step KaTeX LaTeX solutions...</span>
+              </div>
+            </div>
+
+            {/* Glowing Animated Progress Bar */}
+            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-4 relative">
+              <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-amber-400 h-full rounded-full w-full animate-pulse" />
+            </div>
+
+            {/* Skeleton Question Preview Card */}
+            <div className="w-full bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-2.5 opacity-80 animate-pulse text-left">
+              <div className="flex items-center space-x-2">
+                <div className="w-6 h-3 bg-indigo-600/50 rounded"></div>
+                <div className="h-3.5 bg-slate-800 rounded w-3/4"></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="h-7 bg-slate-900 rounded-lg border border-slate-800 flex items-center px-2 space-x-2">
+                  <div className="w-3 h-3 bg-slate-700 rounded-full"></div>
+                  <div className="h-2.5 bg-slate-800 rounded w-20"></div>
+                </div>
+                <div className="h-7 bg-slate-900 rounded-lg border border-slate-800 flex items-center px-2 space-x-2">
+                  <div className="w-3 h-3 bg-slate-700 rounded-full"></div>
+                  <div className="h-2.5 bg-slate-800 rounded w-20"></div>
+                </div>
+                <div className="h-7 bg-slate-900 rounded-lg border border-slate-800 flex items-center px-2 space-x-2">
+                  <div className="w-3 h-3 bg-slate-700 rounded-full"></div>
+                  <div className="h-2.5 bg-slate-800 rounded w-20"></div>
+                </div>
+                <div className="h-7 bg-slate-900 rounded-lg border border-slate-800 flex items-center px-2 space-x-2">
+                  <div className="w-3 h-3 bg-slate-700 rounded-full"></div>
+                  <div className="h-2.5 bg-slate-800 rounded w-20"></div>
+                </div>
+              </div>
+              <div className="h-6 bg-indigo-950/40 border border-indigo-900/40 rounded-lg flex items-center px-2">
+                <div className="h-2 bg-indigo-500/40 rounded w-1/2"></div>
+              </div>
+            </div>
+
+            <p className="text-[10px] text-slate-500 font-mono mt-4">
+              ⚡ Multi-batch verification guarantees exactly {aiQuizNumQuestions} questions with 0 token truncation.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* TEACHER QUIZ SUBMISSIONS & SCORES ANALYTICS MODAL */}
       {isSubmissionsModalOpen && (
         <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-[100]">

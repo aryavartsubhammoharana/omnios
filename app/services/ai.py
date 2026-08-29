@@ -218,12 +218,10 @@ def generate_quiz_questions(
 ) -> list:
     """
     Generate high-quality assessment quiz questions using Groq AI.
-    Features:
-      - Accepts list of extracted texts from all selected notes
-      - Difficulty Level calibration (1 to 10)
-      - Competency-based questions ratio (% of scenario/applied problem solving)
-      - Deduplication against previous quizzes in classroom (JSON format)
+    Guarantees EXACTLY `num_questions` by batching (max 5 per batch) to prevent token truncation.
     """
+    target_count = max(1, min(30, int(num_questions)))
+
     # 1. Format Source Notes from List
     if isinstance(notes_list, str):
         notes_list = [notes_list]
@@ -247,25 +245,18 @@ def generate_quiz_questions(
 
     # 3. Competency Percentage Guidance
     comp_pct = max(0, min(100, competency_percentage or 50))
-    comp_count = max(1, round((comp_pct / 100) * num_questions)) if comp_pct > 0 else 0
     comp_desc = (
-        f"Competency-Based Questions: {comp_pct}% ({comp_count} out of {num_questions} questions) MUST be "
+        f"Competency-Based Target: {comp_pct}% of questions MUST be "
         f"higher-order Competency/Scenario/Case-Study based questions testing real-world applied problem-solving."
     )
 
-    # 4. Previous Quizzes Deduplication (JSON)
-    prev_quiz_prompt = ""
+    # 4. Previous Classroom Quizzes for Deduplication
+    classroom_prev_questions = []
     if previous_quizzes_json and len(previous_quizzes_json) > 0:
-        prev_summary = []
         for pq in previous_quizzes_json[:25]:
             q_str = pq.get("question_text") or pq.get("question") or ""
             if q_str:
-                prev_summary.append(q_str)
-        if prev_summary:
-            prev_quiz_prompt = (
-                "\n\n--- PREVIOUSLY CREATED QUIZ QUESTIONS IN THIS CLASS (STRICTLY DO NOT REPEAT THESE QUESTIONS OR THEIR DIRECT CLONES) ---\n" +
-                "\n".join([f"- {q}" for q in prev_summary])
-            )
+                classroom_prev_questions.append(q_str)
 
     system_prompt = (
         "You are an expert educational assessment generator. Your task is to analyze the provided list of study notes and generate a high-quality quiz.\n\n"
@@ -275,7 +266,7 @@ def generate_quiz_questions(
         "- MATHEMATICAL & NUMERICAL FORMULAS: If the notes contain formulas, physics/chemistry/engineering laws, or numerical problems:\n"
         "  * Express all mathematical equations and variables in standard LaTeX formatting (e.g. `$E = mc^2$`, `$\\frac{a}{b}$`, `$$H_c(T) = H_0 \\left[1 - \\left(\\frac{T}{T_c}\\right)^2\\right]$$`).\n"
         "  * For any numerical calculation question, the 'explanation' field MUST provide a complete, step-by-step mathematical derivation showing: (1) Given values, (2) Formula used in LaTeX, (3) Step-by-step substitution, (4) Final calculated answer with units.\n\n"
-        "You must return ONLY a JSON object matching this exact structure, with no markdown formatting around the outer JSON, no code blocks, and no conversational filler:\n\n"
+        "You must return ONLY a JSON object matching this exact structure, with NO surrounding markdown:\n\n"
         "{\n"
         '  "quiz_title": "string",\n'
         '  "questions": [\n'
@@ -296,132 +287,145 @@ def generate_quiz_questions(
         "Ensure all distractors (wrong answers) are plausible but definitively incorrect."
     )
 
-    user_prompt = (
-        f"Generate a {num_questions}-question multiple-choice quiz based on the following list of selected classroom notes.\n"
-        f"Target Difficulty: {diff_val}/10 | Target Competency: {comp_pct}%\n\n"
-        f"--- SELECTED CLASSROOM STUDY NOTES ---\n"
-        f"{notes_context[:9000]}"
-        f"{prev_quiz_prompt}"
-    )
+    all_standardized_questions = []
+    option_keys = ["A", "B", "C", "D"]
+    batch_size = 3  # Chunk size to ensure no token truncation for high-density LaTeX formulas
 
-    raw_json_str = ""
+    # 5. Batch Generation Loop (Generates in chunks of 3 questions to ensure EXACT count without token cutoffs)
+    client = Groq(api_key=settings.GROQ_API_KEY.strip()) if settings.GROQ_API_KEY else None
+    groq_models = ["openai/gpt-oss-120b", "qwen/qwen3.8-27b"]
 
-    # 1. Primary: Groq AI with automatic active model rotation
-    if settings.GROQ_API_KEY:
-        client = Groq(api_key=settings.GROQ_API_KEY.strip())
-        for model_name in _get_groq_models():
+    max_attempts = 10
+    attempts = 0
+
+    while len(all_standardized_questions) < target_count and attempts < max_attempts:
+        attempts += 1
+        needed_in_batch = min(batch_size, target_count - len(all_standardized_questions))
+
+        # Build exclusion list
+        current_existing_texts = [
+            q["question_text"] for q in all_standardized_questions
+        ] + classroom_prev_questions
+
+        prev_prompt = ""
+        if current_existing_texts:
+            prev_prompt = (
+                "\n\n--- PREVIOUSLY GENERATED QUESTIONS (DO NOT REPEAT THESE) ---\n" +
+                "\n".join([f"- {t}" for t in current_existing_texts[:25]])
+            )
+
+        user_prompt = (
+            f"Generate EXACTLY {needed_in_batch} unique multiple-choice questions (Target Difficulty: {diff_val}/10 | Target Competency: {comp_pct}%).\n"
+            f"You MUST return exactly {needed_in_batch} items in the 'questions' array.\n\n"
+            f"--- SELECTED CLASSROOM STUDY NOTES ---\n"
+            f"{notes_context[:8000]}"
+            f"{prev_prompt}"
+        )
+
+        batch_json_str = ""
+
+        # Try Groq models with json_object mode
+        if client:
+            for model_name in groq_models:
+                try:
+                    response = client.chat.completions.create(
+                        model=model_name,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        response_format={"type": "json_object"},
+                        temperature=0.3,
+                        max_tokens=3000
+                    )
+                    content = response.choices[0].message.content
+                    if content and content.strip():
+                        batch_json_str = content.strip()
+                        break
+                except Exception as e:
+                    print(f"Groq batch model '{model_name}' error: {repr(e)[:120]}")
+
+        # Fallback to Sarvam if Groq failed
+        if not batch_json_str and settings.SARVAM_API_KEY:
             try:
-                response = client.chat.completions.create(
-                    model=model_name,
-                    messages=[
+                headers = {
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {settings.SARVAM_API_KEY.strip()}",
+                    "api-key": settings.SARVAM_API_KEY.strip(),
+                }
+                payload = {
+                    "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
+                    "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    temperature=0.3,
-                    max_tokens=3000
-                )
-                text_content = response.choices[0].message.content
-                if text_content and text_content.strip():
-                    raw_json_str = text_content.strip()
-                    print(f"[OK] Quiz generated successfully via Groq AI (model: {model_name})!")
-                    break
+                    "temperature": 0.3,
+                    "max_tokens": 2500,
+                }
+                res = requests.post("https://api.sarvam.ai/v1/chat/completions", json=payload, headers=headers, timeout=45)
+                if res.status_code == 200:
+                    batch_json_str = res.json()["choices"][0]["message"]["content"].strip()
             except Exception as e:
-                print(f"Groq model '{model_name}' quiz error: {e}")
+                print(f"Sarvam batch fallback error: {repr(e)[:120]}")
 
-    # 2. Fallback: Sarvam AI (if Groq fails or key is missing)
-    if not raw_json_str and settings.SARVAM_API_KEY:
-        try:
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {settings.SARVAM_API_KEY.strip()}",
-                "api-key": settings.SARVAM_API_KEY.strip(),
-            }
-            payload = {
-                "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": 0.3,
-                "max_tokens": 2000,
-            }
-            res = requests.post("https://api.sarvam.ai/v1/chat/completions", json=payload, headers=headers, timeout=45)
-            if res.status_code == 200:
-                raw_json_str = res.json()["choices"][0]["message"]["content"].strip()
-                print("[OK] Quiz generated via Sarvam AI fallback!")
-        except Exception as e:
-            print(f"Sarvam Quiz fallback error: {e}")
+        # Parse batch response
+        if batch_json_str:
+            try:
+                clean = batch_json_str.replace("```json", "").replace("```", "").strip()
+                parsed = json.loads(clean)
+                quiz_title = parsed.get("quiz_title", "Classroom Assessment Quiz") if isinstance(parsed, dict) else "Classroom Assessment Quiz"
+                raw_questions = parsed.get("questions", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
 
-    # 3. Parse and standardize output
-    if raw_json_str:
-        try:
-            clean = raw_json_str.replace("```json", "").replace("```", "").strip()
-            parsed = json.loads(clean)
+                for q in raw_questions:
+                    if len(all_standardized_questions) >= target_count:
+                        break
 
-            quiz_title = parsed.get("quiz_title", "Classroom Study Quiz") if isinstance(parsed, dict) else "Classroom Study Quiz"
-            raw_questions = parsed.get("questions", []) if isinstance(parsed, dict) else (parsed if isinstance(parsed, list) else [])
+                    q_num = len(all_standardized_questions) + 1
+                    q_text = q.get("question_text") or q.get("question", f"Question {q_num}")
+                    raw_opts = q.get("options", {})
 
-            standardized = []
-            option_keys = ["A", "B", "C", "D"]
+                    if isinstance(raw_opts, dict):
+                        opts_list = [raw_opts.get(k, "") for k in option_keys if k in raw_opts]
+                        if not opts_list or len(opts_list) < 4:
+                            opts_list = list(raw_opts.values())[:4]
+                    elif isinstance(raw_opts, list):
+                        opts_list = raw_opts[:4]
+                    else:
+                        opts_list = ["Option A", "Option B", "Option C", "Option D"]
 
-            for idx, q in enumerate(raw_questions):
-                q_num = q.get("question_number", idx + 1)
-                q_text = q.get("question_text") or q.get("question", f"Question {q_num}")
-                raw_opts = q.get("options", {})
+                    # Pad to 4 options if fewer returned
+                    while len(opts_list) < 4:
+                        opts_list.append(f"Option {option_keys[len(opts_list)]}")
 
-                if isinstance(raw_opts, dict):
-                    opts_list = [raw_opts.get(k, "") for k in option_keys if k in raw_opts]
-                    if not opts_list:
-                        opts_list = list(raw_opts.values())
-                elif isinstance(raw_opts, list):
-                    opts_list = raw_opts
-                else:
-                    opts_list = ["Option A", "Option B", "Option C", "Option D"]
+                    corr_opt = str(q.get("correct_option", "A")).strip().upper()
+                    if corr_opt in option_keys:
+                        correct_idx = option_keys.index(corr_opt)
+                    elif "correct_index" in q:
+                        correct_idx = int(q["correct_index"]) % 4
+                    else:
+                        correct_idx = 0
 
-                corr_opt = str(q.get("correct_option", "A")).strip().upper()
-                if corr_opt in option_keys:
-                    correct_idx = option_keys.index(corr_opt)
-                elif "correct_index" in q:
-                    correct_idx = int(q["correct_index"])
-                else:
-                    correct_idx = 0
+                    all_standardized_questions.append({
+                        "id": q_num,
+                        "question_number": q_num,
+                        "question": q_text,
+                        "question_text": q_text,
+                        "options": opts_list,
+                        "options_dict": {option_keys[i]: opt for i, opt in enumerate(opts_list[:4])},
+                        "correct_option": option_keys[correct_idx],
+                        "correct_index": correct_idx,
+                        "explanation": q.get("explanation", "Refer to the classroom study notes for detailed formula derivation."),
+                        "sub_topic": quiz_title
+                    })
+            except Exception as parse_err:
+                print(f"Error parsing batch quiz JSON: {parse_err}")
 
-                standardized.append({
-                    "id": q_num,
-                    "question_number": q_num,
-                    "question": q_text,
-                    "question_text": q_text,
-                    "options": opts_list,
-                    "options_dict": raw_opts if isinstance(raw_opts, dict) else {option_keys[i]: opt for i, opt in enumerate(opts_list[:4])},
-                    "correct_option": corr_opt,
-                    "correct_index": correct_idx,
-                    "explanation": q.get("explanation", "Refer to the classroom study material for detailed solution."),
-                    "sub_topic": quiz_title
-                })
+    # Re-index all IDs sequentially 1..N
+    for i, q in enumerate(all_standardized_questions):
+        q["id"] = i + 1
+        q["question_number"] = i + 1
 
-            if standardized:
-                return standardized
-        except Exception as parse_err:
-            print(f"Error parsing quiz JSON: {parse_err}")
-
-    # Fallback placeholder item
-    return [{
-        "id": 1,
-        "question_number": 1,
-        "question": "Which subject or topic is covered in the uploaded classroom study notes?",
-        "question_text": "Which subject or topic is covered in the uploaded classroom study notes?",
-        "options": ["Course Material from Uploaded PDF", "General Knowledge", "Unrelated Subject", "None of the above"],
-        "options_dict": {
-            "A": "Course Material from Uploaded PDF",
-            "B": "General Knowledge",
-            "C": "Unrelated Subject",
-            "D": "None of the above"
-        },
-        "correct_option": "A",
-        "correct_index": 0,
-        "explanation": "Extracted directly from the uploaded classroom study material.",
-        "sub_topic": "Classroom Notes"
-    }]
+    return all_standardized_questions
 
 
 def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
