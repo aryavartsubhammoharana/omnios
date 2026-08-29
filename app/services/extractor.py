@@ -3,19 +3,13 @@ import re
 import logging
 import warnings
 import numpy as np
-import fitz  # PyMuPDF
+import fitz
 import torch
 
-# Suppress verbose loggers
 warnings.filterwarnings("ignore")
 logging.getLogger("easyocr").setLevel(logging.ERROR)
 
 _easyocr_reader = None
-
-
-# ---------------------------------------------------------------------------
-# EasyOCR lazy singleton
-# ---------------------------------------------------------------------------
 
 def get_easyocr_reader():
     global _easyocr_reader
@@ -31,24 +25,16 @@ def get_easyocr_reader():
             _easyocr_reader = False
     return _easyocr_reader if _easyocr_reader is not False else None
 
-
-# ---------------------------------------------------------------------------
-# Local OCR text formatter (instant, zero-cost fallback)
-# ---------------------------------------------------------------------------
-
 def format_ocr_text_locally(raw_text: str) -> str:
-    """Repairs broken OCR sentence fragments and formats into clean structured Markdown."""
     if not raw_text or not raw_text.strip():
         return raw_text
 
-    # Normalize OCR artifacts
     text = raw_text.replace("_", ". ").replace(". . ", ". ").replace(".  ", ". ")
     text = re.sub(r"[|~^]", " ", text)
 
     raw_lines = [l.strip() for l in text.split("\n") if l.strip()]
     merged = []
 
-    # Merge broken mid-sentence fragments
     for line in raw_lines:
         if not merged:
             merged.append(line)
@@ -72,7 +58,6 @@ def format_ocr_text_locally(raw_text: str) -> str:
         else:
             merged.append(line)
 
-    # Format merged lines into structured Markdown
     formatted = []
     for l in merged:
         l = l.strip()
@@ -102,12 +87,11 @@ def format_ocr_text_locally(raw_text: str) -> str:
     result = "\n".join(formatted).strip()
     return re.sub(r"\n{4,}", "\n\n\n", result)
 
-
 from app.services.vision import analyze_image_with_groq_vision
 
-
-def extract_pdf_page_by_page(file_path: str, doc_id: int | None = None, classroom_code: str | None = None, on_page_progress=None) -> str:
+def extract_pdf_page_by_page(file_path: str, doc_id: int | None = None, unique_code: str | None = None, classroom_code: str | None = None, on_page_progress=None) -> str:
     filename = os.path.basename(file_path)
+    pdf_id_tag = unique_code or (f"doc_{doc_id}" if doc_id else "doc_0")
     extracted_pages = []
 
     c_folder = f"class_{classroom_code.upper()}" if classroom_code else "general"
@@ -117,7 +101,7 @@ def extract_pdf_page_by_page(file_path: str, doc_id: int | None = None, classroo
     try:
         doc = fitz.open(file_path)
         total_pages = len(doc)
-        print(f"[+] '{filename}' — {total_pages} page(s). Starting extraction with Groq Vision...")
+        print(f"[+] '{filename}' ({pdf_id_tag}) — {total_pages} page(s). Starting extraction with Groq Vision...")
 
         for page_idx in range(total_pages):
             page_num = page_idx + 1
@@ -150,8 +134,7 @@ def extract_pdf_page_by_page(file_path: str, doc_id: int | None = None, classroo
                             img_ext = base_image.get("ext", "png")
 
                             if width >= 80 and height >= 80:
-                                d_id = doc_id or "0"
-                                img_filename = f"doc_{d_id}_p{page_num}_img{img_idx+1}.{img_ext}"
+                                img_filename = f"{pdf_id_tag}_p{page_num}_img{img_idx+1}.{img_ext}"
                                 img_save_path = os.path.join(img_dir, img_filename)
                                 with open(img_save_path, "wb") as f_img:
                                     f_img.write(img_bytes)
@@ -195,13 +178,13 @@ def extract_pdf_page_by_page(file_path: str, doc_id: int | None = None, classroo
     raw = "\n\n".join(extracted_pages).strip()
     return format_ocr_text_locally(raw) if raw else f"Classroom Study Note: '{filename}'"
 
-
-def extract_text_from_file(file_path: str, doc_id: int | None = None, classroom_code: str | None = None, on_page_progress=None) -> str:
+def extract_text_from_file(file_path: str, doc_id: int | None = None, unique_code: str | None = None, classroom_code: str | None = None, on_page_progress=None) -> str:
     ext = os.path.splitext(file_path)[1].lower()
     filename = os.path.basename(file_path)
+    pdf_id_tag = unique_code or (f"doc_{doc_id}" if doc_id else "doc_0")
 
     if ext == ".pdf":
-        return extract_pdf_page_by_page(file_path, doc_id=doc_id, classroom_code=classroom_code, on_page_progress=on_page_progress)
+        return extract_pdf_page_by_page(file_path, doc_id=doc_id, unique_code=unique_code, classroom_code=classroom_code, on_page_progress=on_page_progress)
 
     if ext in (".docx", ".doc"):
         try:
@@ -223,8 +206,8 @@ def extract_text_from_file(file_path: str, doc_id: int | None = None, classroom_
                                     ocr_results = reader.readtext(img_bytes, detail=0)
                                     if ocr_results:
                                         ocr_text = ", ".join(ocr_results[:10])
-                                except Exception:
-                                    pass
+                                    except Exception:
+                                        pass
                             if ocr_text:
                                 image_callouts.append(f"> 📝 **Embedded Diagram Text**: `{ocr_text}`")
             except Exception as e:
@@ -283,7 +266,6 @@ def extract_text_from_file(file_path: str, doc_id: int | None = None, classroom_
         if full_res:
             return format_ocr_text_locally(full_res)
 
-    # Plain text and Markdown fallback (.txt, .md)
     try:
         if on_page_progress:
             on_page_progress(1, 1, False)

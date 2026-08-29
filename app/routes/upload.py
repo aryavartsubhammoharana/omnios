@@ -1,6 +1,7 @@
 import os
 import shutil
 import uuid
+import secrets
 import fitz
 from typing import Optional
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, BackgroundTasks
@@ -29,16 +30,22 @@ from app.services.image_merger import (
 
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
 UPLOAD_DIR = "uploads"
+DOCUMENTS_DIR = os.path.join(UPLOAD_DIR, "documents")
+IMAGES_DIR = os.path.join(UPLOAD_DIR, "images")
+MERGED_DIR = os.path.join(UPLOAD_DIR, "merged")
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(os.path.join(UPLOAD_DIR, "images"), exist_ok=True)
-os.makedirs(os.path.join(UPLOAD_DIR, "merged"), exist_ok=True)
+os.makedirs(DOCUMENTS_DIR, exist_ok=True)
+os.makedirs(IMAGES_DIR, exist_ok=True)
+os.makedirs(MERGED_DIR, exist_ok=True)
 
 
-def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int], file_path: str):
+def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int], file_path: str, unique_code: str):
     db = SessionLocal()
     try:
         ext = os.path.splitext(file_path)[1].lower()
         extracted_by_page = {}
+        pdf_unique_tag = unique_code or f"doc_{doc_id}"
 
         if ext == ".pdf":
             try:
@@ -65,10 +72,10 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
                         img_bytes = base_img["image"]
                         img_ext = base_img.get("ext", "png")
 
-                        doc_img_dir = os.path.join(UPLOAD_DIR, "images", str(doc_id))
+                        doc_img_dir = os.path.join(IMAGES_DIR, pdf_unique_tag)
                         os.makedirs(doc_img_dir, exist_ok=True)
 
-                        img_filename = f"page_{page_num}_img_{img_counter}.{img_ext}"
+                        img_filename = f"{pdf_unique_tag}_p{page_num}_img{img_counter}.{img_ext}"
                         save_path = os.path.join(doc_img_dir, img_filename)
 
                         with open(save_path, "wb") as f_out:
@@ -92,13 +99,13 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
 
                 pdf_doc.close()
             except Exception as e:
-                print(f"Error during PDF image extraction for doc {doc_id}: {e}")
+                print(f"Error during PDF image extraction for doc {doc_id} ({pdf_unique_tag}): {e}")
 
         elif ext in (".docx", ".doc"):
             try:
                 import docx
                 d_obj = docx.Document(file_path)
-                doc_img_dir = os.path.join(UPLOAD_DIR, "images", str(doc_id))
+                doc_img_dir = os.path.join(IMAGES_DIR, pdf_unique_tag)
                 os.makedirs(doc_img_dir, exist_ok=True)
 
                 page_num = 1
@@ -111,7 +118,7 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
                         if len(img_bytes) < 1500:
                             continue
 
-                        img_filename = f"page_{page_num}_img_{img_counter}.png"
+                        img_filename = f"{pdf_unique_tag}_p{page_num}_img{img_counter}.png"
                         save_path = os.path.join(doc_img_dir, img_filename)
 
                         with open(save_path, "wb") as f_out:
@@ -133,7 +140,7 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
                 if page_img_records:
                     extracted_by_page[page_num] = page_img_records
             except Exception as e:
-                print(f"Error during DOCX image extraction for doc {doc_id}: {e}")
+                print(f"Error during DOCX image extraction for doc {doc_id} ({pdf_unique_tag}): {e}")
 
         for page_num, img_records in extracted_by_page.items():
             chunk_size = 12
@@ -149,8 +156,8 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
                     merged_path = sub_batch[0].image_path
                 else:
                     batch_suffix = f"_b{sub_idx // chunk_size + 1}" if len(img_records) > 12 else ""
-                    merged_filename = f"{doc_id}_page{page_num}{batch_suffix}_merged.png"
-                    merged_path = os.path.join(UPLOAD_DIR, "merged", merged_filename)
+                    merged_filename = f"{pdf_unique_tag}_p{page_num}{batch_suffix}_merged.png"
+                    merged_path = os.path.join(MERGED_DIR, merged_filename)
                     sub_paths = [r.image_path for r in sub_batch]
                     merge_images_into_grid(sub_paths, merged_path)
 
@@ -190,10 +197,11 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
                             if class_code:
                                 c_col = get_classroom_collection(class_code)
                                 c_col.add(
-                                    ids=[f"class_{class_code}_doc_{doc_id}_img_{img_r.image_id}"],
+                                    ids=[f"class_{class_code}_{pdf_unique_tag}_img_{img_r.image_id}"],
                                     documents=[chunk_content],
                                     metadatas=[{
                                         "doc_id": doc_id,
+                                        "unique_code": pdf_unique_tag,
                                         "classroom_id": classroom_id,
                                         "source_type": "image_analysis",
                                         "page_number": page_num,
@@ -203,10 +211,10 @@ def extract_and_analyze_document_images(doc_id: int, classroom_id: Optional[int]
 
                             g_col = get_global_collection()
                             g_col.add(
-                                ids=[f"global_doc_{doc_id}_img_{img_r.image_id}"],
+                                ids=[f"global_{pdf_unique_tag}_img_{img_r.image_id}"],
                                 documents=[chunk_content],
                                 metadatas=[{
-                                    "doc_hash": f"doc_{doc_id}",
+                                    "doc_hash": pdf_unique_tag,
                                     "source_type": "image_analysis",
                                     "page_number": page_num
                                 }]
@@ -254,6 +262,7 @@ def process_file_text_in_background(doc_id: int):
         extracted_text = extract_text_from_file(
             doc.file_path,
             doc_id=doc.id,
+            unique_code=doc.unique_code,
             classroom_code=class_code,
             on_page_progress=on_page_progress
         )
@@ -277,7 +286,7 @@ def process_file_text_in_background(doc_id: int):
             except Exception as e:
                 print(f"Error during dual vector DB indexing for doc {doc_id}: {e}")
 
-        extract_and_analyze_document_images(doc_id, doc.classroom_id, doc.file_path)
+        extract_and_analyze_document_images(doc.id, doc.classroom_id, doc.file_path, doc.unique_code)
 
     except Exception as e:
         print(f"Fatal error in background file processing for doc {doc_id}: {e}")
@@ -308,9 +317,9 @@ async def upload_file(
             detail=f"Unsupported file format '{ext}'. Allowed: {', '.join(allowed_extensions)}",
         )
 
-    file_id_temp = int(os.urandom(4).hex(), 16)
-    saved_filename = f"{file_id_temp}_{file.filename}"
-    saved_path = os.path.join(UPLOAD_DIR, saved_filename)
+    unique_code = secrets.token_hex(5)
+    saved_filename = f"{unique_code}{ext}"
+    saved_path = os.path.join(DOCUMENTS_DIR, saved_filename)
 
     with open(saved_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -318,6 +327,7 @@ async def upload_file(
     file_size = os.path.getsize(saved_path)
 
     doc = DocumentFile(
+        unique_code=unique_code,
         filename=file.filename,
         file_path=saved_path,
         uploaded_by_id=current_user.id,
@@ -333,12 +343,13 @@ async def upload_file(
 
     return {
         "id": doc.id,
+        "unique_code": doc.unique_code,
         "filename": doc.filename,
         "file_size": file_size,
         "classroom_id": doc.classroom_id,
         "processing_status": doc.processing_status,
         "processing_progress": doc.processing_progress,
-        "message": "File uploaded! Text extraction, image merging, and Groq Vision analysis initiated in background.",
+        "message": "File securely stored with unique 10-char ID. OCR extraction & Groq Vision analysis initiated.",
     }
 
 
@@ -359,61 +370,43 @@ def delete_document(
     if doc.file_path and os.path.exists(doc.file_path):
         try:
             os.remove(doc.file_path)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error removing document file from disk: {e}")
+
+    pdf_unique_tag = doc.unique_code or f"doc_{doc.id}"
+    doc_img_dir = os.path.join(IMAGES_DIR, pdf_unique_tag)
+    if os.path.exists(doc_img_dir):
+        try:
+            shutil.rmtree(doc_img_dir)
+        except Exception as e:
+            print(f"Error removing extracted images directory for {pdf_unique_tag}: {e}")
 
     try:
         class_code = None
         if doc.classroom_id:
-            classroom = db.query(Classroom).filter(Classroom.id == doc.classroom_id).first()
-            if classroom:
-                class_code = classroom.code
-        delete_document_from_dual_vector_store(doc_id, classroom_code=class_code)
-        db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).delete()
-        db.query(StudySession).filter(StudySession.document_id == doc_id).delete()
-        db.query(ImageRecord).filter(ImageRecord.file_id == doc_id).delete()
-        db.query(ImageBatch).filter(ImageBatch.file_id == doc_id).delete()
-    except Exception as e:
-        print(f"Note on cascade delete for doc {doc_id}: {e}")
+            c_obj = db.query(Classroom).filter(Classroom.id == doc.classroom_id).first()
+            if c_obj:
+                class_code = c_obj.code
 
+        delete_document_from_dual_vector_store(
+            doc_id=doc.id,
+            classroom_id=doc.classroom_id,
+            classroom_code=class_code
+        )
+    except Exception as e:
+        print(f"Error removing document from dual vector store: {e}")
+
+    db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).delete(synchronize_session=False)
+    db.query(ImageRecord).filter(ImageRecord.file_id == doc_id).delete(synchronize_session=False)
+    db.query(ImageBatch).filter(ImageBatch.file_id == doc_id).delete(synchronize_session=False)
     db.delete(doc)
     db.commit()
-    return {"message": "Document deleted successfully", "document_id": doc_id}
 
-
-@router.get("/list")
-def list_documents(
-    classroom_id: Optional[int] = None,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    query = db.query(DocumentFile)
-    if classroom_id:
-        query = query.filter(DocumentFile.classroom_id == classroom_id)
-    elif current_user.role == "teacher":
-        query = query.filter(DocumentFile.uploaded_by_id == current_user.id)
-    else:
-        from app.models.classroom import Enrollment
-        enrolled_ids = [e.classroom_id for e in db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()]
-        query = query.filter(DocumentFile.classroom_id.in_(enrolled_ids)) if enrolled_ids else query.filter(DocumentFile.id == -1)
-
-    docs = query.order_by(DocumentFile.created_at.desc()).all()
-    return [{
-        "id": d.id,
-        "filename": d.filename,
-        "file_url": f"/uploads/{os.path.basename(d.file_path)}",
-        "classroom_id": d.classroom_id,
-        "uploaded_by_id": d.uploaded_by_id,
-        "processing_status": d.processing_status or "ready",
-        "processing_progress": d.processing_progress if d.processing_progress is not None else 100,
-        "created_at": d.created_at,
-        "content_preview": d.content_text[:200] if d.content_text else "",
-    } for d in docs]
+    return {"message": "Document and all associated vector chunks and extracted figures deleted successfully"}
 
 
 @router.get("/document/{doc_id}")
-@router.get("/{doc_id}")
-def get_document_content(
+def get_document_details(
     doc_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -421,82 +414,57 @@ def get_document_content(
     doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    file_url = f"/{doc.file_path.replace(chr(92), '/')}"
+
     return {
         "id": doc.id,
+        "unique_code": doc.unique_code,
         "filename": doc.filename,
-        "file_url": f"/uploads/{os.path.basename(doc.file_path)}",
         "classroom_id": doc.classroom_id,
-        "uploaded_by_id": doc.uploaded_by_id,
-        "processing_status": doc.processing_status or "ready",
-        "processing_progress": doc.processing_progress if doc.processing_progress is not None else 100,
-        "content_text": doc.content_text or "",
+        "file_url": file_url,
+        "content_text": doc.content_text,
+        "processing_status": doc.processing_status,
+        "processing_progress": doc.processing_progress,
         "created_at": doc.created_at,
     }
 
 
-@router.get("/images/{file_id}")
-def list_extracted_images(
-    file_id: int,
+@router.get("/image-batches/{doc_id}")
+def get_document_image_batches(
+    doc_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    images = db.query(ImageRecord).filter(ImageRecord.file_id == file_id).order_by(ImageRecord.page_number.asc()).all()
-    return [{
-        "image_id": str(img.image_id),
-        "file_id": img.file_id,
-        "classroom_id": img.classroom_id,
-        "page_number": img.page_number,
-        "image_url": f"/{img.image_path.replace(chr(92), '/')}",
-        "analysis_text": img.analysis_text,
-        "created_at": img.created_at
-    } for img in images]
+    batches = db.query(ImageBatch).filter(ImageBatch.file_id == doc_id).order_by(ImageBatch.page_number.asc()).all()
+    return [
+        {
+            "id": b.id,
+            "page_number": b.page_number,
+            "merged_image_path": f"/{b.merged_image_path.replace(chr(92), '/')}",
+            "image_count": b.image_count,
+            "raw_response": b.raw_response,
+            "local_image_ids": b.local_image_ids,
+            "created_at": b.created_at
+        }
+        for b in batches
+    ]
 
 
-@router.get("/image-batches/{file_id}")
-def list_image_batches(
-    file_id: int,
+@router.get("/images/{doc_id}")
+def get_document_images(
+    doc_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    batches = db.query(ImageBatch).filter(ImageBatch.file_id == file_id).order_by(ImageBatch.page_number.asc()).all()
-    return [{
-        "batch_id": str(b.batch_id),
-        "file_id": b.file_id,
-        "classroom_id": b.classroom_id,
-        "page_number": b.page_number,
-        "merged_image_url": f"/{b.merged_image_path.replace(chr(92), '/')}",
-        "image_count": b.image_count,
-        "local_image_ids": b.local_image_ids,
-        "raw_response": b.raw_response,
-        "created_at": b.created_at
-    } for b in batches]
-
-
-@router.post("/reanalyze-image/{image_id}")
-def reanalyze_single_image(
-    image_id: uuid.UUID,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    if current_user.role != "teacher":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers can re-analyze images.",
-        )
-
-    img = db.query(ImageRecord).filter(ImageRecord.image_id == image_id).first()
-    if not img:
-        raise HTTPException(status_code=404, detail="Image record not found")
-
-    if not os.path.exists(img.image_path):
-        raise HTTPException(status_code=400, detail="Image file missing on disk")
-
-    analysis = analyze_image_batch_with_groq(img.image_path, 1, img.page_number)
-    img.analysis_text = analysis
-    db.commit()
-
-    return {
-        "message": "Image re-analyzed successfully",
-        "image_id": str(img.image_id),
-        "analysis_text": analysis
-    }
+    images = db.query(ImageRecord).filter(ImageRecord.file_id == doc_id).order_by(ImageRecord.page_number.asc()).all()
+    return [
+        {
+            "image_id": img.image_id,
+            "page_number": img.page_number,
+            "image_path": f"/{img.image_path.replace(chr(92), '/')}",
+            "analysis_text": img.analysis_text,
+            "created_at": img.created_at
+        }
+        for img in images
+    ]
