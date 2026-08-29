@@ -295,6 +295,45 @@ def get_active_recommendations(
     }
 
 
+@router.post("/refresh-recommendations")
+def refresh_student_recommendations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    latest_quiz = db.query(StudentDailyQuiz).filter(
+        StudentDailyQuiz.student_id == current_user.id,
+        StudentDailyQuiz.is_completed == True
+    ).order_by(StudentDailyQuiz.completed_at.desc()).first()
+
+    weak_topics_list = latest_quiz.weak_topics if (latest_quiz and latest_quiz.weak_topics) else ["Concept Revision", "Core Problem Solving"]
+
+    enrollments = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()
+    class_ids = [e.classroom_id for e in enrollments]
+    enrolled_classes = db.query(Classroom).filter(Classroom.id.in_(class_ids)).all() if class_ids else []
+    class_names = [c.name for c in enrolled_classes]
+    grade_context = f"Class {' '.join(class_names)}" if class_names else "High School / College"
+
+    import random
+    new_offset = random.randint(1, 10)
+
+    fresh_recommendations = get_curated_weak_topic_videos(
+        weak_topics=weak_topics_list,
+        grade_context=grade_context,
+        target_count=10,
+        seed_offset=new_offset
+    )
+
+    if latest_quiz:
+        latest_quiz.recommendations_json = fresh_recommendations
+        db.commit()
+
+    return {
+        "message": "Recommendations refreshed successfully",
+        "weak_topics": weak_topics_list,
+        "recommendations": fresh_recommendations
+    }
+
+
 @router.get("/video-transcript/{video_id}")
 def fetch_video_transcript(
     video_id: str,

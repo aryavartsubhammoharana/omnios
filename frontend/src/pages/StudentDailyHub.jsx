@@ -4,7 +4,7 @@ import API from '../api/client';
 import { 
   Sparkles, CheckCircle2, XCircle, Play, Flame, Award, Clock,
   BookOpen, ChevronRight, AlertTriangle, ArrowRight, Video,
-  RotateCcw, Loader2, Target
+  RotateCcw, Loader2, Target, RefreshCw
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
 
@@ -14,6 +14,7 @@ export default function StudentDailyHub() {
   const [loading, setLoading] = useState(true);
   const [userAnswers, setUserAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [submissionResult, setSubmissionResult] = useState(null);
   const [streak, setStreak] = useState(1);
 
@@ -82,6 +83,23 @@ export default function StudentDailyHub() {
       console.error('Error submitting quiz', err);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRefreshRecommendations = async () => {
+    setRefreshing(true);
+    try {
+      const res = await API.post('/api/student/refresh-recommendations');
+      const newRecs = res.data.recommendations || [];
+      if (submissionResult) {
+        setSubmissionResult(prev => ({ ...prev, recommendations: newRecs }));
+      } else {
+        setDailyQuiz(prev => ({ ...prev, recommendations: newRecs }));
+      }
+    } catch (err) {
+      console.error('Error refreshing recommendations', err);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -171,12 +189,23 @@ export default function StudentDailyHub() {
 
             {recommendations.length > 0 && (
               <div className="space-y-4 pt-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center space-x-2">
                     <Video className="w-5 h-5 text-red-400" />
                     <h3 className="text-base font-bold text-white">Top 10 Curated Lecture Videos (Focus Mode)</h3>
                   </div>
-                  <span className="text-xs text-gray-400">Zero Distractions • Active Watch-Time Tracked</span>
+
+                  <div className="flex items-center space-x-3">
+                    <span className="text-xs text-gray-400 hidden md:inline">Strictly Academic • No Shorts</span>
+                    <button
+                      onClick={handleRefreshRecommendations}
+                      disabled={refreshing}
+                      className="px-3.5 py-1.5 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-700 text-indigo-300 text-xs font-semibold flex items-center space-x-1.5 transition disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
+                      <span>{refreshing ? 'Refreshing...' : 'Refresh Videos'}</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
