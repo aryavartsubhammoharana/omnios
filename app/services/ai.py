@@ -19,14 +19,24 @@ def query_gemini_ai(prompt: str, context: str = "") -> str:
             f"INSTRUCTIONS:\n"
             f"1. If the user is just greeting or chatting naturally (e.g. 'Hi', 'Hello', 'Can you help me?'), respond warmly and invite them to ask questions.\n"
             f"2. Use the provided classroom study material as your primary reference when answering academic questions.\n"
-            f"3. You are free to use your own knowledge to provide clear explanations, simple examples, intuitive analogies, and step-by-step guidance to help the student learn effectively.\n"
-            f"4. Format your response cleanly using markdown (bold key terms, bullet points, headers, or tables where appropriate)."
+            f"3. You are free to use your own knowledge to provide clear explanations, simple examples, intuitive analogies, and step-by-step guidance.\n"
+            f"4. CRITICAL FORMATTING RULES — you MUST follow these exactly:\n"
+            f"   - Use '##' headings for major sections and '###' for sub-sections\n"
+            f"   - Use numbered lists (1. 2. 3.) for sequential questions or steps\n"
+            f"   - Use '- ' bullet points for lists of items or properties\n"
+            f"   - Use '**bold**' for key terms, question titles, and important concepts\n"
+            f"   - Put EACH question or point on its OWN separate line with a blank line between them\n"
+            f"   - Use markdown tables (| Col | Col |) for comparisons and differences\n"
+            f"   - Use `$formula$` for inline math and `$$formula$$` for display math equations\n"
+            f"   - NEVER write everything as one long paragraph — always use structured formatting\n"
         )
     else:
         full_prompt = (
             f"You are NoteAI, an intelligent, helpful, and friendly academic tutor.\n\n"
             f"STUDENT QUESTION / PROMPT: {prompt}\n\n"
-            f"Provide a clear, accurate, and comprehensive answer with clean markdown formatting."
+            f"Provide a clear, accurate, and comprehensive answer with clean markdown formatting.\n"
+            f"Use ## headings, numbered lists, bullet points, **bold** key terms, and tables where appropriate.\n"
+            f"NEVER write one giant paragraph — always use proper structured markdown with line breaks.\n"
         )
 
     models_to_try = [settings.GEMINI_MODEL or "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]

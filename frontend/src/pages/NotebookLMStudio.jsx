@@ -322,8 +322,8 @@ export default function NotebookLMStudio() {
                 <div
                   className={`p-4 rounded-2xl max-w-[80%] leading-relaxed ${
                     msg.sender === 'user'
-                      ? 'bg-indigo-600 text-white rounded-tr-none shadow-lg'
-                      : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-tl-none prose prose-invert prose-xs max-w-none'
+                      ? 'bg-indigo-600 text-white rounded-tr-none shadow-lg text-xs'
+                      : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-tl-none text-xs'
                   }`}
                 >
                   {msg.sender === 'user' ? (
