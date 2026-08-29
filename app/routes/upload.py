@@ -3,7 +3,7 @@ import shutil
 import uuid
 import secrets
 import fitz
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database import get_db, SessionLocal
@@ -351,6 +351,31 @@ async def upload_file(
         "processing_progress": doc.processing_progress,
         "message": "File securely stored with unique 10-char ID. OCR extraction & Groq Vision analysis initiated.",
     }
+
+
+@router.get("/list")
+def list_documents(
+    classroom_id: Optional[int] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    query = db.query(DocumentFile)
+    if classroom_id:
+        query = query.filter(DocumentFile.classroom_id == classroom_id)
+    docs = query.order_by(DocumentFile.created_at.desc()).all()
+    return [
+        {
+            "id": doc.id,
+            "unique_code": doc.unique_code,
+            "filename": doc.filename,
+            "classroom_id": doc.classroom_id,
+            "file_url": f"/{doc.file_path.replace(chr(92), '/')}",
+            "processing_status": doc.processing_status,
+            "processing_progress": doc.processing_progress,
+            "created_at": doc.created_at,
+        }
+        for doc in docs
+    ]
 
 
 @router.delete("/{doc_id}")

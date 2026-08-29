@@ -67,24 +67,38 @@ export default function ClassroomDetail() {
   const [loadingDoc, setLoadingDoc] = useState(false);
   const [viewMode, setViewMode] = useState('pdf'); // 'pdf' or 'text'
 
+  const [loadingClass, setLoadingClass] = useState(true);
+  const [loadError, setLoadError] = useState('');
+
   const loadData = async () => {
     try {
-      const [classRes, postsRes, docsRes, quizRes, studentRes] = await Promise.all([
+      setLoadingClass(true);
+      const [classRes, postsRes, docsRes, quizRes, studentRes] = await Promise.allSettled([
         API.get(`/api/classroom/${id}`),
         API.get(`/api/classroom/${id}/posts`),
         API.get(`/api/upload/list?classroom_id=${id}`),
         API.get(`/api/quiz/list/${id}`),
         API.get(`/api/classroom/${id}/students`)
       ]);
-      setClassroom(classRes.data);
-      setEditName(classRes.data.name);
-      setEditDescription(classRes.data.description || '');
-      setPosts(postsRes.data);
-      setDocuments(docsRes.data);
-      setQuizzes(quizRes.data);
-      setStudents(studentRes.data);
+
+      if (classRes.status === 'fulfilled' && classRes.value.data) {
+        setClassroom(classRes.value.data);
+        setEditName(classRes.value.data.name);
+        setEditDescription(classRes.value.data.description || '');
+        setLoadError('');
+      } else {
+        setLoadError('Classroom not found or you may not be enrolled.');
+      }
+
+      if (postsRes.status === 'fulfilled') setPosts(postsRes.value.data || []);
+      if (docsRes.status === 'fulfilled') setDocuments(docsRes.value.data || []);
+      if (quizRes.status === 'fulfilled') setQuizzes(quizRes.value.data || []);
+      if (studentRes.status === 'fulfilled') setStudents(studentRes.value.data || []);
     } catch (err) {
       console.error("Error loading classroom details", err);
+      setLoadError('Failed to load classroom details.');
+    } finally {
+      setLoadingClass(false);
     }
   };
 
@@ -430,10 +444,34 @@ export default function ClassroomDetail() {
     }
   };
 
+  if (loadingClass && !classroom) {
+    return (
+      <div className="min-h-[85vh] flex flex-col items-center justify-center bg-[#090d16] text-gray-400 space-y-3">
+        <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+        <span className="text-xs font-mono">Loading Classroom details...</span>
+      </div>
+    );
+  }
+
   if (!classroom) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-400">
-        Loading Classroom...
+      <div className="min-h-[85vh] flex flex-col items-center justify-center bg-[#090d16] text-gray-300 p-6">
+        <div className="max-w-md glass-card p-8 rounded-3xl border border-gray-800 text-center space-y-4 shadow-2xl">
+          <div className="p-3 bg-red-950/60 border border-red-800/80 rounded-2xl w-fit mx-auto text-red-400">
+            <AlertCircle className="w-8 h-8" />
+          </div>
+          <h2 className="text-lg font-bold text-white">Classroom Unavailable</h2>
+          <p className="text-xs text-gray-400">
+            {loadError || 'This classroom does not exist or you do not have permission to view it.'}
+          </p>
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center space-x-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-600/30 transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Return to Classrooms</span>
+          </Link>
+        </div>
       </div>
     );
   }
