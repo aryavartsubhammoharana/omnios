@@ -28,41 +28,72 @@ def get_easyocr_reader():
     return _easyocr_reader if _easyocr_reader is not False else None
 
 def format_ocr_text_locally(raw_text: str) -> str:
-    """Formats raw OCR lines into clean structured Markdown locally with $0 API cost.
-    Handles: Page headers, Subject/Unit/Chapter headings, Section headings,
-    Numbered questions (1. / 1_ / 1) / Q1.), bullet lists, and body text."""
+    """Intelligently repairs broken OCR sentence fragments and formats into clean structured Markdown."""
     import re
 
-    # Step 1: Normalize OCR artifacts — underscores used as periods by OCR
+    if not raw_text or not raw_text.strip():
+        return raw_text
+
+    # Step 1: Normalize OCR artifacts
     text = raw_text.replace("_", ". ").replace(". . ", ". ").replace(".  ", ". ")
+    # Replace weird OCR quotes or pipes
+    text = re.sub(r'[|~^]', ' ', text)
 
-    # Step 2: Split numbered questions that are glued together on same line
-    # Pattern: "...sentence. 2. Next question" or "...sentence. 2 Next question"
-    text = re.sub(r'(?<=[.?!])\s*(\d{1,3})\s*[.)]\s*', r'\n\1. ', text)
+    raw_lines = [l.strip() for l in text.split("\n") if l.strip()]
+    merged_lines = []
 
-    lines = text.split("\n")
+    # Step 2: Merge broken mid-sentence fragments
+    # If line i does not end with terminal punctuation (. ? ! : ---) and line i+1 doesn't start with a new question/heading/bullet, JOIN THEM!
+    for line in raw_lines:
+        if not merged_lines:
+            merged_lines.append(line)
+            continue
+
+        prev = merged_lines[-1]
+
+        # Is this a new structural block (Page header, Heading, Question number, bullet)?
+        is_new_block = (
+            bool(re.match(r'^-{2,}\s*Page\s+\d+', line, re.I)) or
+            bool(re.match(r'^(subject\s*[:.]|question\s*bank|unit\s+\d|chapter\s+\d)', line, re.I)) or
+            bool(re.match(r'^(short\s+questions?|broad\s+questions?|long\s+questions?|section\s+[a-z]|notes?\s*[:.]|fill\s+in|true\s+or\s+false|match\s+the|multiple\s+choice|mcq|objective)', line, re.I)) or
+            bool(re.match(r'^(Q\.?\s*)?(\d{1,3})\s*[.)]\s+', line)) or
+            line.startswith(("-", "*", "•")) or
+            bool(re.match(r'^\(?[a-eA-Eivx]{1,4}[.)]\s+', line))
+        )
+
+        prev_is_block_header = (
+            bool(re.match(r'^-{2,}\s*Page\s+\d+', prev, re.I)) or
+            bool(re.match(r'^(subject\s*[:.]|question\s*bank|unit\s+\d|chapter\s+\d)', prev, re.I)) or
+            bool(re.match(r'^(short\s+questions?|broad\s+questions?|long\s+questions?|section\s+[a-z]|notes?\s*[:.]|fill\s+in|true\s+or\s+false|match\s+the|multiple\s+choice|mcq|objective)', prev, re.I))
+        )
+
+        if not is_new_block and not prev_is_block_header and not prev.endswith((".", "?", "!", ":", ";", "---")):
+            # Join with previous line to form a complete coherent sentence!
+            merged_lines[-1] = prev + " " + line
+        else:
+            merged_lines.append(line)
+
+    # Step 3: Format merged lines into structured Markdown
     formatted_lines = []
-
-    for line in lines:
-        l = line.strip()
+    for l in merged_lines:
+        l = l.strip()
         if not l:
             continue
 
-        # --- Page Header ---
+        # Page Header
         if re.match(r'^-{2,}\s*Page\s+\d+', l, re.IGNORECASE):
             formatted_lines.append(f"\n\n---\n\n### 📄 {l.strip('- ')}\n")
 
-        # --- Subject / Unit / Chapter / Question Bank (Top-Level Heading) ---
+        # Top Headings (Subject, Unit, Chapter)
         elif re.match(r'^(subject\s*[:.]|question\s*bank|unit\s+\d|chapter\s+\d)', l, re.IGNORECASE):
             formatted_lines.append(f"\n## {l}\n")
 
-        # --- Section Heading (Short Questions / Broad Questions / Section / Notes) ---
+        # Section Headings (Short Questions, Broad Questions)
         elif re.match(r'^(short\s+questions?|broad\s+questions?|long\s+questions?|section\s+[a-z]|notes?\s*[:.]|fill\s+in|true\s+or\s+false|match\s+the|multiple\s+choice|mcq|objective)', l, re.IGNORECASE):
             formatted_lines.append(f"\n### {l}\n")
 
-        # --- Numbered Question: "1. ..." / "Q1. ..." / "Q.1 ..." ---
+        # Numbered Questions
         elif re.match(r'^(Q\.?\s*)?(\d{1,3})\s*[.)]\s+', l):
-            # Extract the question number and text
             m = re.match(r'^(Q\.?\s*)?(\d{1,3})\s*[.)]\s+(.*)', l)
             if m:
                 num = m.group(2)
@@ -71,27 +102,24 @@ def format_ocr_text_locally(raw_text: str) -> str:
             else:
                 formatted_lines.append(f"\n**{l}**\n")
 
-        # --- Bullet list items ---
+        # Bullet lists
         elif l.startswith(("-", "*", "•")):
             formatted_lines.append(f"- {l.lstrip('-*• ')}")
 
-        # --- Lettered sub-options: a) / b) / (a) / (i) ---
+        # Lettered sub-options
         elif re.match(r'^\(?[a-eA-Eivx]{1,4}[.)]\s+', l):
             formatted_lines.append(f"   - {l}")
 
-        # --- "Define ...", "Describe ...", "Differentiate ...", "Draw ...", "Discuss ...", "Mention ...", "Write ...", "What ...", "Why ...", "How ...", "Give ..." --- (standalone question keywords)
-        elif re.match(r'^(Define|Describe|Differentiate|Distinguish|Draw|Discuss|Mention|Write|What|Why|How|Give|Classify|Compare|Contrast|Explain|State|List|Name|Depict|Enumerate)\b', l, re.IGNORECASE) and len(l) > 20:
+        # Standalone Question keywords (Define, Describe, What is...)
+        elif re.match(r'^(Define|Describe|Differentiate|Distinguish|Draw|Discuss|Mention|Write|What|Why|How|Give|Classify|Compare|Contrast|Explain|State|List|Name|Depict|Enumerate)\b', l, re.IGNORECASE) and len(l) > 15:
             formatted_lines.append(f"\n**{l}**\n")
 
-        # --- Regular body text ---
+        # Normal text
         else:
             formatted_lines.append(l)
 
     result = "\n".join(formatted_lines).strip()
-
-    # Step 3: Clean up excessive blank lines
     result = re.sub(r'\n{4,}', '\n\n\n', result)
-
     return result
 
 def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
