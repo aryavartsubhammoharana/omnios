@@ -6,14 +6,20 @@ import {
   BookOpen, LogOut, Sparkles, Flame, User, Bot, 
   GraduationCap, Settings, Mail, X, Check, Loader2,
   Camera, Lock, ShieldCheck, KeyRound, ChevronDown, ChevronUp,
-  Trash2, AlertTriangle
+  Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award
 } from 'lucide-react';
 
 export default function Navbar() {
-  const { user, logout, updateProfile, changePassword, uploadAvatar, deleteAccount } = useContext(AuthContext);
+  const { user, logout, confirmRole, updateProfile, changePassword, uploadAvatar, deleteAccount } = useContext(AuthContext);
   const navigate = useNavigate();
   const [streak, setStreak] = useState(1);
   
+  // Mandatory Role Selection Modal State (Google Login First-Time Onboarding)
+  const [mandatoryRole, setMandatoryRole] = useState('student');
+  const [mandatoryClass, setMandatoryClass] = useState('Class 11 Science');
+  const [savingRole, setSavingRole] = useState(false);
+  const [roleError, setRoleError] = useState('');
+
   // Profile Settings Modal State
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editName, setEditName] = useState('');
@@ -52,6 +58,22 @@ export default function Navbar() {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleConfirmRoleSubmit = async (e) => {
+    e.preventDefault();
+    setSavingRole(true);
+    setRoleError('');
+    try {
+      await confirmRole({
+        role: mandatoryRole,
+        student_class: mandatoryRole === 'student' ? mandatoryClass : null
+      });
+    } catch (err) {
+      setRoleError(err.response?.data?.detail || 'Failed to confirm role.');
+    } finally {
+      setSavingRole(false);
+    }
   };
 
   const handleAvatarChange = async (e) => {
@@ -132,6 +154,8 @@ export default function Navbar() {
     }
   };
 
+  const isRolePending = user && user.is_role_confirmed === false;
+
   return (
     <>
       <nav className="h-[61px] bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
@@ -155,8 +179,8 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Navigation Tabs (Center) */}
-        {user && (
+        {/* Navigation Tabs (Center) - Disabled if role is pending */}
+        {user && !isRolePending && (
           <div className="hidden md:flex items-center bg-gray-900/90 border border-gray-800/80 rounded-xl p-1 gap-1 shadow-inner">
             <Link
               to="/dashboard"
@@ -189,18 +213,21 @@ export default function Navbar() {
           {user ? (
             <div className="flex items-center space-x-2.5">
               {/* Gamified Streak Counter */}
-              <div 
-                title={`${streak} consecutive active study days`}
-                className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-inner"
-              >
-                <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
-                <span>{streak} {streak === 1 ? 'Day' : 'Days'} Streak</span>
-              </div>
+              {!isRolePending && (
+                <div 
+                  title={`${streak} consecutive active study days`}
+                  className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-inner"
+                >
+                  <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
+                  <span>{streak} {streak === 1 ? 'Day' : 'Days'} Streak</span>
+                </div>
+              )}
 
               {/* Profile Pill & Settings Trigger */}
               <button
-                onClick={() => setShowProfileModal(true)}
-                className="flex items-center space-x-2 bg-gray-900/90 hover:bg-gray-800 border border-gray-800 px-3 py-1.5 rounded-xl text-xs transition group cursor-pointer shadow-inner"
+                onClick={() => !isRolePending && setShowProfileModal(true)}
+                disabled={isRolePending}
+                className="flex items-center space-x-2 bg-gray-900/90 hover:bg-gray-800 border border-gray-800 px-3 py-1.5 rounded-xl text-xs transition group cursor-pointer shadow-inner disabled:opacity-50"
                 title="Edit Student Profile & Class"
               >
                 {user.avatar_url ? (
@@ -244,8 +271,110 @@ export default function Navbar() {
         </div>
       </nav>
 
+      {/* Mandatory Non-Dismissible Role Selection Onboarding Modal (Google First Login) */}
+      {isRolePending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
+          <div className="w-full max-w-lg glass-card p-6 sm:p-8 rounded-3xl border border-indigo-900/60 shadow-2xl space-y-6 animate-in fade-in zoom-in duration-300">
+            <div className="text-center space-y-2">
+              <div className="inline-flex p-3 bg-indigo-950 border border-indigo-700/60 rounded-2xl shadow-inner">
+                <GraduationCap className="w-8 h-8 text-indigo-400" />
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold text-white">
+                Welcome to NoteAI, {user.full_name}!
+              </h2>
+              <p className="text-xs text-gray-300 max-w-md mx-auto leading-relaxed">
+                Please select your permanent role to continue. Once selected and confirmed, your role <strong className="text-indigo-300">cannot be changed</strong>.
+              </p>
+            </div>
+
+            {roleError && (
+              <div className="p-3 bg-red-950/80 border border-red-800 text-red-300 text-xs rounded-xl text-center">
+                {roleError}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmRoleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Option 1: Student */}
+                <div
+                  onClick={() => setMandatoryRole('student')}
+                  className={`p-4 rounded-2xl border cursor-pointer transition flex flex-col items-center text-center space-y-2 ${
+                    mandatoryRole === 'student'
+                      ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-600/20 ring-1 ring-indigo-500'
+                      : 'bg-gray-900/80 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                  }`}
+                >
+                  <div className="p-2.5 bg-indigo-950 rounded-xl text-indigo-400 border border-indigo-800">
+                    <GraduationCap className="w-6 h-6" />
+                  </div>
+                  <span className="font-bold text-xs">I am a Student</span>
+                  <p className="text-[10px] text-gray-400">Daily practice, video lectures & notes</p>
+                </div>
+
+                {/* Option 2: Teacher */}
+                <div
+                  onClick={() => setMandatoryRole('teacher')}
+                  className={`p-4 rounded-2xl border cursor-pointer transition flex flex-col items-center text-center space-y-2 ${
+                    mandatoryRole === 'teacher'
+                      ? 'bg-purple-600/20 border-purple-500 text-white shadow-lg shadow-purple-600/20 ring-1 ring-purple-500'
+                      : 'bg-gray-900/80 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                  }`}
+                >
+                  <div className="p-2.5 bg-purple-950 rounded-xl text-purple-400 border border-purple-800">
+                    <Award className="w-6 h-6" />
+                  </div>
+                  <span className="font-bold text-xs">I am a Teacher</span>
+                  <p className="text-[10px] text-gray-400">Create classes, upload notes & manage quizzes</p>
+                </div>
+              </div>
+
+              {mandatoryRole === 'student' && (
+                <div className="bg-gray-900/60 p-4 rounded-2xl border border-gray-800 space-y-2">
+                  <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Select Your Class / Grade</span>
+                  </label>
+                  <select
+                    value={mandatoryClass}
+                    onChange={(e) => setMandatoryClass(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner transition cursor-pointer"
+                  >
+                    <option value="Class 11 Science">Class 11 Science</option>
+                    <option value="Class 12 Science">Class 12 Science</option>
+                    <option value="Class 10 Board">Class 10 Board</option>
+                    <option value="Class 9 Foundation">Class 9 Foundation</option>
+                    <option value="JEE / NEET Advanced">JEE / NEET Advanced</option>
+                    <option value="College / Engineering">College / Engineering</option>
+                    <option value="General Science">General Science</option>
+                  </select>
+                  <p className="text-[10px] text-gray-500">
+                    You can change your class later, but your student role will remain permanent.
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-amber-950/40 border border-amber-900/60 p-3 rounded-xl flex items-start space-x-2 text-[11px] text-amber-300">
+                <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong>Important Security Notice:</strong> Once saved, you cannot switch between Student and Teacher. To change your role, you must delete your account.
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingRole}
+                className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition disabled:opacity-50"
+              >
+                {savingRole ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                <span>{savingRole ? 'Saving Role & Initializing Studio...' : 'Confirm Role & Enter NoteAI'}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Comprehensive Student Profile Modal */}
-      {showProfileModal && user && (
+      {showProfileModal && user && !isRolePending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md overflow-y-auto">
           <div className="w-full max-w-lg glass-card p-6 sm:p-8 rounded-3xl border border-gray-800 shadow-2xl relative animate-in fade-in zoom-in duration-200 my-8">
             <button
@@ -290,8 +419,9 @@ export default function Navbar() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-bold text-white">{user.full_name}</h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                    {user.role}
+                  <span className="text-[10px] px-2 py-0.5 rounded-md font-bold uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>{user.role}</span>
                   </span>
                 </div>
                 <p className="text-xs text-gray-400 flex items-center gap-1.5 mt-1 font-mono">
@@ -352,27 +482,44 @@ export default function Navbar() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5 font-mono flex items-center gap-1.5">
-                  <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Student Class / Grade (Dropdown)</span>
+                <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5 font-mono">
+                  Role (Permanently Locked 🔒)
                 </label>
-                <select
-                  value={editClass}
-                  onChange={(e) => setEditClass(e.target.value)}
-                  className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition shadow-inner cursor-pointer"
-                >
-                  <option value="Class 11 Science">Class 11 Science</option>
-                  <option value="Class 12 Science">Class 12 Science</option>
-                  <option value="Class 10 Board">Class 10 Board</option>
-                  <option value="Class 9 Foundation">Class 9 Foundation</option>
-                  <option value="JEE / NEET Advanced">JEE / NEET Advanced</option>
-                  <option value="College / Engineering">College / Engineering</option>
-                  <option value="General Science">General Science</option>
-                </select>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-gray-500 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={user.role === 'student' ? 'Student' : 'Teacher'}
+                    disabled
+                    className="w-full bg-gray-900/40 border border-gray-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-gray-400 cursor-not-allowed shadow-inner font-bold uppercase"
+                  />
+                </div>
                 <p className="text-[10px] text-gray-500 mt-1">
-                  Your daily diagnostic tests and recommendations adapt directly to this class.
+                  Role is locked for security. To switch roles, you must permanently delete your account.
                 </p>
               </div>
+
+              {user.role === 'student' && (
+                <div>
+                  <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5 font-mono flex items-center gap-1.5">
+                    <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Student Class / Grade (Editable Dropdown)</span>
+                  </label>
+                  <select
+                    value={editClass}
+                    onChange={(e) => setEditClass(e.target.value)}
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 transition shadow-inner cursor-pointer"
+                  >
+                    <option value="Class 11 Science">Class 11 Science</option>
+                    <option value="Class 12 Science">Class 12 Science</option>
+                    <option value="Class 10 Board">Class 10 Board</option>
+                    <option value="Class 9 Foundation">Class 9 Foundation</option>
+                    <option value="JEE / NEET Advanced">JEE / NEET Advanced</option>
+                    <option value="College / Engineering">College / Engineering</option>
+                    <option value="General Science">General Science</option>
+                  </select>
+                </div>
+              )}
 
               <div className="pt-2 flex justify-end">
                 <button

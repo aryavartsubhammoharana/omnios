@@ -14,6 +14,7 @@ class User(Base):
     avatar_url = Column(String, nullable=True)
     auth_provider = Column(String, default="local", nullable=False)
     is_verified = Column(Boolean, default=True, nullable=False)
+    is_role_confirmed = Column(Boolean, default=False, nullable=False)
     verification_otp = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

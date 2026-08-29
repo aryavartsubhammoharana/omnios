@@ -59,6 +59,12 @@ export const AuthProvider = ({ children }) => {
     return res.data.user;
   };
 
+  const confirmRole = async ({ role, student_class = null }) => {
+    const res = await API.put('/api/auth/confirm-role', { role, student_class });
+    setUser(res.data);
+    return res.data;
+  };
+
   const updateProfile = async (profileData) => {
     const res = await API.put('/api/auth/profile', profileData);
     setUser(res.data);
@@ -94,7 +100,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{ 
       user, loading, login, signup, verifyOtp, resendOtp, 
-      googleLogin, updateProfile, changePassword, uploadAvatar, deleteAccount, logout 
+      googleLogin, confirmRole, updateProfile, changePassword, uploadAvatar, deleteAccount, logout 
     }}>
       {children}
     </AuthContext.Provider>

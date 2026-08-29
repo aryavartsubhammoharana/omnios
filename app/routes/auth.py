@@ -10,7 +10,7 @@ from app.database import get_db
 from app.models.user import User
 from app.schemas.auth import (
     UserCreate, UserLogin, UserOut, Token, GoogleAuthRequest, 
-    UserProfileUpdate, VerifyOtpRequest, ResendOtpRequest, ChangePasswordRequest
+    UserProfileUpdate, VerifyOtpRequest, ResendOtpRequest, ChangePasswordRequest, ConfirmRoleRequest
 )
 from app.utils.security import get_password_hash, verify_password, create_access_token
 from app.utils.deps import get_current_user
@@ -33,6 +33,7 @@ def signup(user_in: UserCreate, db: Session = Depends(get_db)):
             existing.hashed_password = get_password_hash(user_in.password)
             existing.role = user_in.role.lower()
             existing.student_class = user_in.student_class
+            existing.is_role_confirmed = True
             db.commit()
             send_verification_otp_email(existing.email, otp, existing.full_name)
             return {
@@ -54,6 +55,7 @@ def signup(user_in: UserCreate, db: Session = Depends(get_db)):
         student_class=user_in.student_class,
         auth_provider="local",
         is_verified=False,
+        is_role_confirmed=True,
         verification_otp=otp,
         otp_expires_at=expires_at
     )
@@ -128,10 +130,10 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
         user.verification_otp = otp
         user.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
         db.commit()
-        print(f"[OTP SERVICE] Unverified login attempt for {user.email}. OTP: {otp}")
+        send_verification_otp_email(user.email, otp, user.full_name)
         raise HTTPException(
             status_code=403,
-            detail=f"EMAIL_NOT_VERIFIED: Please verify your email with the 6-digit OTP."
+            detail="EMAIL_NOT_VERIFIED: Please verify your email with the 6-digit OTP."
         )
 
     token = create_access_token(subject=user.id)
@@ -180,11 +182,12 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             email=email,
             hashed_password=get_password_hash(random_pwd),
             full_name=name or email.split("@")[0],
-            role=payload.role.lower() if payload.role else "student",
-            student_class=payload.student_class,
+            role="student",
+            student_class=None,
             avatar_url=picture,
             auth_provider="google",
-            is_verified=True
+            is_verified=True,
+            is_role_confirmed=False
         )
         db.add(user)
         db.commit()
@@ -195,13 +198,40 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             user.avatar_url = picture
         if name and (not user.full_name or user.full_name == user.email):
             user.full_name = name
-        if payload.student_class and not user.student_class:
-            user.student_class = payload.student_class
         db.commit()
         db.refresh(user)
 
     token = create_access_token(subject=user.id)
     return Token(access_token=token, token_type="bearer", user=UserOut.model_validate(user))
+
+
+@router.put("/confirm-role", response_model=UserOut)
+def confirm_role(
+    payload: ConfirmRoleRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.is_role_confirmed:
+        raise HTTPException(
+            status_code=400,
+            detail="Role is permanently locked and cannot be modified. To change role, you must delete your account."
+        )
+
+    role_clean = payload.role.lower().strip()
+    if role_clean not in ("student", "teacher"):
+        raise HTTPException(status_code=400, detail="Invalid role. Must be 'student' or 'teacher'.")
+
+    current_user.role = role_clean
+    if role_clean == "student":
+        current_user.student_class = (payload.student_class or "Class 11 Science").strip()
+    else:
+        current_user.student_class = None
+
+    current_user.is_role_confirmed = True
+    db.commit()
+    db.refresh(current_user)
+
+    return UserOut.model_validate(current_user)
 
 
 @router.put("/profile", response_model=UserOut)
@@ -212,10 +242,8 @@ def update_profile(
 ):
     if data.full_name is not None and data.full_name.strip():
         current_user.full_name = data.full_name.strip()
-    if data.student_class is not None:
+    if data.student_class is not None and current_user.role == "student":
         current_user.student_class = data.student_class.strip()
-    if data.role is not None and data.role.lower() in ("student", "teacher"):
-        current_user.role = data.role.lower()
 
     db.commit()
     db.refresh(current_user)

@@ -20,6 +20,10 @@ class VerifyOtpRequest(BaseModel):
 class ResendOtpRequest(BaseModel):
     email: EmailStr
 
+class ConfirmRoleRequest(BaseModel):
+    role: str
+    student_class: Optional[str] = None
+
 class ChangePasswordRequest(BaseModel):
     old_password: Optional[str] = None
     new_password: str
@@ -27,13 +31,12 @@ class ChangePasswordRequest(BaseModel):
 class GoogleAuthRequest(BaseModel):
     credential: Optional[str] = None
     access_token: Optional[str] = None
-    role: Optional[str] = "student"
+    role: Optional[str] = None
     student_class: Optional[str] = None
 
 class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     student_class: Optional[str] = None
-    role: Optional[str] = None
 
 class UserOut(BaseModel):
     id: int
@@ -44,6 +47,7 @@ class UserOut(BaseModel):
     avatar_url: Optional[str] = None
     auth_provider: Optional[str] = "local"
     is_verified: bool = True
+    is_role_confirmed: bool = False
     created_at: datetime
 
     class Config:
