@@ -14,6 +14,7 @@ from app.schemas.auth import (
 )
 from app.utils.security import get_password_hash, verify_password, create_access_token
 from app.utils.deps import get_current_user
+from app.services.email_service import send_verification_otp_email
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -33,7 +34,7 @@ def signup(user_in: UserCreate, db: Session = Depends(get_db)):
             existing.role = user_in.role.lower()
             existing.student_class = user_in.student_class
             db.commit()
-            print(f"[OTP SERVICE] Resent verification OTP: {otp} to {existing.email}")
+            send_verification_otp_email(existing.email, otp, existing.full_name)
             return {
                 "message": "Account already created but unverified. A new verification OTP has been sent to your email.",
                 "email": existing.email,
@@ -60,7 +61,7 @@ def signup(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    print(f"[OTP SERVICE] Verification OTP for {user.email}: {otp}")
+    send_verification_otp_email(user.email, otp, user.full_name)
 
     return {
         "message": "Registration successful! Please enter the 6-digit OTP sent to your email.",
@@ -107,7 +108,7 @@ def resend_otp(payload: ResendOtpRequest, db: Session = Depends(get_db)):
     user.otp_expires_at = datetime.utcnow() + timedelta(minutes=10)
     db.commit()
 
-    print(f"[OTP SERVICE] New Verification OTP for {user.email}: {otp}")
+    send_verification_otp_email(user.email, otp, user.full_name)
 
     return {
         "message": "A fresh 6-digit OTP has been sent to your email.",
