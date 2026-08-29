@@ -37,14 +37,15 @@ def analyze_image_with_groq_vision(image_input: bytes | str | Image.Image, max_r
         "or scientific laws shown. Format the output in clean Markdown with LaTeX for formulas where appropriate."
     )
 
-    if settings.GROQ_API_KEY:
+    vision_key = settings.GROQ_VISION_API_KEY.strip() or settings.GROQ_API_KEY.strip()
+    if vision_key:
         try:
             headers = {
-                "Authorization": f"Bearer {settings.GROQ_API_KEY.strip()}",
+                "Authorization": f"Bearer {vision_key}",
                 "Content-Type": "application/json"
             }
             payload = {
-                "model": "qwen/qwen3.6-27b",
+                "model": settings.GROQ_VISION_MODEL or "qwen/qwen3.6-27b",
                 "messages": [
                     {
                         "role": "user",

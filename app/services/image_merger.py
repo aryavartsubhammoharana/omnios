@@ -69,8 +69,9 @@ def merge_images_into_grid(image_paths: list[str], output_path: str, images_per_
 
 
 def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number: int, max_retries: int = 3) -> str:
-    if not settings.GROQ_API_KEY:
-        print("[WARNING] GROQ_API_KEY is not configured in .env")
+    vision_key = settings.GROQ_VISION_API_KEY.strip() or settings.GROQ_API_KEY.strip()
+    if not vision_key:
+        print("[WARNING] Neither GROQ_VISION_API_KEY nor GROQ_API_KEY is configured in .env")
         return ""
 
     if not os.path.exists(image_path):
@@ -102,11 +103,11 @@ def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number
             )
 
         headers = {
-            "Authorization": f"Bearer {settings.GROQ_API_KEY.strip()}",
+            "Authorization": f"Bearer {vision_key}",
             "Content-Type": "application/json"
         }
 
-        model_to_use = "qwen/qwen3.6-27b"
+        model_to_use = settings.GROQ_VISION_MODEL or "qwen/qwen3.6-27b"
 
         payload = {
             "model": model_to_use,
