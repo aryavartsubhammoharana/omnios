@@ -46,4 +46,6 @@ class QuizAttemptOut(BaseModel):
     score: float
     max_score: float
     answers_json: Dict[str, Any]
-    attempted_at: datetime
+    completed_at: Optional[datetime] = None
+    attempted_at: Optional[datetime] = None
+

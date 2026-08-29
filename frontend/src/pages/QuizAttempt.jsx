@@ -90,7 +90,7 @@ export default function QuizAttempt() {
         {questions.map((q, idx) => {
           const qId = q.id || idx + 1;
           const chosenOpt = selectedAnswers[qId];
-          const resultItem = attemptResult?.answers_json?.[strQId => strQId === String(qId)];
+          const resultItem = attemptResult?.answers_json?.[String(qId)] || attemptResult?.answers_json?.[qId];
 
           return (
             <TiltCard3D key={idx} className="p-6">
