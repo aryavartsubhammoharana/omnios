@@ -1,8 +1,3 @@
-"""Dual Vector Database Architecture for NoteAI:
-1. Classroom Vector DB (Per-Classroom Isolated Vector Space with Full Metadata)
-2. Global Vector DB (Unified Anonymous Vector Space without Metadata)
-"""
-
 import os
 import chromadb
 from app.utils.text_chunker import chunk_text
@@ -23,7 +18,6 @@ def get_chroma_client():
     return _client
 
 def get_classroom_collection(classroom_code: str):
-    """Returns dedicated isolated ChromaDB collection for a specific classroom."""
     client = get_chroma_client()
     clean_code = str(classroom_code).strip().upper()
     collection_name = f"classroom_{clean_code}"
@@ -33,7 +27,6 @@ def get_classroom_collection(classroom_code: str):
     )
 
 def get_global_collection():
-    """Returns the single unified Global Vector Database collection."""
     client = get_chroma_client()
     return client.get_or_create_collection(
         name="global_knowledge_base",
@@ -47,10 +40,6 @@ def index_document_in_dual_vector_store(
     filename: str,
     content_text: str
 ) -> int:
-    """Simultaneously indexes document into:
-    1. Classroom-specific Vector DB (with full document metadata)
-    2. Global Vector DB (pure anonymous chunks without metadata)
-    """
     if not content_text or not content_text.strip():
         return 0
 
@@ -59,13 +48,9 @@ def index_document_in_dual_vector_store(
         if not chunks:
             return 0
 
-        # =========================================================================
-        # 1. CLASSROOM VECTOR DB (Per-Classroom Vector Store WITH Metadata)
-        # =========================================================================
         if classroom_code:
             try:
                 class_col = get_classroom_collection(classroom_code)
-                # Clean existing chunks for this doc in classroom DB
                 try:
                     class_col.delete(where={"doc_id": int(doc_id)})
                 except Exception:
@@ -93,21 +78,12 @@ def index_document_in_dual_vector_store(
                     metadatas=class_metas,
                     ids=class_ids
                 )
-                print(f"[OK] Classroom Vector DB ({classroom_code}): Indexed {len(chunks)} chunks with metadata for '{filename}'")
+                print(f"[OK] Classroom Vector DB ({classroom_code}): Indexed {len(chunks)} chunks for '{filename}'")
             except Exception as e:
                 print(f"Error indexing in Classroom Vector DB: {e}")
 
-        # =========================================================================
-        # 2. GLOBAL VECTOR DB (Anonymous Knowledge Space WITHOUT Metadata)
-        # =========================================================================
         try:
             global_col = get_global_collection()
-            # Clean existing chunks in global DB
-            try:
-                global_col.delete(where={"doc_hash": f"doc_{doc_id}"})
-            except Exception:
-                pass
-
             global_docs = []
             global_metas = []
             global_ids = []
@@ -115,7 +91,6 @@ def index_document_in_dual_vector_store(
             for c in chunks:
                 idx = c["chunk_index"]
                 global_docs.append(c["chunk_text"])
-                # PURE ANONYMOUS METADATA: No filename, no user ID, no teacher name
                 global_metas.append({
                     "doc_hash": f"doc_{doc_id}",
                     "collection_key": str(classroom_code or "general").upper()
@@ -127,7 +102,7 @@ def index_document_in_dual_vector_store(
                 metadatas=global_metas,
                 ids=global_ids
             )
-            print(f"[OK] Global Vector DB: Indexed {len(chunks)} anonymous chunks into collection '{classroom_code or 'general'}'")
+            print(f"[OK] Global Vector DB: Permanently indexed {len(chunks)} chunks into Global Knowledge Base")
         except Exception as e:
             print(f"Error indexing in Global Vector DB: {e}")
 
@@ -138,9 +113,6 @@ def index_document_in_dual_vector_store(
         return 0
 
 def query_classroom_vector_db(classroom_code: str, query_text: str, n_results: int = 5) -> list[dict]:
-    """Semantic search inside a specific Classroom Vector Database.
-    Returns matched chunks with source metadata.
-    """
     if not query_text or not query_text.strip() or not classroom_code:
         return []
 
@@ -175,9 +147,6 @@ def query_classroom_vector_db(classroom_code: str, query_text: str, n_results: i
         return []
 
 def query_global_vector_db(query_text: str, n_results: int = 6) -> list[dict]:
-    """Semantic search across the entire Global Vector Database.
-    Returns pure anonymous chunks without revealing source metadata.
-    """
     if not query_text or not query_text.strip():
         return []
 
@@ -205,21 +174,11 @@ def query_global_vector_db(query_text: str, n_results: int = 6) -> list[dict]:
         print(f"Error querying Global Vector DB: {e}")
         return []
 
-def delete_document_from_dual_vector_store(doc_id: int, classroom_code: str | None = None):
-    """Removes document chunks from both Classroom Vector DB and Global Vector DB."""
-    # 1. Delete from Classroom Vector DB
+def delete_document_from_dual_vector_store(doc_id: int, classroom_code: str | None = None, classroom_id: int | None = None):
     if classroom_code:
         try:
             class_col = get_classroom_collection(classroom_code)
             class_col.delete(where={"doc_id": int(doc_id)})
-            print(f"[OK] Deleted doc {doc_id} from Classroom Vector DB ({classroom_code})")
+            print(f"[OK] Cleaned doc {doc_id} from Classroom Vector DB ({classroom_code})")
         except Exception as e:
-            print(f"Note on deleting from Classroom Vector DB: {e}")
-
-    # 2. Delete from Global Vector DB
-    try:
-        global_col = get_global_collection()
-        global_col.delete(where={"doc_hash": f"doc_{doc_id}"})
-        print(f"[OK] Deleted doc {doc_id} from Global Vector DB")
-    except Exception as e:
-        print(f"Note on deleting from Global Vector DB: {e}")
+            print(f"Note on Classroom Vector DB cleanup: {e}")

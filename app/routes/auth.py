@@ -21,6 +21,7 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 AVATAR_UPLOAD_DIR = os.path.join("uploads", "avatars")
 os.makedirs(AVATAR_UPLOAD_DIR, exist_ok=True)
 
+
 @router.post("/signup")
 def signup(user_in: UserCreate, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == user_in.email).first()
@@ -152,38 +153,40 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
             if res.status_code == 200:
                 data = res.json()
                 email = data.get("email")
-                name = data.get("name") or data.get("given_name") or "Student"
+                name = data.get("name")
                 picture = data.get("picture")
         except Exception as e:
-            print(f"Error verifying Google ID token: {e}")
+            print(f"Error validating Google ID token: {e}")
 
     if not email and payload.access_token:
         try:
-            res = requests.get("https://www.googleapis.com/oauth2/v3/userinfo", headers={"Authorization": f"Bearer {payload.access_token}"}, timeout=10)
+            res = requests.get(
+                "https://www.googleapis.com/oauth2/v3/userinfo",
+                headers={"Authorization": f"Bearer {payload.access_token}"},
+                timeout=10
+            )
             if res.status_code == 200:
                 data = res.json()
                 email = data.get("email")
-                name = data.get("name") or "Student"
+                name = data.get("name")
                 picture = data.get("picture")
         except Exception as e:
-            print(f"Error verifying Google access token: {e}")
+            print(f"Error fetching Google userinfo: {e}")
 
     if not email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to authenticate with Google. Invalid token or credential."
+            detail="Unable to verify Google credentials."
         )
 
     user = db.query(User).filter(User.email == email).first()
 
     if not user:
-        random_pwd = str(uuid.uuid4())
+        suggested_role = payload.role.lower() if payload.role else "student"
         user = User(
             email=email,
-            hashed_password=get_password_hash(random_pwd),
             full_name=name or email.split("@")[0],
-            role="student",
-            student_class=None,
+            role=suggested_role,
             avatar_url=picture,
             auth_provider="google",
             is_verified=True,
@@ -193,11 +196,9 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
     else:
-        user.is_verified = True
         if picture and not user.avatar_url:
             user.avatar_url = picture
-        if name and (not user.full_name or user.full_name == user.email):
-            user.full_name = name
+        user.is_verified = True
         db.commit()
         db.refresh(user)
 
@@ -205,87 +206,83 @@ def google_auth(payload: GoogleAuthRequest, db: Session = Depends(get_db)):
     return Token(access_token=token, token_type="bearer", user=UserOut.model_validate(user))
 
 
-@router.put("/confirm-role", response_model=UserOut)
-def confirm_role(
-    payload: ConfirmRoleRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    if current_user.is_role_confirmed:
-        raise HTTPException(
-            status_code=400,
-            detail="Role is permanently locked and cannot be modified. To change role, you must delete your account."
-        )
-
-    role_clean = payload.role.lower().strip()
-    if role_clean not in ("student", "teacher"):
-        raise HTTPException(status_code=400, detail="Invalid role. Must be 'student' or 'teacher'.")
-
-    current_user.role = role_clean
-    if role_clean == "student":
-        current_user.student_class = (payload.student_class or "Class 11 Science").strip()
-    else:
-        current_user.student_class = None
-
+@router.post("/confirm-role", response_model=UserOut)
+def confirm_role(payload: ConfirmRoleRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if payload.role:
+        current_user.role = payload.role.lower()
+    if payload.student_class:
+        current_user.student_class = payload.student_class
+    
     current_user.is_role_confirmed = True
     db.commit()
     db.refresh(current_user)
-
     return UserOut.model_validate(current_user)
 
 
 @router.put("/profile", response_model=UserOut)
 def update_profile(
-    data: UserProfileUpdate,
+    profile_data: UserProfileUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
-    if data.full_name is not None and data.full_name.strip():
-        current_user.full_name = data.full_name.strip()
-    if data.student_class is not None and current_user.role == "student":
-        current_user.student_class = data.student_class.strip()
+    if profile_data.full_name is not None:
+        current_user.full_name = profile_data.full_name
+    if profile_data.student_class is not None:
+        current_user.student_class = profile_data.student_class
+    if profile_data.avatar_url is not None:
+        current_user.avatar_url = profile_data.avatar_url
 
     db.commit()
     db.refresh(current_user)
     return UserOut.model_validate(current_user)
 
 
-@router.put("/change-password")
+@router.post("/change-password")
 def change_password(
-    data: ChangePasswordRequest,
+    payload: ChangePasswordRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
-    if current_user.auth_provider == "local" and data.old_password:
-        if not verify_password(data.old_password, current_user.hashed_password):
-            raise HTTPException(status_code=400, detail="Current password does not match.")
+    if current_user.auth_provider == "google":
+        raise HTTPException(
+            status_code=400,
+            detail="Accounts registered via Google do not have a local password."
+        )
 
-    if len(data.new_password) < 6:
-        raise HTTPException(status_code=400, detail="New password must be at least 6 characters.")
+    if not current_user.hashed_password or not verify_password(payload.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
 
-    current_user.hashed_password = get_password_hash(data.new_password)
+    current_user.hashed_password = get_password_hash(payload.new_password)
     db.commit()
     return {"message": "Password changed successfully."}
 
 
 @router.post("/upload-avatar", response_model=UserOut)
 def upload_avatar(
-    file: UploadFile = File(...),
+    avatar: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
-    ext = os.path.splitext(file.filename)[1].lower()
-    if ext not in (".png", ".jpg", ".jpeg", ".webp", ".gif"):
-        raise HTTPException(status_code=400, detail="Only image files (.png, .jpg, .jpeg, .webp) are allowed.")
+    allowed_exts = [".jpg", ".jpeg", ".png", ".webp"]
+    ext = os.path.splitext(avatar.filename)[1].lower()
+    if ext not in allowed_exts:
+        raise HTTPException(status_code=400, detail="Invalid image format. Allowed: JPG, PNG, WEBP.")
 
-    clean_filename = f"user_{current_user.id}_{int(datetime.utcnow().timestamp())}{ext}"
-    target_path = os.path.join(AVATAR_UPLOAD_DIR, clean_filename)
+    filename = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}{ext}"
+    filepath = os.path.join(AVATAR_UPLOAD_DIR, filename)
 
-    with open(target_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    with open(filepath, "wb") as buffer:
+        shutil.copyfileobj(avatar.file, buffer)
 
-    avatar_url = f"/uploads/avatars/{clean_filename}"
-    current_user.avatar_url = avatar_url
+    if current_user.avatar_url and current_user.avatar_url.startswith("/uploads/avatars/"):
+        old_path = current_user.avatar_url.lstrip("/")
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+
+    current_user.avatar_url = f"/uploads/avatars/{filename}"
     db.commit()
     db.refresh(current_user)
 
@@ -303,6 +300,7 @@ def delete_account(
     from app.models.file import DocumentFile
     from app.models.chunk import DocumentChunk
     from app.models.image import ImageRecord, ImageBatch
+    from app.services.vector_store import get_chroma_client
 
     user_id = current_user.id
 
@@ -314,11 +312,30 @@ def delete_account(
     db.query(VideoFocusSession).filter(VideoFocusSession.student_id == user_id).delete(synchronize_session=False)
     db.query(Post).filter(Post.author_id == user_id).delete(synchronize_session=False)
 
+    personal_docs = db.query(DocumentFile).filter(DocumentFile.uploaded_by_id == user_id).all()
+    for pd in personal_docs:
+        if pd.file_path and os.path.exists(pd.file_path):
+            try:
+                os.remove(pd.file_path)
+            except Exception as ex:
+                print(f"Error removing file from disk: {ex}")
+        db.query(DocumentChunk).filter(DocumentChunk.document_id == pd.id).delete(synchronize_session=False)
+        db.query(ImageRecord).filter(ImageRecord.file_id == pd.id).delete(synchronize_session=False)
+        db.query(ImageBatch).filter(ImageBatch.file_id == pd.id).delete(synchronize_session=False)
+        db.delete(pd)
+
     teacher_classes = db.query(Classroom).filter(Classroom.teacher_id == user_id).all()
+    chroma_client = get_chroma_client()
+
     for c in teacher_classes:
         c_id = c.id
         doc_files = db.query(DocumentFile).filter(DocumentFile.classroom_id == c_id).all()
         for df in doc_files:
+            if df.file_path and os.path.exists(df.file_path):
+                try:
+                    os.remove(df.file_path)
+                except Exception as ex:
+                    print(f"Error removing physical file: {ex}")
             db.query(DocumentChunk).filter(DocumentChunk.document_id == df.id).delete(synchronize_session=False)
             db.query(ImageRecord).filter(ImageRecord.file_id == df.id).delete(synchronize_session=False)
             db.query(ImageBatch).filter(ImageBatch.file_id == df.id).delete(synchronize_session=False)
@@ -331,6 +348,13 @@ def delete_account(
 
         db.query(Enrollment).filter(Enrollment.classroom_id == c_id).delete(synchronize_session=False)
         db.query(Post).filter(Post.classroom_id == c_id).delete(synchronize_session=False)
+
+        try:
+            if c.code:
+                chroma_client.delete_collection(f"classroom_{c.code.upper()}")
+        except Exception as ex:
+            print(f"Note on deleting classroom vector collection: {ex}")
+
         db.delete(c)
 
     if current_user.avatar_url and current_user.avatar_url.startswith("/uploads/avatars/"):
@@ -344,7 +368,7 @@ def delete_account(
     db.delete(current_user)
     db.commit()
 
-    return {"message": "Account and all associated records permanently deleted."}
+    return {"message": "Account, physical files, and classroom spaces deleted. Global intelligence retained permanently."}
 
 
 @router.get("/me", response_model=UserOut)
