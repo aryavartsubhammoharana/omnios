@@ -5,6 +5,9 @@ import { AuthContext } from '../context/AuthContext';
 import { Bot, User, Trash2, Plus, CheckSquare, Square, FileText, Loader2, Book, ChevronDown, Filter, X, Layers, Send } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 export default function NotebookLMStudio() {
   const [searchParams] = useSearchParams();
@@ -326,7 +329,47 @@ export default function NotebookLMStudio() {
                   {msg.sender === 'user' ? (
                     msg.text
                   ) : (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        table: ({node, ...props}) => (
+                          <div className="overflow-x-auto my-3">
+                            <table className="min-w-full border border-slate-600 rounded-lg text-xs" {...props} />
+                          </div>
+                        ),
+                        thead: ({node, ...props}) => <thead className="bg-indigo-900/60" {...props} />,
+                        th: ({node, ...props}) => (
+                          <th className="px-3 py-2 border border-slate-600 text-indigo-200 font-bold text-left" {...props} />
+                        ),
+                        td: ({node, ...props}) => (
+                          <td className="px-3 py-2 border border-slate-700 text-slate-300" {...props} />
+                        ),
+                        tr: ({node, ...props}) => (
+                          <tr className="even:bg-slate-700/30 hover:bg-slate-700/50 transition" {...props} />
+                        ),
+                        code: ({node, inline, className, children, ...props}) => {
+                          if (inline) {
+                            return <code className="bg-slate-700 text-indigo-300 px-1 py-0.5 rounded text-xs font-mono" {...props}>{children}</code>;
+                          }
+                          return (
+                            <pre className="bg-slate-900 border border-slate-700 rounded-lg p-3 overflow-x-auto my-2">
+                              <code className="text-green-300 text-xs font-mono" {...props}>{children}</code>
+                            </pre>
+                          );
+                        },
+                        strong: ({node, ...props}) => <strong className="text-indigo-200 font-bold" {...props} />,
+                        h1: ({node, ...props}) => <h1 className="text-base font-bold text-white mt-3 mb-1.5 border-b border-slate-700 pb-1" {...props} />,
+                        h2: ({node, ...props}) => <h2 className="text-sm font-bold text-indigo-300 mt-2.5 mb-1" {...props} />,
+                        h3: ({node, ...props}) => <h3 className="text-xs font-bold text-indigo-400 mt-2 mb-1" {...props} />,
+                        ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 my-1.5 pl-2" {...props} />,
+                        ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1 my-1.5 pl-2" {...props} />,
+                        li: ({node, ...props}) => <li className="text-slate-300" {...props} />,
+                        blockquote: ({node, ...props}) => (
+                          <blockquote className="border-l-2 border-indigo-500 pl-3 my-2 text-slate-400 italic" {...props} />
+                        ),
+                      }}
+                    >
                       {msg.text}
                     </ReactMarkdown>
                   )}
