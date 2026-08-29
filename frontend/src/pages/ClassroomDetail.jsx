@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import TiltCard3D from '../components/TiltCard3D';
 import MathRenderer from '../components/MathRenderer';
 
 export default function ClassroomDetail() {
@@ -582,62 +581,62 @@ export default function ClassroomDetail() {
             </div>
 
             {/* Create Post */}
-            <TiltCard3D className="p-5">
-            <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center space-x-2">
-              <MessageSquare className="w-4 h-4 text-indigo-400" />
-              <span>Announce something to your class</span>
-            </h3>
-            <form onSubmit={handleCreatePost} className="space-y-3">
-              <textarea
-                rows="3"
-                value={newPost}
-                onChange={(e) => setNewPost(e.target.value)}
-                placeholder="Share an announcement, assignment update, or study tip..."
-                className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
-              />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Post</span>
-                </button>
-              </div>
-            </form>
-          </TiltCard3D>
+            <div className="glass-card rounded-2xl border border-gray-800/80 p-5 shadow-lg">
+              <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center space-x-2">
+                <MessageSquare className="w-4 h-4 text-indigo-400" />
+                <span>Announce something to your class</span>
+              </h3>
+              <form onSubmit={handleCreatePost} className="space-y-3">
+                <textarea
+                  rows="3"
+                  value={newPost}
+                  onChange={(e) => setNewPost(e.target.value)}
+                  placeholder="Share an announcement, assignment update, or study tip..."
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-lg transition"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>Post</span>
+                  </button>
+                </div>
+              </form>
+            </div>
 
-          {/* Posts Stream */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Class Feed Stream</h3>
-            {posts.length === 0 ? (
-              <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-8 text-center text-slate-500 text-sm">
-                No announcements posted yet.
-              </div>
-            ) : (
-              posts.map((p) => (
-                <TiltCard3D key={p.id} className="p-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-indigo-300">{p.author_name}</span>
-                    <span className="text-[11px] text-slate-500">{new Date(p.created_at).toLocaleString()}</span>
+            {/* Posts Stream */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Class Feed Stream</h3>
+              {posts.length === 0 ? (
+                <div className="bg-slate-800/40 border border-slate-700 rounded-xl p-8 text-center text-slate-500 text-sm">
+                  No announcements posted yet.
+                </div>
+              ) : (
+                posts.map((p) => (
+                  <div key={p.id} className="glass-card rounded-2xl border border-gray-800/80 p-5 shadow-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-indigo-300">{p.author_name}</span>
+                      <span className="text-[11px] text-slate-500">{new Date(p.created_at).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm text-slate-200 whitespace-pre-wrap">{p.content}</p>
                   </div>
-                  <p className="text-sm text-slate-200 whitespace-pre-wrap">{p.content}</p>
-                </TiltCard3D>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Unified Tabbed Sidebar (Right Col) */}
-        <div>
-          <TiltCard3D className="p-5">
-            {/* Segmented Tab Navigation Switcher */}
-            <div className="flex items-center bg-gray-900/90 p-1 rounded-2xl border border-gray-800/80 mb-5 gap-1 shadow-inner">
-              <button
-                type="button"
-                onClick={() => setActiveSidebarTab('docs')}
-                className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
-                  activeSidebarTab === 'docs'
+          {/* Unified Tabbed Sidebar (Right Col) */}
+          <div>
+            <div className="glass-card rounded-2xl border border-gray-800/80 p-5 shadow-lg">
+              {/* Segmented Tab Navigation Switcher */}
+              <div className="flex items-center bg-gray-900/90 p-1 rounded-2xl border border-gray-800/80 mb-5 gap-1 shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => setActiveSidebarTab('docs')}
+                  className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                    activeSidebarTab === 'docs'
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
                     : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
                 }`}
@@ -1074,7 +1073,7 @@ export default function ClassroomDetail() {
                 )}
               </div>
             )}
-          </TiltCard3D>
+          </div>
         </div>
       </div>
 
