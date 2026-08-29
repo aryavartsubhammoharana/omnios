@@ -1,47 +1,37 @@
-/**
- * Precision Worldwide LaTeX & KaTeX Math Normalizer
- * Resolves:
- * - Trailing/stray $$ on variables (\phi$$, \nu$$, \omega=2rad s-1$$)
- * - Safe Math Fraction & Radical Isolation (prevents \frac{\nu}{2\pi} breaking into \frac{$\nu$}{...})
- * - Raw Greek letters (\phi, \gamma, \omega, \nu, \alpha, \beta, \theta, \pi)
- */
-export function formatLatex(content) {
+function formatLatex(content) {
   if (!content || typeof content !== 'string') return content || '';
 
   let text = content;
 
-  // 1. Strip outer double quotes if string was wrapped in quotes
   text = text.replace(/^"([\s\S]*)"$/, '$1');
 
-  // 2. Fix AI stray $$ on inline variables e.g. "\phi$$" -> "$\phi$", "\nu$$" -> "$\nu$"
+  // Fix AI stray $$ on inline variables e.g. "\phi$$" -> "$\phi$"
   text = text.replace(/([^\$])(\\[a-zA-Z]+)\$\$/g, '$1$$$2$$');
-  text = text.replace(/([^\$])(\\[a-zA-Z]+[^\$\n]+?)\$\$/g, '$1$$$2$$');
+  text = text.replace(/([^\$])(\\[a-zA-Z]+[^\$\n]*?)\$\$/g, '$1$$$2$$');
 
-  // 3. Normalize bracket delimiters
+  // Normalize bracket delimiters
   text = text.replace(/\\\\\[([\s\S]*?)\\\\\]/g, '\n\n$$$$$1$$$$\n\n');
   text = text.replace(/\\\[([\s\S]*?)\\\]/g, '\n\n$$$$$1$$$$\n\n');
   text = text.replace(/\\\\\(([\s\S]*?)\\\\\)/g, ' $$$1$$ ');
   text = text.replace(/\\\(([\s\S]*?)\\\)/g, ' $$$1$$ ');
 
-  // 4. Fix premature dollar sign closings before continuing LaTeX commands:
-  // e.g. "$... \cos^{2}$\omega t" -> "$... \cos^{2}\omega t$"
+  // Fix premature dollar sign closings
   text = text.replace(/\$([^\$\n]+)\$(\s*\\[a-zA-Z,;:!~]+[^\$\n.]+)/g, '$$$1 $2$$');
 
-  // 5. Safely wrap naked equations, fractions, square roots, and greek letters
   const tokens = text.split(/(\$\$[\s\S]*?\$\$|\$[^\$\n]*?\$)/g);
   for (let i = 0; i < tokens.length; i++) {
     if (i % 2 === 0 && tokens[i]) {
-      // Wrap standalone fractions, square roots, integrals, sums (e.g. \frac{...}{...})
+      // 1. Wrap standalone fractions, square roots, integrals
+      // Math expressions with braces. Match \frac{}{} or \sqrt{}
       tokens[i] = tokens[i].replace(/(\\frac\s*\{[^{}]*\}\s*\{[^{}]*\})/g, '$$$1$$');
       tokens[i] = tokens[i].replace(/(\\(?:sqrt|int|sum)\s*\{[^{}]*\})/g, '$$$1$$');
       
-      // Wrap remaining standalone Greek letters or symbols (ONLY if NOT inside { } blocks)
+      // 2. Wrap standalone Greek letters (ONLY if NOT preceded by { or followed by })
       tokens[i] = tokens[i].replace(/(?<!\\)(?<!\{)(\\(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|hbar|infty|partial|nabla))(?![a-zA-Z0-9_])(?!\}|\s*\})/g, '$$$1$$');
     }
   }
   text = tokens.join('');
 
-  // 6. Clean duplicate dollar signs
   text = text.replace(/\$\s{1,}\$/g, ' ');
   text = text.replace(/\$\$\$+/g, '$$$$');
   text = text.replace(/\.\$\$/g, '$$$$.');
@@ -49,3 +39,18 @@ export function formatLatex(content) {
 
   return text;
 }
+
+const testCases = [
+  `\\omega = \\frac{\\nu}{2\\pi}`,
+  `T = \\frac{\\omega}{2\\pi}`,
+  `\\nu = \\frac{2\\pi}{\\omega}`,
+  `Both \\omega = 2\\pi\\nu and T = \\frac{2\\pi}{\\omega} are correct`,
+  `T = \\frac{1}{\\nu}`,
+  `\\nu = \\frac{\\omega}{2\\pi} gives T = \\frac{2\\pi}{\\omega}`
+];
+
+testCases.forEach(t => {
+  console.log("IN :", t);
+  console.log("OUT:", formatLatex(t));
+  console.log("----------------------");
+});
