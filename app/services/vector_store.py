@@ -1,4 +1,7 @@
-"""ChromaDB Vector Database Service for high-speed local RAG semantic search."""
+"""Dual Vector Database Architecture for NoteAI:
+1. Classroom Vector DB (Per-Classroom Isolated Vector Space with Full Metadata)
+2. Global Vector DB (Unified Anonymous Vector Space without Metadata)
+"""
 
 import os
 import chromadb
@@ -19,79 +22,133 @@ def get_chroma_client():
             _client = chromadb.Client()
     return _client
 
-def get_collection(name: str = "classroom_notes"):
+def get_classroom_collection(classroom_code: str):
+    """Returns dedicated isolated ChromaDB collection for a specific classroom."""
     client = get_chroma_client()
+    clean_code = str(classroom_code).strip().upper()
+    collection_name = f"classroom_{clean_code}"
     return client.get_or_create_collection(
-        name=name,
+        name=collection_name,
         metadata={"hnsw:space": "cosine"}
     )
 
-def index_document_in_chroma(doc_id: int, classroom_id: int | None, filename: str, content_text: str) -> int:
-    """Chunks text and stores embeddings into ChromaDB with metadata for fast RAG search."""
+def get_global_collection():
+    """Returns the single unified Global Vector Database collection."""
+    client = get_chroma_client()
+    return client.get_or_create_collection(
+        name="global_knowledge_base",
+        metadata={"hnsw:space": "cosine"}
+    )
+
+def index_document_in_dual_vector_store(
+    doc_id: int,
+    classroom_code: str | None,
+    classroom_id: int | None,
+    filename: str,
+    content_text: str
+) -> int:
+    """Simultaneously indexes document into:
+    1. Classroom-specific Vector DB (with full document metadata)
+    2. Global Vector DB (pure anonymous chunks without metadata)
+    """
     if not content_text or not content_text.strip():
         return 0
 
     try:
-        col = get_collection()
-        
-        # 1. Clean previous chunks for this document
-        try:
-            col.delete(where={"doc_id": int(doc_id)})
-        except Exception:
-            pass
-
-        # 2. Chunk text
         chunks = chunk_text(content_text, max_tokens=600, overlap_tokens=80)
         if not chunks:
             return 0
 
-        # 3. Prepare payload for ChromaDB
-        doc_texts = []
-        metadatas = []
-        ids = []
+        # =========================================================================
+        # 1. CLASSROOM VECTOR DB (Per-Classroom Vector Store WITH Metadata)
+        # =========================================================================
+        if classroom_code:
+            try:
+                class_col = get_classroom_collection(classroom_code)
+                # Clean existing chunks for this doc in classroom DB
+                try:
+                    class_col.delete(where={"doc_id": int(doc_id)})
+                except Exception:
+                    pass
 
-        for c in chunks:
-            idx = c["chunk_index"]
-            doc_texts.append(c["chunk_text"])
-            metadatas.append({
-                "doc_id": int(doc_id),
-                "classroom_id": int(classroom_id) if classroom_id else 0,
-                "filename": str(filename),
-                "chunk_index": int(idx),
-                "total_chunks": int(len(chunks))
-            })
-            ids.append(f"doc_{doc_id}_chunk_{idx}")
+                class_docs = []
+                class_metas = []
+                class_ids = []
 
-        # 4. Insert into ChromaDB (auto-embeds locally using built-in embedding engine)
-        col.add(
-            documents=doc_texts,
-            metadatas=metadatas,
-            ids=ids
-        )
-        print(f"[OK] ChromaDB: Successfully indexed {len(chunks)} vector chunks for '{filename}' (doc_id={doc_id})")
+                for c in chunks:
+                    idx = c["chunk_index"]
+                    class_docs.append(c["chunk_text"])
+                    class_metas.append({
+                        "doc_id": int(doc_id),
+                        "classroom_id": int(classroom_id) if classroom_id else 0,
+                        "classroom_code": str(classroom_code).upper(),
+                        "filename": str(filename),
+                        "chunk_index": int(idx),
+                        "total_chunks": int(len(chunks))
+                    })
+                    class_ids.append(f"class_{classroom_code}_doc_{doc_id}_chunk_{idx}")
+
+                class_col.add(
+                    documents=class_docs,
+                    metadatas=class_metas,
+                    ids=class_ids
+                )
+                print(f"[OK] Classroom Vector DB ({classroom_code}): Indexed {len(chunks)} chunks with metadata for '{filename}'")
+            except Exception as e:
+                print(f"Error indexing in Classroom Vector DB: {e}")
+
+        # =========================================================================
+        # 2. GLOBAL VECTOR DB (Anonymous Knowledge Space WITHOUT Metadata)
+        # =========================================================================
+        try:
+            global_col = get_global_collection()
+            # Clean existing chunks in global DB
+            try:
+                global_col.delete(where={"doc_hash": f"doc_{doc_id}"})
+            except Exception:
+                pass
+
+            global_docs = []
+            global_metas = []
+            global_ids = []
+
+            for c in chunks:
+                idx = c["chunk_index"]
+                global_docs.append(c["chunk_text"])
+                # PURE ANONYMOUS METADATA: No filename, no user ID, no teacher name
+                global_metas.append({
+                    "doc_hash": f"doc_{doc_id}",
+                    "collection_key": str(classroom_code or "general").upper()
+                })
+                global_ids.append(f"global_doc_{doc_id}_chunk_{idx}")
+
+            global_col.add(
+                documents=global_docs,
+                metadatas=global_metas,
+                ids=global_ids
+            )
+            print(f"[OK] Global Vector DB: Indexed {len(chunks)} anonymous chunks into collection '{classroom_code or 'general'}'")
+        except Exception as e:
+            print(f"Error indexing in Global Vector DB: {e}")
+
         return len(chunks)
+
     except Exception as e:
-        print(f"Error indexing in ChromaDB: {e}")
+        print(f"Error in dual vector store indexing: {e}")
         return 0
 
-def query_chroma_rag(query_text: str, doc_id: int | None = None, classroom_id: int | None = None, n_results: int = 5) -> list[dict]:
-    """Semantic search query in ChromaDB. Returns top matching chunks with metadata."""
-    if not query_text or not query_text.strip():
+def query_classroom_vector_db(classroom_code: str, query_text: str, n_results: int = 5) -> list[dict]:
+    """Semantic search inside a specific Classroom Vector Database.
+    Returns matched chunks with source metadata.
+    """
+    if not query_text or not query_text.strip() or not classroom_code:
         return []
 
     try:
-        col = get_collection()
-        where_filter = None
-
-        if doc_id:
-            where_filter = {"doc_id": int(doc_id)}
-        elif classroom_id:
-            where_filter = {"classroom_id": int(classroom_id)}
-
+        col = get_classroom_collection(classroom_code)
         results = col.query(
             query_texts=[query_text],
-            n_results=n_results,
-            where=where_filter
+            n_results=n_results
         )
 
         formatted = []
@@ -105,22 +162,64 @@ def query_chroma_rag(query_text: str, doc_id: int | None = None, classroom_id: i
                 dist = dists[i] if i < len(dists) else 0.0
                 formatted.append({
                     "chunk_text": text,
-                    "filename": meta.get("filename", "Lecture Note"),
+                    "filename": meta.get("filename", "Classroom Note"),
                     "chunk_index": meta.get("chunk_index", 0),
                     "doc_id": meta.get("doc_id", 0),
+                    "classroom_code": meta.get("classroom_code", classroom_code),
                     "similarity": round(1.0 - dist, 4) if dist is not None else 1.0
                 })
 
         return formatted
     except Exception as e:
-        print(f"Error querying ChromaDB: {e}")
+        print(f"Error querying Classroom Vector DB ({classroom_code}): {e}")
         return []
 
-def delete_document_from_chroma(doc_id: int):
-    """Remove all vector chunks for a given document from ChromaDB."""
+def query_global_vector_db(query_text: str, n_results: int = 6) -> list[dict]:
+    """Semantic search across the entire Global Vector Database.
+    Returns pure anonymous chunks without revealing source metadata.
+    """
+    if not query_text or not query_text.strip():
+        return []
+
     try:
-        col = get_collection()
-        col.delete(where={"doc_id": int(doc_id)})
-        print(f"[OK] ChromaDB: Deleted all vector chunks for doc_id={doc_id}")
+        col = get_global_collection()
+        results = col.query(
+            query_texts=[query_text],
+            n_results=n_results
+        )
+
+        formatted = []
+        if results and "documents" in results and results["documents"]:
+            docs = results["documents"][0]
+            dists = results["distances"][0] if "distances" in results and results["distances"] else [0.0] * len(docs)
+
+            for i, text in enumerate(docs):
+                dist = dists[i] if i < len(dists) else 0.0
+                formatted.append({
+                    "chunk_text": text,
+                    "similarity": round(1.0 - dist, 4) if dist is not None else 1.0
+                })
+
+        return formatted
     except Exception as e:
-        print(f"Note on deleting from ChromaDB: {e}")
+        print(f"Error querying Global Vector DB: {e}")
+        return []
+
+def delete_document_from_dual_vector_store(doc_id: int, classroom_code: str | None = None):
+    """Removes document chunks from both Classroom Vector DB and Global Vector DB."""
+    # 1. Delete from Classroom Vector DB
+    if classroom_code:
+        try:
+            class_col = get_classroom_collection(classroom_code)
+            class_col.delete(where={"doc_id": int(doc_id)})
+            print(f"[OK] Deleted doc {doc_id} from Classroom Vector DB ({classroom_code})")
+        except Exception as e:
+            print(f"Note on deleting from Classroom Vector DB: {e}")
+
+    # 2. Delete from Global Vector DB
+    try:
+        global_col = get_global_collection()
+        global_col.delete(where={"doc_hash": f"doc_{doc_id}"})
+        print(f"[OK] Deleted doc {doc_id} from Global Vector DB")
+    except Exception as e:
+        print(f"Note on deleting from Global Vector DB: {e}")

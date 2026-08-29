@@ -2,12 +2,8 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import API from '../api/client';
 import { AuthContext } from '../context/AuthContext';
-import { Bot, User, Trash2, Plus, CheckSquare, Square, FileText, Loader2, Book, ChevronDown, Filter, X, Layers, Send } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-import 'katex/dist/katex.min.css';
+import { Bot, User, Trash2, Plus, CheckSquare, Square, FileText, Loader2, Book, ChevronDown, Filter, X, Layers, Send, Globe, Lock, Sparkles } from 'lucide-react';
+import MathRenderer from '../components/MathRenderer';
 
 export default function NotebookLMStudio() {
   const [searchParams] = useSearchParams();
@@ -23,7 +19,7 @@ export default function NotebookLMStudio() {
   const [selectedDocIds, setSelectedDocIds] = useState([]);
   const [isSourcesModalOpen, setIsSourcesModalOpen] = useState(false);
 
-  const [aiProvider, setAiProvider] = useState('gemini'); // 'gemini' or 'sarvam'
+  const [aiProvider, setAiProvider] = useState('sarvam'); // Default to Sarvam AI for NotebookLM
 
   // Permanent Chat Threads State
   const [chatSessions, setChatSessions] = useState(() => {
@@ -277,37 +273,52 @@ export default function NotebookLMStudio() {
         <div className="lg:col-span-9 bg-slate-900/90 flex flex-col h-full min-h-0 overflow-hidden">
           {/* Studio Active Session Top Bar (Flex Shrink 0) */}
           <div className="p-3 border-b border-slate-800 bg-slate-950 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2.5">
               <Bot className="w-4 h-4 text-indigo-400" />
               <span className="text-xs font-bold text-slate-200">{activeSession?.title}</span>
+              
+              {/* Dual Vector DB Scope Badge */}
+              <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border bg-slate-900">
+                {selectedClassroomId === 'all' ? (
+                  <>
+                    <Globe className="w-3 h-3 text-sky-400" />
+                    <span className="text-sky-300">Global Vector DB (Anonymous)</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-3 h-3 text-emerald-400" />
+                    <span className="text-emerald-300">Classroom Vector DB (Private)</span>
+                  </>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
               <span className="text-[10px] text-slate-400 font-mono">Engine:</span>
               <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[10px]">
                 <button
+                  onClick={() => setAiProvider('sarvam')}
+                  className={`px-2.5 py-0.5 rounded font-semibold transition ${
+                    aiProvider === 'sarvam' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  Sarvam AI 🇮🇳
+                </button>
+                <button
+                  onClick={() => setAiProvider('groq')}
+                  className={`px-2 py-0.5 rounded font-semibold transition ${
+                    aiProvider === 'groq' ? 'bg-orange-600 text-white' : 'text-slate-400'
+                  }`}
+                >
+                  Groq
+                </button>
+                <button
                   onClick={() => setAiProvider('gemini')}
-                  className={`px-2 py-0.5 rounded font-semibold ${
+                  className={`px-2 py-0.5 rounded font-semibold transition ${
                     aiProvider === 'gemini' ? 'bg-indigo-600 text-white' : 'text-slate-400'
                   }`}
                 >
                   Gemini
-                </button>
-                <button
-                  onClick={() => setAiProvider('sarvam')}
-                  className={`px-2 py-0.5 rounded font-semibold ${
-                    aiProvider === 'sarvam' ? 'bg-indigo-600 text-white' : 'text-slate-400'
-                  }`}
-                >
-                  Sarvam
-                </button>
-                <button
-                  onClick={() => setAiProvider('groq')}
-                  className={`px-2 py-0.5 rounded font-semibold ${
-                    aiProvider === 'groq' ? 'bg-orange-600 text-white' : 'text-slate-400'
-                  }`}
-                >
-                  Groq ⚡
                 </button>
               </div>
             </div>
@@ -323,70 +334,33 @@ export default function NotebookLMStudio() {
                 }`}
               >
                 {msg.sender === 'ai' && (
-                  <div className="p-2 bg-indigo-950 rounded-xl text-indigo-400 mt-0.5 border border-indigo-800">
+                  <div className="p-2 bg-indigo-950 rounded-xl text-indigo-400 mt-0.5 border border-indigo-800 flex-shrink-0">
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
                 <div
-                  className={`p-4 rounded-2xl max-w-[80%] leading-relaxed ${
+                  className={`p-4 rounded-2xl max-w-[85%] leading-relaxed ${
                     msg.sender === 'user'
                       ? 'bg-indigo-600 text-white rounded-tr-none shadow-lg text-xs'
-                      : 'bg-slate-800 text-slate-200 border border-slate-700 rounded-tl-none text-xs'
+                      : 'bg-slate-800/90 text-slate-200 border border-slate-700/80 rounded-tl-none text-xs shadow-inner'
                   }`}
                 >
                   {msg.sender === 'user' ? (
-                    msg.text
+                    <div className="whitespace-pre-wrap">{msg.text}</div>
                   ) : (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm, remarkMath]}
-                      rehypePlugins={[rehypeKatex]}
-                      components={{
-                        table: ({node, ...props}) => (
-                          <div className="overflow-x-auto my-3">
-                            <table className="min-w-full border border-slate-600 rounded-lg text-xs" {...props} />
-                          </div>
-                        ),
-                        thead: ({node, ...props}) => <thead className="bg-indigo-900/60" {...props} />,
-                        th: ({node, ...props}) => (
-                          <th className="px-3 py-2 border border-slate-600 text-indigo-200 font-bold text-left" {...props} />
-                        ),
-                        td: ({node, ...props}) => (
-                          <td className="px-3 py-2 border border-slate-700 text-slate-300" {...props} />
-                        ),
-                        tr: ({node, ...props}) => (
-                          <tr className="even:bg-slate-700/30 hover:bg-slate-700/50 transition" {...props} />
-                        ),
-                        code: ({node, inline, className, children, ...props}) => {
-                          if (inline) {
-                            return <code className="bg-slate-700 text-indigo-300 px-1 py-0.5 rounded text-xs font-mono" {...props}>{children}</code>;
-                          }
-                          return (
-                            <pre className="bg-slate-900 border border-slate-700 rounded-lg p-3 overflow-x-auto my-2">
-                              <code className="text-green-300 text-xs font-mono" {...props}>{children}</code>
-                            </pre>
-                          );
-                        },
-                        strong: ({node, ...props}) => <strong className="text-indigo-200 font-bold" {...props} />,
-                        h1: ({node, ...props}) => <h1 className="text-base font-bold text-white mt-3 mb-1.5 border-b border-slate-700 pb-1" {...props} />,
-                        h2: ({node, ...props}) => <h2 className="text-sm font-bold text-indigo-300 mt-2.5 mb-1" {...props} />,
-                        h3: ({node, ...props}) => <h3 className="text-xs font-bold text-indigo-400 mt-2 mb-1" {...props} />,
-                        ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-1 my-1.5 pl-2" {...props} />,
-                        ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-1 my-1.5 pl-2" {...props} />,
-                        li: ({node, ...props}) => <li className="text-slate-300" {...props} />,
-                        blockquote: ({node, ...props}) => (
-                          <blockquote className="border-l-2 border-indigo-500 pl-3 my-2 text-slate-400 italic" {...props} />
-                        ),
-                      }}
-                    >
-                      {msg.text}
-                    </ReactMarkdown>
+                    <div className="overflow-x-auto text-xs leading-relaxed">
+                      <MathRenderer content={msg.text} />
+                    </div>
                   )}
                   {msg.provider && (
-                    <span className="block text-[9px] text-slate-500 mt-2 font-mono">{msg.provider}</span>
+                    <span className="block text-[9px] text-slate-400 mt-2 font-mono border-t border-slate-700/50 pt-1.5 flex items-center gap-1">
+                      <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                      <span>{msg.provider}</span>
+                    </span>
                   )}
                 </div>
                 {msg.sender === 'user' && (
-                  <div className="p-2 bg-slate-800 rounded-xl text-slate-300 mt-0.5 border border-slate-700">
+                  <div className="p-2 bg-slate-800 rounded-xl text-slate-300 mt-0.5 border border-slate-700 flex-shrink-0">
                     <User className="w-4 h-4" />
                   </div>
                 )}

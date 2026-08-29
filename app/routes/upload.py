@@ -8,9 +8,13 @@ from app.models.user import User
 from app.models.file import DocumentFile
 from app.models.chunk import DocumentChunk
 from app.models.analytics import StudySession
+from app.models.classroom import Classroom
 from app.services.extractor import extract_text_from_file
 from app.services.embedding import generate_embeddings_batch
-from app.services.vector_store import index_document_in_chroma, delete_document_from_chroma
+from app.services.vector_store import (
+    index_document_in_dual_vector_store,
+    delete_document_from_dual_vector_store
+)
 from app.utils.text_chunker import chunk_text
 from app.utils.deps import get_current_user
 
@@ -21,7 +25,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
-# Background: OCR extraction → AI structuring → ChromaDB + PG chunk indexing
+# Background: OCR extraction → AI structuring → Dual Vector DB + PG chunk indexing
 # ---------------------------------------------------------------------------
 
 def process_file_text_in_background(doc_id: int):
@@ -60,15 +64,23 @@ def process_file_text_in_background(doc_id: int):
             db.commit()
             print(f"[OK] Document {doc_id} ('{doc.filename}') structured and saved!")
 
-            # 3. ChromaDB vector indexing
+            # 3. Dual Vector DB indexing (Classroom Vector DB + Global Anonymous Vector DB)
+            classroom = None
+            if doc.classroom_id:
+                classroom = db.query(Classroom).filter(Classroom.id == doc.classroom_id).first()
+            class_code = classroom.code if classroom else None
+
             try:
-                n = index_document_in_chroma(
-                    doc_id=doc.id, classroom_id=doc.classroom_id,
-                    filename=doc.filename, content_text=doc.content_text,
+                n = index_document_in_dual_vector_store(
+                    doc_id=doc.id,
+                    classroom_code=class_code,
+                    classroom_id=doc.classroom_id,
+                    filename=doc.filename,
+                    content_text=doc.content_text,
                 )
-                print(f"[OK] Document {doc_id} indexed in ChromaDB ({n} chunks)!")
+                print(f"[OK] Document {doc_id} dual-indexed into ChromaDB ({n} chunks)!")
             except Exception as e:
-                print(f"Note on ChromaDB indexing for doc {doc_id}: {e}")
+                print(f"Note on Dual Vector DB indexing for doc {doc_id}: {e}")
 
             # 4. PostgreSQL relational chunk backup
             try:
@@ -89,93 +101,113 @@ def process_file_text_in_background(doc_id: int):
                             metadata_json={"filename": doc.filename, "total_chunks": len(chunks)},
                         ))
                     db.commit()
+                    print(f"[OK] Document {doc_id} indexed in PostgreSQL chunks!")
             except Exception as e:
-                print(f"Note on relational chunking for doc {doc_id}: {e}")
+                print(f"Note on PostgreSQL chunk indexing for doc {doc_id}: {e}")
 
     except Exception as e:
-        print(f"Error in background processing for doc {doc_id}: {e}")
-        try:
-            doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
-            if doc:
-                doc.processing_status = "ready"
-                doc.processing_progress = 100
-                db.commit()
-        except Exception:
-            pass
+        print(f"Fatal error in background file processing for doc {doc_id}: {e}")
     finally:
         db.close()
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# Upload file endpoint
 # ---------------------------------------------------------------------------
 
-@router.post("/document")
-def upload_document(
-    background_tasks: BackgroundTasks,
+@router.post("")
+async def upload_file(
     file: UploadFile = File(...),
     classroom_id: Optional[int] = Form(None),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     if current_user.role != "teacher":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only teachers can upload study notes")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only teachers can upload study materials and notes.",
+        )
 
-    filename_clean = f"{current_user.id}_{file.filename}"
-    save_path = os.path.join(UPLOAD_DIR, filename_clean)
-    with open(save_path, "wb") as buffer:
+    # 1. Validate file extension
+    ext = os.path.splitext(file.filename)[1].lower()
+    allowed_extensions = [".pdf", ".docx", ".doc", ".txt", ".png", ".jpg", ".jpeg"]
+    if ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file format '{ext}'. Allowed: {', '.join(allowed_extensions)}",
+        )
+
+    # 2. Save file to disk
+    file_id_temp = int(os.urandom(4).hex(), 16)
+    saved_filename = f"{file_id_temp}_{file.filename}"
+    saved_path = os.path.join(UPLOAD_DIR, saved_filename)
+
+    with open(saved_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
+    file_size = os.path.getsize(saved_path)
+
+    # 3. Create DocumentFile DB Record
     doc = DocumentFile(
-        classroom_id=classroom_id,
-        uploaded_by_id=current_user.id,
         filename=file.filename,
-        file_path=save_path,
-        content_text="",
+        file_path=saved_path,
+        file_size=file_size,
+        mime_type=file.content_type or "application/octet-stream",
+        uploaded_by_id=current_user.id,
+        classroom_id=classroom_id,
         processing_status="processing",
-        processing_progress=50,
+        processing_progress=0,
     )
     db.add(doc)
     db.commit()
     db.refresh(doc)
 
+    # 4. Trigger asynchronous OCR + Structuring + Dual Vector Ingestion
     background_tasks.add_task(process_file_text_in_background, doc.id)
 
     return {
         "id": doc.id,
         "filename": doc.filename,
-        "file_url": f"/uploads/{filename_clean}",
+        "file_size": doc.file_size,
+        "classroom_id": doc.classroom_id,
         "processing_status": doc.processing_status,
         "processing_progress": doc.processing_progress,
-        "created_at": doc.created_at,
+        "message": "File uploaded! Text extraction and vector indexing initiated in background.",
     }
 
 
-@router.delete("/document/{doc_id}")
+# ---------------------------------------------------------------------------
+# Delete document endpoint
+# ---------------------------------------------------------------------------
+
+@router.delete("/{doc_id}")
 def delete_document(
     doc_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != "teacher":
-        raise HTTPException(status_code=403, detail="Only teachers can delete documents")
-
     doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    if doc.uploaded_by_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You can only delete documents you uploaded")
 
-    # Remove physical file
+    if doc.uploaded_by_id != current_user.id and current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this document")
+
     if doc.file_path and os.path.exists(doc.file_path):
         try:
             os.remove(doc.file_path)
         except Exception as e:
             print(f"Error removing file from disk: {e}")
 
-    # Cascade delete: ChromaDB vectors, chunks, study sessions
+    # Cascade delete: Dual Vector DB chunks, relational chunks, study sessions
     try:
-        delete_document_from_chroma(doc_id)
+        class_code = None
+        if doc.classroom_id:
+            classroom = db.query(Classroom).filter(Classroom.id == doc.classroom_id).first()
+            if classroom:
+                class_code = classroom.code
+        delete_document_from_dual_vector_store(doc_id, classroom_code=class_code)
         db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).delete()
         db.query(StudySession).filter(StudySession.document_id == doc_id).delete()
     except Exception as e:

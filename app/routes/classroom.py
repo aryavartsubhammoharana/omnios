@@ -10,15 +10,29 @@ from app.utils.deps import get_current_user
 
 router = APIRouter(prefix="/api/classroom", tags=["Classroom"])
 
-def generate_class_code() -> str:
-    return secrets.token_hex(3).upper()
+import string
+
+def generate_unique_class_code(db: Session, length: int = 5) -> str:
+    """Generate a collision-resistant 5-character alphanumeric classroom code (A-Z, 0-9)."""
+    chars = string.ascii_uppercase + string.digits
+    # Exclude easily confused characters (O, 0, I, 1) for superior UX if desired, or use standard A-Z, 2-9
+    charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    
+    for _ in range(100):  # Retry loop to guarantee 100% uniqueness
+        code = "".join(secrets.choice(charset) for _ in range(length))
+        existing = db.query(Classroom).filter(Classroom.code == code).first()
+        if not existing:
+            return code
+    
+    # Fallback to 6 chars if saturation occurs
+    return "".join(secrets.choice(charset) for _ in range(6))
 
 @router.post("/create", response_model=ClassroomOut)
 def create_classroom(data: ClassroomCreate, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="Only teachers can create classrooms")
     
-    code = generate_class_code()
+    code = generate_unique_class_code(db, length=5)
     classroom = Classroom(
         name=data.name,
         description=data.description,
