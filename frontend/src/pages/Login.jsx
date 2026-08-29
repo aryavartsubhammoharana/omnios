@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { BookOpen, KeyRound, Mail, Loader2, ArrowRight } from 'lucide-react';
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '753894711311-648b2a1a8u1qke25t795d3q9g342p258.apps.googleusercontent.com';
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +22,7 @@ export default function Login() {
     script.onload = () => {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
-          client_id: '753894711311-648b2a1a8u1qke25t795d3q9g342p258.apps.googleusercontent.com',
+          client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCredentialResponse,
           auto_select: false
         });

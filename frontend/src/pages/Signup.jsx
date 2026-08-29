@@ -1,7 +1,9 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { BookOpen, KeyRound, Mail, User, GraduationCap, Loader2, ShieldCheck, ArrowRight, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { BookOpen, KeyRound, Mail, User, GraduationCap, Loader2, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '753894711311-648b2a1a8u1qke25t795d3q9g342p258.apps.googleusercontent.com';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -14,7 +16,6 @@ export default function Signup() {
   const [loadingGoogle, setLoadingGoogle] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // OTP Verification Stage State
   const [requiresOtp, setRequiresOtp] = useState(false);
   const [otpCode, setOtpCode] = useState('');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
@@ -45,7 +46,7 @@ export default function Signup() {
     script.onload = () => {
       if (window.google?.accounts?.id) {
         window.google.accounts.id.initialize({
-          client_id: '753894711311-648b2a1a8u1qke25t795d3q9g342p258.apps.googleusercontent.com',
+          client_id: GOOGLE_CLIENT_ID,
           callback: handleGoogleCredentialResponse,
           auto_select: false
         });
@@ -181,7 +182,6 @@ export default function Signup() {
         )}
 
         {requiresOtp ? (
-          /* OTP Verification Stage */
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div>
               <label className="block text-[11px] font-semibold text-gray-300 uppercase tracking-wider mb-1.5 font-mono text-center">
@@ -234,7 +234,6 @@ export default function Signup() {
             </div>
           </form>
         ) : (
-          /* Registration Form Stage */
           <div className="space-y-4">
             <div className="flex flex-col items-center justify-center min-h-[44px]">
               <div id="googleSignUpBtnDiv" className="w-full flex justify-center"></div>
