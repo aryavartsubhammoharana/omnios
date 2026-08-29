@@ -51,8 +51,18 @@ def process_file_text_in_background(doc_id: int):
             except Exception as ex:
                 print(f"Error updating page progress for doc {doc_id}: {ex}")
 
-        # 1. Page-by-page text extraction (text layer → GPU OCR per page)
-        extracted_text = extract_text_from_file(doc.file_path, on_page_progress=on_page_progress)
+        # 1. Page-by-page text & image extraction (with isolated classroom image storage)
+        classroom = None
+        if doc.classroom_id:
+            classroom = db.query(Classroom).filter(Classroom.id == doc.classroom_id).first()
+        class_code = classroom.code if classroom else None
+
+        extracted_text = extract_text_from_file(
+            doc.file_path,
+            doc_id=doc.id,
+            classroom_code=class_code,
+            on_page_progress=on_page_progress
+        )
 
         doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
         if doc:

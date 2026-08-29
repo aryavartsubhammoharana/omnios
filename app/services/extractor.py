@@ -110,10 +110,15 @@ from app.services.vision import analyze_image_with_llava
 # PDF extraction (text layer + embedded images analysis via EasyOCR & LLaVA)
 # ---------------------------------------------------------------------------
 
-def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
+def extract_pdf_page_by_page(file_path: str, doc_id: int | None = None, classroom_code: str | None = None, on_page_progress=None) -> str:
     """Extract text page-by-page: text layer + embedded diagram/image analysis via EasyOCR & LLaVA."""
     filename = os.path.basename(file_path)
     extracted_pages = []
+
+    # Isolated directory for this classroom / document's images
+    c_folder = f"class_{classroom_code.upper()}" if classroom_code else "general"
+    img_dir = os.path.join("uploads", "extracted_images", c_folder)
+    os.makedirs(img_dir, exist_ok=True)
 
     try:
         doc = fitz.open(file_path)
@@ -150,9 +155,19 @@ def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
                             img_bytes = base_image["image"]
                             width = base_image.get("width", 0)
                             height = base_image.get("height", 0)
+                            img_ext = base_image.get("ext", "png")
 
                             # Skip tiny icons / logos (must be at least 80x80)
                             if width >= 80 and height >= 80:
+                                # Save image to isolated physical disk location
+                                d_id = doc_id or "0"
+                                img_filename = f"doc_{d_id}_p{page_num}_img{img_idx+1}.{img_ext}"
+                                img_save_path = os.path.join(img_dir, img_filename)
+                                with open(img_save_path, "wb") as f_img:
+                                    f_img.write(img_bytes)
+
+                                img_url = f"/uploads/extracted_images/{c_folder}/{img_filename}"
+
                                 # A. OCR Text from Image
                                 img_ocr_text = ""
                                 if reader:
@@ -167,7 +182,10 @@ def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
                                 llava_desc = analyze_image_with_llava(img_bytes)
 
                                 if llava_desc or img_ocr_text:
-                                    callout = [f"> 🖼️ **[Figure/Diagram {img_idx+1} Analysis - LLaVA]**:"]
+                                    callout = [
+                                        f"![Diagram {img_idx+1}]({img_url})\n",
+                                        f"> 🖼️ **[Figure/Diagram {img_idx+1} Analysis - LLaVA]**:",
+                                    ]
                                     if llava_desc:
                                         callout.append(f"> **Visual Comprehension**: {llava_desc}")
                                     if img_ocr_text:
@@ -203,12 +221,12 @@ def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
 # Main entry point
 # ---------------------------------------------------------------------------
 
-def extract_text_from_file(file_path: str, on_page_progress=None) -> str:
+def extract_text_from_file(file_path: str, doc_id: int | None = None, classroom_code: str | None = None, on_page_progress=None) -> str:
     ext = os.path.splitext(file_path)[1].lower()
     filename = os.path.basename(file_path)
 
     if ext == ".pdf":
-        return extract_pdf_page_by_page(file_path, on_page_progress=on_page_progress)
+        return extract_pdf_page_by_page(file_path, doc_id=doc_id, classroom_code=classroom_code, on_page_progress=on_page_progress)
 
     if ext in (".docx", ".doc"):
         try:
