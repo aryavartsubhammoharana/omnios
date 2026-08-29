@@ -29,7 +29,7 @@ export default function NotebookLMStudio() {
         id: 'session_1',
         title: 'General Doubt Solving Session',
         messages: [
-          { sender: 'ai', text: 'Welcome to NotebookLM Studio! Click on "Sources" to manage document sources and ask grounded AI questions.' }
+          { sender: 'ai', text: 'Welcome to DLM Notebook! Click on "Sources" to manage document sources and ask grounded AI questions.' }
         ],
         createdAt: new Date().toISOString()
       }
@@ -369,7 +369,7 @@ export default function NotebookLMStudio() {
             {sending && (
               <div className="flex items-center space-x-2 text-indigo-400 text-xs py-3">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>NotebookLM AI is thinking...</span>
+                <span>DLM Notebook AI is thinking...</span>
               </div>
             )}
             <div ref={chatEndRef} />

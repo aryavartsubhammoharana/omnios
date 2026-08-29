@@ -146,7 +146,7 @@ export default function QuickPDFReader() {
             className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-700 text-xs px-3 py-1.5 rounded-xl transition"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Open NotebookLM Permanent Studio</span>
+            <span>Open DLM Notebook Studio</span>
           </Link>
         </div>
       </header>

@@ -31,7 +31,7 @@ export default function Signup() {
             <BookOpen className="w-8 h-8 text-indigo-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">Create NoteAI Account</h1>
-          <p className="text-sm text-slate-400 mt-1">Join Google Classroom & NotebookLM Studio</p>
+          <p className="text-sm text-slate-400 mt-1">Join Google Classroom & DLM Notebook</p>
         </div>
 
         {error && (

@@ -465,7 +465,7 @@ export default function ClassroomDetail() {
             className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-indigo-600/20"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Open NotebookLM AI Workspace</span>
+            <span>Open DLM Notebook Workspace</span>
           </Link>
         </div>
       </div>
@@ -1101,7 +1101,7 @@ export default function ClassroomDetail() {
                     className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-lg transition"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Ask NotebookLM AI</span>
+                    <span>Ask DLM Notebook AI</span>
                   </Link>
                 ) : (
                   <button

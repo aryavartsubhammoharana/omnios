@@ -29,7 +29,7 @@ export default function Login() {
             <BookOpen className="w-8 h-8 text-indigo-400" />
           </div>
           <h1 className="text-2xl font-bold text-white">Welcome back to NoteAI</h1>
-          <p className="text-sm text-slate-400 mt-1">Classroom & NotebookLM Studio</p>
+          <p className="text-sm text-slate-400 mt-1">Classroom & DLM Notebook</p>
         </div>
 
         {error && (

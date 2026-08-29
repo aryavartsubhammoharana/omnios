@@ -27,20 +27,22 @@ export default function Navbar() {
       <div className="flex items-center space-x-6">
         <Link to="/" className="flex items-center space-x-2 text-xl font-bold text-indigo-400 hover:text-indigo-300">
           <BookOpen className="w-6 h-6 text-indigo-500" />
-          <span>NoteAI</span>
-          <span className="text-xs bg-indigo-950 text-indigo-300 border border-indigo-700 px-2 py-0.5 rounded-full font-normal">
-            NotebookLM + Classroom
+          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 tracking-tight">
+            NoteAI
+          </span>
+          <span className="text-[10px] text-indigo-300/80 font-mono tracking-wider">
+            DLMNotebook + Classroom
           </span>
         </Link>
 
         {user && (
-          <div className="flex items-center space-x-4 ml-6 text-sm">
+          <div className="hidden md:flex items-center space-x-6 text-sm">
             <Link to="/dashboard" className="text-slate-300 hover:text-white transition">
               Dashboard
             </Link>
             <Link to="/notebooklm" className="flex items-center space-x-1.5 text-indigo-400 hover:text-indigo-300 font-medium transition">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span>NotebookLM Studio</span>
+              <Bot className="w-4 h-4" />
+              <span>DLM Notebook</span>
             </Link>
           </div>
         )}

@@ -66,7 +66,7 @@ export default function Dashboard() {
             </span>
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Google Classroom Management & NotebookLM AI Studio
+            Google Classroom Management & DLM Notebook
           </p>
         </div>
 
@@ -94,7 +94,7 @@ export default function Dashboard() {
             className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-800/60 text-sm font-semibold px-4 py-2 rounded-xl transition"
           >
             <Sparkles className="w-4 h-4 text-indigo-400" />
-            <span>Open NotebookLM AI</span>
+            <span>Open DLM Notebook</span>
           </Link>
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function Dashboard() {
             <p className="text-slate-500 text-sm mt-1 mb-4">
               {user?.role === 'teacher'
                 ? 'Create your first classroom to share study notes and quizzes.'
-                : 'Join a classroom using the 6-character code provided by your teacher.'}
+                : 'Join a classroom using the 5-character code provided by your teacher.'}
             </p>
           </div>
         ) : (
@@ -153,7 +153,7 @@ export default function Dashboard() {
                     className="text-xs text-slate-400 hover:text-white flex items-center space-x-1 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-700"
                   >
                     <Sparkles className="w-3 h-3 text-indigo-400" />
-                    <span>NotebookLM Studio</span>
+                    <span>DLM Notebook</span>
                   </Link>
                 </div>
               </div>
