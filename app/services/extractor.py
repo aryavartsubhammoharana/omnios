@@ -206,8 +206,8 @@ def extract_text_from_file(file_path: str, doc_id: int | None = None, unique_cod
                                     ocr_results = reader.readtext(img_bytes, detail=0)
                                     if ocr_results:
                                         ocr_text = ", ".join(ocr_results[:10])
-                                    except Exception:
-                                        pass
+                                except Exception:
+                                    pass
                             if ocr_text:
                                 image_callouts.append(f"> 📝 **Embedded Diagram Text**: `{ocr_text}`")
             except Exception as e:
