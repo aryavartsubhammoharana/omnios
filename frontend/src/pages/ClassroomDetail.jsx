@@ -485,23 +485,23 @@ export default function ClassroomDetail() {
       <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
       <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
 
-      <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+      <div className="max-w-7xl mx-auto space-y-5 sm:space-y-6 relative z-10">
         {/* Top Navigation & Action Row */}
-        <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-gray-800/80">
           <Link
             to="/dashboard"
-            className="flex items-center space-x-1.5 text-gray-400 hover:text-white text-xs font-semibold transition"
+            className="inline-flex items-center space-x-1.5 text-gray-400 hover:text-white text-xs font-semibold transition py-1"
           >
             <ArrowLeft className="w-4 h-4 text-indigo-400" />
             <span>Back to Dashboard</span>
           </Link>
 
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5 w-full sm:w-auto justify-between sm:justify-end">
             {user?.role === 'student' && (
               <button
                 onClick={handleLeaveClassroom}
                 disabled={leaving}
-                className="flex items-center space-x-1.5 bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-800 text-xs font-semibold px-3 py-1.5 rounded-xl transition"
+                className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-1.5 bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-800 text-xs font-semibold px-3 py-2 rounded-xl transition"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>{leaving ? 'Leaving...' : 'Leave Classroom'}</span>
@@ -510,20 +510,20 @@ export default function ClassroomDetail() {
 
             <Link
               to={`/notebooklm?classroom_id=${id}`}
-              className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-indigo-600/20"
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-indigo-600/20 text-center"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Open DLM Notebook Workspace</span>
+              <span>Open DLM Notebook</span>
             </Link>
           </div>
         </div>
 
-        {/* CLASSROOM BANNER CARD (Slim Breadth / Height) */}
-        <div className="glass-card px-6 py-3.5 rounded-2xl border border-gray-800/80 shadow-lg">
+        {/* CLASSROOM BANNER CARD (Responsive Breadth / Height) */}
+        <div className="glass-card px-4 sm:px-6 py-3.5 rounded-2xl border border-gray-800/80 shadow-lg">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
+            <div className="w-full sm:w-auto">
               <div className="flex items-center space-x-2.5">
-                <h1 className="text-xl font-bold text-white tracking-tight">{classroom.name}</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">{classroom.name}</h1>
                 {isTeacher && (
                   <button
                     onClick={handleOpenEditClassroomModal}
@@ -540,14 +540,14 @@ export default function ClassroomDetail() {
               </p>
             </div>
 
-            <div className="bg-gray-900/90 px-4 py-2 rounded-xl border border-gray-800 text-center shadow-inner flex sm:flex-col items-center gap-1.5 sm:gap-0">
+            <div className="w-full sm:w-auto bg-gray-900/90 px-4 py-2 rounded-xl border border-gray-800 text-center shadow-inner flex justify-between sm:flex-col items-center gap-1 sm:gap-0">
               <span className="text-[9px] text-gray-400 uppercase font-mono tracking-wider">Class Join Code</span>
               <span className="text-base font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
             </div>
           </div>
         </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Main Feed (Left 2 Cols) */}
         <div className="lg:col-span-2 space-y-6">
           {/* Create Post */}
@@ -1156,23 +1156,23 @@ export default function ClassroomDetail() {
 
       {/* FULL SCREEN PDF DOCUMENT READER MODAL */}
       {readingDoc && (
-        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-lg flex items-center justify-center p-4 z-[100]">
-          <div className="bg-slate-900 border border-indigo-900/80 rounded-2xl max-w-6xl w-full h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-lg flex items-center justify-center p-2 sm:p-4 z-[100]">
+          <div className="bg-slate-900 border border-indigo-900/80 rounded-2xl max-w-6xl w-full h-[95vh] sm:h-[92vh] flex flex-col shadow-2xl overflow-hidden">
             {/* Reader Header */}
-            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Book className="w-5 h-5 text-indigo-400" />
-                <div>
-                  <h3 className="text-base font-bold text-white max-w-sm truncate">{readingDoc.filename}</h3>
+            <div className="p-3 sm:p-4 border-b border-slate-800 bg-slate-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center space-x-3 min-w-0 w-full sm:w-auto">
+                <Book className="w-5 h-5 text-indigo-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <h3 className="text-sm sm:text-base font-bold text-white truncate max-w-xs sm:max-w-md">{readingDoc.filename}</h3>
                   <span className="text-[10px] text-indigo-400 uppercase font-mono">Actual PDF Document Viewer</span>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3">
-                <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
+              <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-between sm:justify-end flex-wrap gap-1">
+                <div className="flex bg-slate-800 p-0.5 sm:p-1 rounded-xl border border-slate-700">
                   <button
                     onClick={() => setViewMode('pdf')}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
+                    className={`px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold rounded-lg transition ${
                       viewMode === 'pdf' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -1180,7 +1180,7 @@ export default function ClassroomDetail() {
                   </button>
                   <button
                     onClick={() => setViewMode('text')}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
+                    className={`px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold rounded-lg transition ${
                       viewMode === 'text' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
@@ -1191,34 +1191,25 @@ export default function ClassroomDetail() {
                 {readingDoc.processing_status === 'ready' ? (
                   <Link
                     to={`/quick-reader?document_id=${readingDoc.id}`}
-                    className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl shadow-lg transition"
+                    className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] sm:text-xs font-semibold px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl shadow-lg transition"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>Ask DLM Notebook AI</span>
+                    <span>Ask DLM AI</span>
                   </Link>
                 ) : (
                   <button
                     disabled
                     title="Please wait until GPU OCR completes (100%)"
-                    className="flex items-center space-x-1.5 bg-slate-800 text-slate-500 text-xs font-semibold px-3.5 py-2 rounded-xl cursor-not-allowed opacity-60 font-mono"
+                    className="flex items-center space-x-1 bg-slate-800 text-slate-500 text-[10px] sm:text-xs font-semibold px-2.5 py-1.5 rounded-xl cursor-not-allowed opacity-60 font-mono"
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-slate-600" />
-                    <span>
-                      {(() => {
-                        const st = readingDoc.processing_status || '';
-                        if (st.startsWith('ocr_page_')) {
-                          const parts = st.split('_');
-                          return `Page ${parts[2]}/${parts[3]} OCR (${readingDoc.processing_progress || 50}%)`;
-                        }
-                        return `Processing (${readingDoc.processing_progress || 50}%)`;
-                      })()}
-                    </span>
+                    <Sparkles className="w-3 h-3 text-slate-600" />
+                    <span>Processing...</span>
                   </button>
                 )}
 
                 <button
                   onClick={() => setReadingDoc(null)}
-                  className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition"
+                  className="p-1.5 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition ml-auto sm:ml-0"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1505,22 +1496,22 @@ export default function ClassroomDetail() {
             ) : quizSubmissionsData ? (
               <div className="p-5 space-y-4 bg-slate-950 text-xs overflow-y-auto">
                 {/* Metric Summary Cards */}
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
                   <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
                     <span className="text-[10px] text-slate-400 font-mono block">Enrolled Students</span>
-                    <span className="text-lg font-bold text-white mt-1 block">{quizSubmissionsData.total_students}</span>
+                    <span className="text-base sm:text-lg font-bold text-white mt-1 block">{quizSubmissionsData.total_students}</span>
                   </div>
                   <div className="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-xl">
                     <span className="text-[10px] text-emerald-400 font-mono block">Attempted</span>
-                    <span className="text-lg font-bold text-emerald-300 mt-1 block">{quizSubmissionsData.attempted_count}</span>
+                    <span className="text-base sm:text-lg font-bold text-emerald-300 mt-1 block">{quizSubmissionsData.attempted_count}</span>
                   </div>
                   <div className="bg-amber-950/40 border border-amber-800/60 p-3 rounded-xl">
                     <span className="text-[10px] text-amber-400 font-mono block">Pending</span>
-                    <span className="text-lg font-bold text-amber-300 mt-1 block">{quizSubmissionsData.pending_count}</span>
+                    <span className="text-base sm:text-lg font-bold text-amber-300 mt-1 block">{quizSubmissionsData.pending_count}</span>
                   </div>
                   <div className="bg-indigo-950/40 border border-indigo-800/60 p-3 rounded-xl">
                     <span className="text-[10px] text-indigo-400 font-mono block">Class Average</span>
-                    <span className="text-lg font-bold text-indigo-300 mt-1 block">
+                    <span className="text-base sm:text-lg font-bold text-indigo-300 mt-1 block truncate">
                       {quizSubmissionsData.average_score != null
                         ? `${quizSubmissionsData.average_score} / ${quizSubmissionsData.max_score}`
                         : 'N/A'}
@@ -1540,14 +1531,15 @@ export default function ClassroomDetail() {
                   />
                 </div>
 
-                {/* Submissions Roster Table */}
-                <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/60">
-                  <div className="grid grid-cols-12 bg-slate-900 p-3 text-[11px] font-bold text-slate-400 border-b border-slate-800">
-                    <span className="col-span-4">Student</span>
-                    <span className="col-span-3 text-center">Status</span>
-                    <span className="col-span-2 text-center">1st Score</span>
-                    <span className="col-span-3 text-right">Submitted At</span>
-                  </div>
+                {/* Submissions Roster Table (Horizontally scrollable on narrow mobile screens) */}
+                <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/60 overflow-x-auto">
+                  <div className="min-w-[500px]">
+                    <div className="grid grid-cols-12 bg-slate-900 p-3 text-[11px] font-bold text-slate-400 border-b border-slate-800">
+                      <span className="col-span-4">Student</span>
+                      <span className="col-span-3 text-center">Status</span>
+                      <span className="col-span-2 text-center">1st Score</span>
+                      <span className="col-span-3 text-right">Submitted At</span>
+                    </div>
 
                   <div className="divide-y divide-slate-800/60 max-h-60 overflow-y-auto">
                     {quizSubmissionsData.submissions
@@ -1603,6 +1595,7 @@ export default function ClassroomDetail() {
                           </div>
                         </div>
                       ))}
+                    </div>
                   </div>
                 </div>
               </div>
