@@ -1,3 +1,5 @@
+import os
+import re
 import requests
 import json
 from google import genai
@@ -152,7 +154,7 @@ def query_sarvam_ai(prompt: str, context: str = "") -> str:
 # ---------------------------------------------------------------------------
 
 def _get_groq_models():
-    base = [settings.GROQ_MODEL, "qwen/qwen3.8-27b", "groq/compound", "openai/gpt-oss-120b", "groq/compound-mini", "qwen/qwen3.6-27b"]
+    base = [settings.GROQ_MODEL or "openai/gpt-oss-120b", "qwen/qwen3.8-27b", "groq/compound", "openai/gpt-oss-20b", "groq/compound-mini"]
     seen = set()
     result = []
     for m in base:
@@ -162,16 +164,15 @@ def _get_groq_models():
     return result
 
 def query_groq_ai(prompt: str, context: str = "") -> str:
-    """Query Groq AI — ultra-fast LPU inference with automatic model rotation across active models."""
     if not settings.GROQ_API_KEY:
         return "Groq API key is not configured."
 
     client = Groq(api_key=settings.GROQ_API_KEY.strip())
 
     system_content = (
-        "You are NoteAI, a helpful and friendly academic tutor. "
-        "Answer student questions clearly and accurately using proper markdown formatting. "
-        "Use ## headings, numbered lists, bullet points, **bold** key terms, tables, and math formulas. "
+        "You are NoteAI, an expert academic tutor and classroom assistant. "
+        "Answer student questions with high accuracy, detail, and proper formatting. "
+        "Use ## headings, bullet points, **bold** key terms, tables, and LaTeX math formulas ($...$ for inline, $$...$$ for block). "
         "Reference provided study notes when relevant."
     )
 
@@ -188,12 +189,13 @@ def query_groq_ai(prompt: str, context: str = "") -> str:
                     {"role": "system", "content": system_content},
                     {"role": "user", "content": user_message},
                 ],
-                temperature=0.7,
-                max_tokens=2048,
+                temperature=0.4,
+                max_tokens=2500,
             )
             content = response.choices[0].message.content
             if content and content.strip():
-                return content.strip()
+                cleaned = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+                return cleaned or content.strip()
         except Exception as e:
             print(f"Groq model '{model_name}' attempt error: {e}")
 

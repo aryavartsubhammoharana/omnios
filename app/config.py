@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     SARVAM_API_KEY: str = os.getenv("SARVAM_API_KEY", "")
     SARVAM_MODEL: str = os.getenv("SARVAM_MODEL", "sarvam-105b-conversations")
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
     GROQ_VISION_API_KEY: str = os.getenv("GROQ_VISION_API_KEY", "")
     GROQ_VISION_MODEL: str = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.6-27b")
     YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
