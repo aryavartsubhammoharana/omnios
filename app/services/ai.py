@@ -3,12 +3,33 @@ import json
 from google import genai
 from app.config import settings
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def is_valid_ai_text(text: str) -> bool:
+    """Returns True only if the text is a real AI answer, not an error string."""
+    if not text or len(text.strip()) < 30:
+        return False
+    error_signatures = [
+        "error querying", "sarvam api error", "gemini api error",
+        "httpsconnectionpool", "read timed out", "quota exceeded",
+        "rate limit", "429", "500 internal", "timeout",
+    ]
+    t_lower = text.lower()
+    return not any(sig in t_lower for sig in error_signatures)
+
+
+# ---------------------------------------------------------------------------
+# Gemini AI
+# ---------------------------------------------------------------------------
+
 def query_gemini_ai(prompt: str, context: str = "") -> str:
-    """Generate answer using Google Gemini SDK with automatic model rotation & Sarvam AI fallback on 429 quota limits."""
+    """Query Google Gemini with model rotation and Sarvam fallback on quota exhaustion."""
     if not settings.GEMINI_API_KEY:
-        print("Gemini API key missing, falling back to Sarvam AI...")
         return query_sarvam_ai(prompt, context)
-    
+
     if context and context.strip():
         full_prompt = (
             f"You are NoteAI, an intelligent, helpful, and friendly academic tutor.\n\n"
@@ -17,94 +38,82 @@ def query_gemini_ai(prompt: str, context: str = "") -> str:
             f"-----------------------------------------\n\n"
             f"STUDENT QUESTION / PROMPT: {prompt}\n\n"
             f"INSTRUCTIONS:\n"
-            f"1. If the user is just greeting or chatting naturally (e.g. 'Hi', 'Hello', 'Can you help me?'), respond warmly and invite them to ask questions.\n"
-            f"2. Use the provided classroom study material as your primary reference when answering academic questions.\n"
-            f"3. You are free to use your own knowledge to provide clear explanations, simple examples, intuitive analogies, and step-by-step guidance.\n"
-            f"4. CRITICAL FORMATTING RULES — you MUST follow these exactly:\n"
-            f"   - Use '##' headings for major sections and '###' for sub-sections\n"
-            f"   - Use numbered lists (1. 2. 3.) for sequential questions or steps\n"
-            f"   - Use '- ' bullet points for lists of items or properties\n"
-            f"   - Use '**bold**' for key terms, question titles, and important concepts\n"
-            f"   - Put EACH question or point on its OWN separate line with a blank line between them\n"
-            f"   - Use markdown tables (| Col | Col |) for comparisons and differences\n"
-            f"   - Use `$formula$` for inline math and `$$formula$$` for display math equations\n"
-            f"   - NEVER write everything as one long paragraph — always use structured formatting\n"
+            f"1. If the user is just greeting or chatting naturally (e.g. 'Hi', 'Hello'), respond warmly.\n"
+            f"2. Use the provided classroom material as your primary reference.\n"
+            f"3. Supplement with your own knowledge for examples, analogies, and step-by-step guidance.\n"
+            f"4. CRITICAL FORMATTING — follow exactly:\n"
+            f"   - Use '##' for major sections, '###' for sub-sections\n"
+            f"   - Use numbered lists (1. 2. 3.) for sequential steps or questions\n"
+            f"   - Use '- ' bullet points for lists of items\n"
+            f"   - Use '**bold**' for key terms and question titles\n"
+            f"   - Each question/point on its OWN line with a blank line between\n"
+            f"   - Markdown tables (| Col | Col |) for comparisons\n"
+            f"   - `$formula$` for inline math, `$$formula$$` for display equations\n"
+            f"   - NEVER write everything as one long paragraph\n"
         )
     else:
         full_prompt = (
             f"You are NoteAI, an intelligent, helpful, and friendly academic tutor.\n\n"
             f"STUDENT QUESTION / PROMPT: {prompt}\n\n"
-            f"Provide a clear, accurate, and comprehensive answer with clean markdown formatting.\n"
+            f"Provide a clear, comprehensive answer with clean markdown formatting.\n"
             f"Use ## headings, numbered lists, bullet points, **bold** key terms, and tables where appropriate.\n"
-            f"NEVER write one giant paragraph — always use proper structured markdown with line breaks.\n"
+            f"NEVER write one giant paragraph — always use structured markdown.\n"
         )
 
-    models_to_try = [settings.GEMINI_MODEL or "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-    
-    for model_name in models_to_try:
+    # Try SDK models in order
+    for model_name in [settings.GEMINI_MODEL or "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
         try:
             client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            response = client.models.generate_content(
-                model=model_name,
-                contents=full_prompt,
-            )
-            if response.text and response.text.strip() and not response.text.startswith("Gemini API Error"):
+            response = client.models.generate_content(model=model_name, contents=full_prompt)
+            if response.text and response.text.strip():
                 return response.text.strip()
         except Exception as e:
-            print(f"Gemini model '{model_name}' error/quota limit: {e}")
+            print(f"Gemini model '{model_name}' failed: {e}")
 
-    # Fallback to direct REST API call
+    # REST API fallback
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.GEMINI_API_KEY}"
-        payload = {"contents": [{"parts": [{"text": full_prompt}]}]}
-        res = requests.post(url, json=payload, timeout=60)
+        res = requests.post(url, json={"contents": [{"parts": [{"text": full_prompt}]}]}, timeout=60)
         if res.status_code == 200:
-            data = res.json()
-            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+            return res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
     except Exception as ex:
-        print(f"Gemini REST API fallback error: {ex}")
+        print(f"Gemini REST fallback error: {ex}")
 
-    # Seamless Fallback to Sarvam AI (sarvam-105b-conversations) if Gemini 429 Quota is exhausted!
-    print("Gemini API quota exhausted (429). Seamlessly falling back to Sarvam AI...")
+    # Sarvam fallback
+    print("Gemini quota exhausted — falling back to Sarvam AI...")
     sarvam_res = query_sarvam_ai(prompt=prompt, context=context)
-    if sarvam_res and not sarvam_res.startswith("Sarvam API Error"):
-        return f"{sarvam_res}\n\n*(Powered by Sarvam AI fallback)*"
-    
+    if is_valid_ai_text(sarvam_res):
+        return f"{sarvam_res}\n\n*(Powered by Sarvam AI)*"
     return sarvam_res
 
+
+# ---------------------------------------------------------------------------
+# Sarvam AI
+# ---------------------------------------------------------------------------
+
 def query_sarvam_ai(prompt: str, context: str = "") -> str:
-    """Generate answer using Sarvam AI (sarvam-105b-conversations).
-    
-    Context is capped at 3000 chars and moved to the user message to avoid
-    Sarvam's content_filter (400) triggered by overly large system prompts.
-    """
+    """Query Sarvam AI with short system prompt and capped context to avoid content_filter (400)."""
     if not settings.SARVAM_API_KEY:
-        return "Sarvam API key is not configured in .env file."
-    
+        return "Sarvam API key is not configured."
+
     try:
-        url = "https://api.sarvam.ai/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {settings.SARVAM_API_KEY.strip()}",
-            "api-key": settings.SARVAM_API_KEY.strip()
+            "api-key": settings.SARVAM_API_KEY.strip(),
         }
-
-        # Keep system prompt SHORT — Sarvam's content filter triggers on oversized payloads
         system_content = (
             "You are NoteAI, a helpful academic tutor. "
             "Answer student questions clearly and accurately. "
-            "Reference the provided notes when relevant, and use your own knowledge for explanations, "
-            "analogies, and step-by-step guidance."
+            "Reference the provided notes when relevant, and use your knowledge for analogies and guidance."
         )
 
-        # Sanitize user prompt — Sarvam content_filter can trigger on repeated special chars like %%
-        safe_prompt = prompt.replace("%%", "marks").replace("%", " percent ")
-        safe_prompt = safe_prompt.strip()
+        # Sanitize prompt — repeated % chars can trigger Sarvam's content filter
+        safe_prompt = prompt.replace("%%", "marks").replace("%", " percent ").strip()
 
-        # Cap context at 3000 chars and merge into user message (safer for Sarvam's filter)
+        # Merge context into user message (capped at 3000 chars) — safer than large system prompts
         if context and context.strip():
-            trimmed_context = context.strip()[:3000]
-            user_message = f"Study Notes (reference):\n{trimmed_context}\n\nStudent Question: {safe_prompt}"
+            user_message = f"Study Notes (reference):\n{context.strip()[:3000]}\n\nStudent Question: {safe_prompt}"
         else:
             user_message = safe_prompt
 
@@ -112,98 +121,82 @@ def query_sarvam_ai(prompt: str, context: str = "") -> str:
             "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
             "messages": [
                 {"role": "system", "content": system_content},
-                {"role": "user", "content": user_message}
+                {"role": "user", "content": user_message},
             ],
             "temperature": 0.7,
-            "max_tokens": 1500
+            "max_tokens": 1500,
         }
-        res = requests.post(url, json=payload, headers=headers, timeout=60)
+        res = requests.post("https://api.sarvam.ai/v1/chat/completions", json=payload, headers=headers, timeout=60)
         if res.status_code == 200:
-            data = res.json()
-            return data["choices"][0]["message"]["content"].strip()
-        else:
-            print(f"Sarvam API Error ({res.status_code}): {res.text}")
-            return f"Sarvam API Error ({res.status_code}): {res.text}"
+            return res.json()["choices"][0]["message"]["content"].strip()
+        print(f"Sarvam API Error ({res.status_code}): {res.text}")
+        return f"Sarvam API Error ({res.status_code}): {res.text}"
     except Exception as e:
-        return f"Error querying Sarvam AI: {str(e)}"
+        return f"Error querying Sarvam AI: {e}"
+
+
+# ---------------------------------------------------------------------------
+# Document utilities (summary, quiz, OCR structuring)
+# ---------------------------------------------------------------------------
 
 def generate_document_summary(context: str, summary_type: str = "bullet") -> str:
-    prompt = f"Generate a comprehensive {summary_type} study guide summary based strictly on the uploaded classroom study material."
+    prompt = f"Generate a comprehensive {summary_type} study guide summary based on the uploaded classroom study material."
     return query_gemini_ai(prompt=prompt, context=context)
 
+
 def generate_quiz_questions(context: str, num_questions: int = 5) -> list:
-    prompt = f"""Generate an educational JSON list of {num_questions} multiple choice questions based on the key concepts in the provided classroom study material.
-Return ONLY valid raw JSON array of objects without markdown fences.
-Each object must have:
-- "id": number (1 to N)
-- "question": string (engaging conceptual question testing understanding)
-- "options": list of 4 plausible strings
-- "correct_index": integer (0, 1, 2, or 3)
-- "explanation": string (clear educational reasoning why the answer is correct)
-- "sub_topic": string (academic topic or concept name)
-"""
-    raw_response = query_gemini_ai(prompt=prompt, context=context)
-    clean_json = raw_response.replace("```json", "").replace("```", "").strip()
+    prompt = (
+        f"Generate an educational JSON list of {num_questions} multiple-choice questions "
+        f"based on the key concepts in the provided classroom study material.\n"
+        f"Return ONLY a valid raw JSON array (no markdown fences). Each object must have:\n"
+        f'- "id": number\n- "question": string\n- "options": list of 4 strings\n'
+        f'- "correct_index": integer (0–3)\n- "explanation": string\n- "sub_topic": string'
+    )
+    raw = query_gemini_ai(prompt=prompt, context=context)
+    clean = raw.replace("```json", "").replace("```", "").strip()
     try:
-        return json.loads(clean_json)
+        return json.loads(clean)
     except Exception:
         return [{
             "id": 1,
             "question": "Which core topic is covered in the uploaded study notes?",
-            "options": ["CY202 - Biology and Environmental Science", "General Knowledge", "Unrelated Subject", "None"],
+            "options": ["The uploaded classroom material", "General Knowledge", "Unrelated Subject", "None"],
             "correct_index": 0,
-            "explanation": "Extracted directly from the uploaded classroom study PDF.",
-            "sub_topic": "Unit 1: Cells & Biomolecules"
+            "explanation": "Extracted directly from the uploaded classroom PDF.",
+            "sub_topic": "Classroom Notes",
         }]
 
-def is_valid_ai_text(text: str) -> bool:
-    """Checks whether the AI response is valid content or an error string."""
-    if not text or not text.strip():
-        return False
-    t_lower = text.lower()
-    error_signatures = [
-        "error querying", "sarvam api error", "gemini api error", 
-        "httpsconnectionpool", "read timed out", "quota exceeded", 
-        "rate limit", "429", "500 internal", "timeout"
-    ]
-    for sig in error_signatures:
-        if sig in t_lower:
-            return False
-    return len(text.strip()) > 30
 
 def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
-    """Uses Sarvam/Gemini AI to structure OCR text, with guaranteed local fallback so errors never leak to user."""
+    """Structure raw OCR text into clean Markdown using Gemini → Sarvam → local fallback."""
     from app.services.extractor import format_ocr_text_locally
-    
+
     if not raw_ocr_text or not raw_ocr_text.strip():
         return raw_ocr_text
 
-    # Compute clean local formatted text first as guaranteed baseline
     local_clean = format_ocr_text_locally(raw_ocr_text)
 
-    prompt = (
+    formatting_prompt = (
         "You are an expert Document Formatter. Convert the following RAW OCR text extracted from lecture notes "
         "into clean, beautifully structured Markdown without losing any information.\n\n"
         "STRICT FORMATTING RULES:\n"
-        "1. CRITICAL: REPAIR ALL BROKEN SENTENCES & QUESTIONS. OCR splits single sentences across multiple lines "
-        "(e.g. 'What is a' followed by 'peptide bond?'). You MUST join them into a single, complete, grammatically smooth line "
-        "('**2. What is a peptide bond?**'). NEVER leave broken fragments on separate lines.\n"
-        "2. Format all question titles in bold on a single line (e.g. **1. Draw a labelled diagram of a plant cell.** or **2. What is a peptide bond?**).\n"
-        "3. Convert any tables, comparisons, or differences into clean Markdown tables (| Parameter | Saturated | Unsaturated |).\n"
-        "4. Use appropriate Markdown headings (## for Units/Chapters, ### for Sections/Short Questions/Broad Questions).\n"
-        "5. Preserve page separators (e.g. '### 📄 Page 1 of 4').\n"
-        "6. Do NOT summarize, drop, or delete any questions or content. Keep all questions, options, definitions, and terms 100% intact.\n"
-        "7. Return ONLY the clean, structured markdown content without any conversational filler.\n\n"
+        "1. REPAIR ALL BROKEN SENTENCES. OCR splits single sentences across lines "
+        "(e.g. 'What is a' / 'peptide bond?'). Join them into one complete line.\n"
+        "2. Format question titles in bold on a single line (e.g. **2. What is a peptide bond?**).\n"
+        "3. Convert tables/comparisons into clean Markdown tables.\n"
+        "4. Use ## for Units/Chapters, ### for Sections.\n"
+        "5. Do NOT summarize or drop any content — keep everything 100% intact.\n"
+        "6. Return ONLY the structured markdown, no conversational filler.\n\n"
         f"RAW OCR TEXT:\n{raw_ocr_text[:8000]}"
     )
 
-    # 1. Try Gemini AI
+    # Try Gemini
     if settings.GEMINI_API_KEY:
         try:
             client = genai.Client(api_key=settings.GEMINI_API_KEY)
             response = client.models.generate_content(
                 model=settings.GEMINI_MODEL or "gemini-2.5-flash",
-                contents=prompt,
+                contents=formatting_prompt,
             )
             if response.text and is_valid_ai_text(response.text):
                 print("[OK] Document text successfully structured via Gemini AI!")
@@ -211,35 +204,31 @@ def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
         except Exception as e:
             print(f"Note on Gemini structuring: {e}")
 
-    # 2. Try Sarvam AI with fast 25s timeout
+    # Try Sarvam
     if settings.SARVAM_API_KEY:
         try:
-            url = "https://api.sarvam.ai/v1/chat/completions"
             headers = {
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {settings.SARVAM_API_KEY.strip()}",
-                "api-key": settings.SARVAM_API_KEY.strip()
+                "api-key": settings.SARVAM_API_KEY.strip(),
             }
             payload = {
                 "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
                 "messages": [
                     {"role": "system", "content": "You are an expert Document Formatter. Convert raw OCR text into structured Markdown."},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": formatting_prompt},
                 ],
-                "temperature": 0.2
+                "temperature": 0.2,
             }
-            res = requests.post(url, json=payload, headers=headers, timeout=25)
+            res = requests.post("https://api.sarvam.ai/v1/chat/completions", json=payload, headers=headers, timeout=25)
             if res.status_code == 200:
-                data = res.json()
-                result = data["choices"][0]["message"]["content"].strip()
+                result = res.json()["choices"][0]["message"]["content"].strip()
                 if is_valid_ai_text(result):
                     print("[OK] Document text successfully structured via Sarvam AI!")
                     return result
         except Exception as e:
             print(f"Note on Sarvam structuring: {e}")
 
-    # 3. Guaranteed Rock-Solid Local Formatter (Instant, 0s, $0, No timeouts, No network errors)
-    print("[OK] Document text structured via local high-speed sentence repair engine!")
+    # Local fallback (instant, zero cost)
+    print("[OK] Document text structured via local sentence repair engine!")
     return local_clean
-
-
