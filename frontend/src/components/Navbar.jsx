@@ -23,64 +23,84 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-slate-900 border-b border-slate-800 px-6 py-3.5 flex items-center justify-between sticky top-0 z-50">
+    <nav className="bg-[#090d16]/80 backdrop-blur-xl border-b border-gray-800/80 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+      {/* Brand / Logo (Left) */}
       <div className="flex items-center space-x-6">
-        <Link to="/" className="flex items-center space-x-2 text-xl font-bold text-indigo-400 hover:text-indigo-300">
-          <BookOpen className="w-6 h-6 text-indigo-500" />
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 tracking-tight">
-            NoteAI
-          </span>
-          <span className="text-[10px] text-indigo-300/80 font-mono tracking-wider">
-            DLMNotebook + Classroom
-          </span>
-        </Link>
-
-        {user && (
-          <div className="hidden md:flex items-center space-x-6 text-sm">
-            <Link to="/dashboard" className="text-slate-300 hover:text-white transition">
-              Dashboard
-            </Link>
-            <Link to="/notebooklm" className="flex items-center space-x-1.5 text-indigo-400 hover:text-indigo-300 font-medium transition">
-              <Bot className="w-4 h-4" />
-              <span>DLM Notebook</span>
-            </Link>
+        <Link to="/" className="flex items-center space-x-2.5 text-indigo-400 hover:text-indigo-300 transition group">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition">
+            <BookOpen className="w-5 h-5 text-white" />
           </div>
-        )}
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-indigo-400 tracking-tight">
+                NoteAI
+              </span>
+              <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                PRO
+              </span>
+            </div>
+            <p className="text-[10px] text-gray-400 font-medium tracking-tight">DLMNotebook + Classroom</p>
+          </div>
+        </Link>
       </div>
 
-      <div className="flex items-center space-x-4">
+      {/* Navigation Tabs (Center) */}
+      {user && (
+        <div className="hidden md:flex items-center bg-gray-900/90 border border-gray-800/80 rounded-xl p-1 gap-1 shadow-inner">
+          <Link
+            to="/dashboard"
+            className="text-xs px-3.5 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Classroom Dashboard</span>
+          </Link>
+          <Link
+            to="/notebooklm"
+            className="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-medium transition flex items-center gap-1.5 hover:bg-indigo-600/30"
+          >
+            <Bot className="w-3.5 h-3.5 text-indigo-400" />
+            <span>DLM Notebook Studio</span>
+          </Link>
+        </div>
+      )}
+
+      {/* User Controls & Streak (Right) */}
+      <div className="flex items-center space-x-3">
         {user ? (
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2.5">
             {/* Gamified Streak Counter */}
             <div 
               title={`${streak} consecutive active study days`}
-              className="flex items-center space-x-1 bg-amber-950/80 text-amber-300 border border-amber-800/80 px-2.5 py-1 rounded-full text-xs font-semibold font-mono"
+              className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-inner"
             >
               <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
-              <span>{streak} {streak === 1 ? 'Day' : 'Days'}</span>
+              <span>{streak} {streak === 1 ? 'Day' : 'Days'} Streak</span>
             </div>
 
-            <div className="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-              <User className="w-4 h-4 text-slate-400" />
-              <span className="text-xs font-semibold text-slate-200">{user.full_name}</span>
-              <span className="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded uppercase font-mono">
+            {/* Profile Badge */}
+            <div className="flex items-center space-x-2 bg-gray-900/90 border border-gray-800 px-3 py-1.5 rounded-xl text-xs">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+              <span className="font-medium text-gray-200">{user.full_name}</span>
+              <span className="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-bold uppercase">
                 {user.role}
               </span>
             </div>
+
+            {/* Logout Button */}
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-1 text-slate-400 hover:text-red-400 transition text-sm font-medium"
+              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-xl transition text-xs flex items-center gap-1"
+              title="Logout"
             >
               <LogOut className="w-4 h-4" />
-              <span>Logout</span>
             </button>
           </div>
         ) : (
-          <div className="flex items-center space-x-3">
-            <Link to="/login" className="text-sm font-medium text-slate-300 hover:text-white px-3 py-1.5">
+          <div className="flex items-center space-x-2.5">
+            <Link to="/login" className="text-xs font-medium text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
               Login
             </Link>
-            <Link to="/signup" className="text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition">
+            <Link to="/signup" className="text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-1.5 rounded-xl shadow-lg shadow-indigo-600/20 transition">
               Sign Up
             </Link>
           </div>

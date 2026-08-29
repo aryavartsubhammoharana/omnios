@@ -185,14 +185,18 @@ export default function NotebookLMStudio() {
   };
 
   return (
-    <div className="h-[calc(100vh-64px)] bg-slate-950 text-slate-100 flex flex-col overflow-hidden relative">
+    <div className="h-[calc(100vh-61px)] bg-[#090d16] text-gray-100 flex flex-col overflow-hidden relative">
+      {/* Background Ambient Glow Orbs */}
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
+      <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
+
       {/* Main Studio Grid (Flex 1, Overflow Hidden) */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
         {/* Left Sidebar (3 Cols): Classroom Dropdown & Sources Pop-up Button */}
-        <div className="lg:col-span-3 border-r border-slate-800 bg-slate-950 p-4 flex flex-col space-y-5 overflow-y-auto h-full">
+        <div className="lg:col-span-3 border-r border-gray-800/80 bg-[#090d16]/90 backdrop-blur-md p-4 flex flex-col space-y-5 overflow-y-auto h-full">
           {/* Classroom Selector Dropdown */}
           <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center space-x-1">
+            <label className="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5 flex items-center space-x-1">
               <Filter className="w-3.5 h-3.5 text-indigo-400" />
               <span>Classroom Filter</span>
             </label>
@@ -201,16 +205,16 @@ export default function NotebookLMStudio() {
               <select
                 value={selectedClassroomId}
                 onChange={(e) => setSelectedClassroomId(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 hover:border-indigo-500 rounded-xl px-3 py-2 text-xs text-white appearance-none cursor-pointer focus:outline-none focus:border-indigo-500 pr-8 font-medium"
+                className="w-full glass-input rounded-xl px-3 py-2 text-xs text-white appearance-none cursor-pointer pr-8 font-medium"
               >
-                <option value="all">📚 All Classrooms (Combined Notes)</option>
+                <option value="all" className="bg-gray-900">📚 All Classrooms (Combined Notes)</option>
                 {classrooms.map((c) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={c.id} className="bg-gray-900">
                     🏫 {c.name} ({c.code})
                   </option>
                 ))}
               </select>
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 bottom-2.5 pointer-events-none" />
+              <ChevronDown className="w-4 h-4 text-gray-400 absolute right-2.5 bottom-2.5 pointer-events-none" />
             </div>
 
             {/* Clickable Sources Button with Dynamic Count */}
@@ -228,15 +232,15 @@ export default function NotebookLMStudio() {
             </button>
           </div>
 
-          <hr className="border-slate-800/80" />
+          <hr className="border-gray-800/80" />
 
           {/* Saved Chat History Threads */}
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Chat Threads</h3>
+              <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wider">Chat Threads</h3>
               <button
                 onClick={handleCreateNewSession}
-                className="flex items-center space-x-1 text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-lg transition"
+                className="flex items-center space-x-1 text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded-lg transition shadow-sm"
               >
                 <Plus className="w-3 h-3" />
                 <span>New</span>
@@ -252,15 +256,15 @@ export default function NotebookLMStudio() {
                     onClick={() => setActiveSessionId(session.id)}
                     className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between text-xs ${
                       isActive
-                        ? 'bg-slate-800 border-indigo-500 text-white font-bold'
-                        : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:bg-slate-900'
+                        ? 'bg-gray-800 border-indigo-500 text-white font-bold shadow-sm'
+                        : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:bg-gray-900 hover:text-gray-200'
                     }`}
                   >
                     <span className="truncate max-w-[150px]">{session.title}</span>
                     {chatSessions.length > 1 && (
                       <button
                         onClick={(e) => handleDeleteSession(session.id, e)}
-                        className="p-1 text-slate-500 hover:text-red-400 rounded transition"
+                        className="p-1 text-gray-500 hover:text-red-400 rounded transition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -273,12 +277,12 @@ export default function NotebookLMStudio() {
         </div>
 
         {/* Right Main Studio Area (9 Cols): Grounded AI Chat */}
-        <div className="lg:col-span-9 bg-slate-900/90 flex flex-col h-full min-h-0 overflow-hidden">
+        <div className="lg:col-span-9 bg-[#090d16]/70 backdrop-blur-sm flex flex-col h-full min-h-0 overflow-hidden">
           {/* Studio Active Session Top Bar (Flex Shrink 0) */}
-          <div className="p-3 border-b border-slate-800 bg-slate-950 flex items-center justify-between flex-shrink-0">
+          <div className="p-3 border-b border-gray-800/80 bg-gray-950/80 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center space-x-2.5">
               <Bot className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-bold text-slate-200">{activeSession?.title}</span>
+              <span className="text-xs font-bold text-gray-200">{activeSession?.title}</span>
               
               {/* Dual Vector DB Scope Badge */}
               <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border bg-slate-900">

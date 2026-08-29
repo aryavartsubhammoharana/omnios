@@ -441,60 +441,66 @@ export default function ClassroomDetail() {
   const isTeacher = user?.role === 'teacher' && classroom?.teacher_id === user?.id;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-      {/* Top Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <Link to="/dashboard" className="flex items-center space-x-1.5 text-slate-400 hover:text-white text-xs font-semibold">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Dashboard</span>
-        </Link>
+    <div className="min-h-[calc(100vh-61px)] bg-[#090d16] text-gray-100 py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      {/* Background Ambient Glow Orbs */}
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
+      <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
 
-        <div className="flex items-center space-x-3">
-          {user?.role === 'student' && (
-            <button
-              onClick={handleLeaveClassroom}
-              disabled={leaving}
-              className="flex items-center space-x-1.5 bg-red-950/70 hover:bg-red-900 text-red-300 border border-red-800 text-xs font-semibold px-3 py-2 rounded-xl transition"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>{leaving ? 'Leaving...' : 'Leave Classroom'}</span>
-            </button>
-          )}
-
-          <Link
-            to={`/notebooklm?classroom_id=${id}`}
-            className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-indigo-600/20"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Open DLM Notebook Workspace</span>
+      <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+        {/* Top Navigation & Action Row */}
+        <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
+          <Link to="/dashboard" className="flex items-center space-x-1.5 text-gray-400 hover:text-white text-xs font-semibold transition">
+            <ArrowLeft className="w-4 h-4 text-indigo-400" />
+            <span>Back to Dashboard</span>
           </Link>
-        </div>
-      </div>
 
-      <TiltCard3D className="p-6 mb-8 bg-gradient-to-r from-indigo-950/80 via-slate-900 to-slate-950 border border-indigo-900/50">
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center space-x-2.5">
-              <h1 className="text-2xl font-bold text-white">{classroom.name}</h1>
-              {isTeacher && (
-                <button
-                  onClick={handleOpenEditClassroomModal}
-                  title="Edit Classroom Name & Details"
-                  className="p-1.5 text-slate-400 hover:text-indigo-300 bg-slate-900/80 hover:bg-indigo-950 border border-slate-700 hover:border-indigo-600 rounded-lg transition"
-                >
-                  <Edit3 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            <p className="text-sm text-slate-400 mt-1">{classroom.description || 'Classroom feed and study workspace'}</p>
-            <p className="text-xs text-slate-500 mt-2">Instructor: {classroom.teacher_name}</p>
-          </div>
-          <div className="bg-slate-900/80 px-3 py-2 rounded-xl border border-slate-700 text-center">
-            <span className="text-[10px] text-slate-400 uppercase font-mono block">Class Join Code</span>
-            <span className="text-base font-mono font-bold text-indigo-400 tracking-wider">{classroom.code}</span>
+          <div className="flex items-center space-x-3">
+            {user?.role === 'student' && (
+              <button
+                onClick={handleLeaveClassroom}
+                disabled={leaving}
+                className="flex items-center space-x-1.5 bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-800 text-xs font-semibold px-3 py-1.5 rounded-xl transition"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{leaving ? 'Leaving...' : 'Leave Classroom'}</span>
+              </button>
+            )}
+
+            <Link
+              to={`/notebooklm?classroom_id=${id}`}
+              className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-indigo-600/20"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>Open DLM Notebook Workspace</span>
+            </Link>
           </div>
         </div>
-      </TiltCard3D>
+
+        {/* HERO BANNER */}
+        <div className="glass-card p-6 rounded-2xl border border-gray-800/80 shadow-2xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <div className="flex items-center space-x-2.5">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{classroom.name}</h1>
+                {isTeacher && (
+                  <button
+                    onClick={handleOpenEditClassroomModal}
+                    title="Edit Classroom Name & Details"
+                    className="p-1.5 text-gray-400 hover:text-indigo-300 bg-gray-900/80 hover:bg-indigo-950 border border-gray-700 hover:border-indigo-600 rounded-lg transition"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm text-gray-400 mt-1">{classroom.description || 'Classroom feed and study workspace'}</p>
+              <p className="text-xs text-gray-500 mt-2 font-medium">Instructor: {classroom.teacher_name}</p>
+            </div>
+            <div className="bg-gray-900/90 px-4 py-2.5 rounded-2xl border border-gray-800 text-center shadow-inner">
+              <span className="text-[10px] text-gray-400 uppercase font-mono block">Class Join Code</span>
+              <span className="text-lg font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
+            </div>
+          </div>
+        </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Feed (Left 2 Cols) */}
@@ -1529,6 +1535,7 @@ export default function ClassroomDetail() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
