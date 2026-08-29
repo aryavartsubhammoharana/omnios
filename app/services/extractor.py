@@ -103,19 +103,22 @@ def format_ocr_text_locally(raw_text: str) -> str:
     return re.sub(r"\n{4,}", "\n\n\n", result)
 
 
+from app.services.vision import analyze_image_with_llava
+
+
 # ---------------------------------------------------------------------------
-# PDF extraction (text layer → GPU OCR per page)
+# PDF extraction (text layer + embedded images analysis via EasyOCR & LLaVA)
 # ---------------------------------------------------------------------------
 
 def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
-    """Extract text page-by-page: prefer text layer, fall back to GPU EasyOCR."""
+    """Extract text page-by-page: text layer + embedded diagram/image analysis via EasyOCR & LLaVA."""
     filename = os.path.basename(file_path)
     extracted_pages = []
 
     try:
         doc = fitz.open(file_path)
         total_pages = len(doc)
-        print(f"[+] '{filename}' — {total_pages} page(s). Starting extraction...")
+        print(f"[+] '{filename}' — {total_pages} page(s). Starting extraction with LLaVA Vision...")
 
         for page_idx in range(total_pages):
             page_num = page_idx + 1
@@ -123,7 +126,7 @@ def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
             page_text = page.get_text()
             ocr_used = False
 
-            # Fall back to EasyOCR if page has no meaningful text
+            # 1. Fall back to EasyOCR if page has no meaningful text
             if not page_text or len(page_text.strip()) < 15:
                 reader = get_easyocr_reader()
                 if reader:
@@ -134,10 +137,56 @@ def extract_pdf_page_by_page(file_path: str, on_page_progress=None) -> str:
                     if lines:
                         page_text = "\n".join(lines)
 
-            if page_text and page_text.strip():
-                extracted_pages.append(f"--- Page {page_num} of {total_pages} ---\n{page_text.strip()}")
+            # 2. Extract & Analyze Embedded Images / Diagrams (EasyOCR + LLaVA)
+            image_analyses = []
+            try:
+                page_images = page.get_images()
+                if page_images:
+                    reader = get_easyocr_reader()
+                    for img_idx, img_info in enumerate(page_images[:4]):  # Cap at 4 images per page for speed
+                        xref = img_info[0]
+                        base_image = doc.extract_image(xref)
+                        if base_image and "image" in base_image:
+                            img_bytes = base_image["image"]
+                            width = base_image.get("width", 0)
+                            height = base_image.get("height", 0)
 
-            print(f"   -> [Page {page_num}/{total_pages}] {'GPU OCR' if ocr_used else 'Text Layer'} ({len(page_text.strip()) if page_text else 0} chars)")
+                            # Skip tiny icons / logos (must be at least 80x80)
+                            if width >= 80 and height >= 80:
+                                # A. OCR Text from Image
+                                img_ocr_text = ""
+                                if reader:
+                                    try:
+                                        ocr_results = reader.readtext(img_bytes, detail=0)
+                                        if ocr_results:
+                                            img_ocr_text = ", ".join(ocr_results[:12])
+                                    except Exception:
+                                        pass
+
+                                # B. LLaVA Multimodal Vision Analysis
+                                llava_desc = analyze_image_with_llava(img_bytes)
+
+                                if llava_desc or img_ocr_text:
+                                    callout = [f"> 🖼️ **[Figure/Diagram {img_idx+1} Analysis - LLaVA]**:"]
+                                    if llava_desc:
+                                        callout.append(f"> **Visual Comprehension**: {llava_desc}")
+                                    if img_ocr_text:
+                                        callout.append(f"> **OCR Labels/Formulas**: `{img_ocr_text}`")
+                                    image_analyses.append("\n".join(callout))
+            except Exception as img_err:
+                print(f"Note on page {page_num} image extraction: {img_err}")
+
+            # Assemble Page Content (Text + Image Analyses)
+            full_page_parts = []
+            if page_text and page_text.strip():
+                full_page_parts.append(page_text.strip())
+            if image_analyses:
+                full_page_parts.append("\n\n" + "\n\n".join(image_analyses))
+
+            if full_page_parts:
+                extracted_pages.append(f"--- Page {page_num} of {total_pages} ---\n" + "\n\n".join(full_page_parts))
+
+            print(f"   -> [Page {page_num}/{total_pages}] {'GPU OCR' if ocr_used else 'Text Layer'} ({len(full_page_parts)} sections, {len(image_analyses)} diagrams)")
 
             if on_page_progress:
                 on_page_progress(page_num, total_pages, ocr_used)
@@ -165,9 +214,44 @@ def extract_text_from_file(file_path: str, on_page_progress=None) -> str:
         try:
             import docx
             doc = docx.Document(file_path)
-            text = "\n".join(p.text for p in doc.paragraphs if p.text).strip()
-            if text:
-                return text
+            paragraphs = [p.text for p in doc.paragraphs if p.text]
+            text = "\n".join(paragraphs).strip()
+            
+            # Extract inline images from DOCX and analyze with LLaVA
+            image_callouts = []
+            try:
+                reader = get_easyocr_reader()
+                for rel_id, rel in doc.part.related_parts.items():
+                    if "image" in rel.content_type:
+                        img_bytes = rel.blob
+                        if len(img_bytes) > 2048:  # Skip tiny icons
+                            ocr_text = ""
+                            if reader:
+                                try:
+                                    ocr_results = reader.readtext(img_bytes, detail=0)
+                                    if ocr_results:
+                                        ocr_text = ", ".join(ocr_results[:10])
+                                except Exception:
+                                    pass
+                            llava_desc = analyze_image_with_llava(img_bytes)
+                            if llava_desc or ocr_text:
+                                block = ["> 🖼️ **[Document Figure Analysis - LLaVA]**:"]
+                                if llava_desc:
+                                    block.append(f"> **Visual Comprehension**: {llava_desc}")
+                                if ocr_text:
+                                    block.append(f"> **OCR Labels**: `{ocr_text}`")
+                                image_callouts.append("\n".join(block))
+            except Exception as e:
+                print(f"Note on docx image extraction: {e}")
+
+            full_docx = text
+            if image_callouts:
+                full_docx += "\n\n### 🖼️ Embedded Figures & Diagrams Analysis\n" + "\n\n".join(image_callouts)
+
+            if full_docx:
+                if on_page_progress:
+                    on_page_progress(1, 1, False)
+                return format_ocr_text_locally(full_docx)
         except Exception:
             pass
 
@@ -182,22 +266,37 @@ def extract_text_from_file(file_path: str, on_page_progress=None) -> str:
                 if hasattr(shape, "text") and shape.text.strip()
             ).strip()
             if text:
+                if on_page_progress:
+                    on_page_progress(1, 1, False)
                 return text
         except Exception:
             pass
 
+    # Standalone Image Files (.png, .jpg, .jpeg, .webp) -> EasyOCR + LLaVA Vision
     if ext in (".png", ".jpg", ".jpeg", ".webp", ".bmp"):
+        if on_page_progress:
+            on_page_progress(1, 1, True)
+            
         reader = get_easyocr_reader()
+        ocr_text = ""
         if reader:
             try:
-                if on_page_progress:
-                    on_page_progress(1, 1, True)
                 results = reader.readtext(file_path, detail=0)
-                text = " ".join(results).strip()
-                if text:
-                    return format_ocr_text_locally(text)
+                ocr_text = "\n".join(results).strip()
             except Exception as e:
                 print(f"Error OCR extracting standalone image {filename}: {e}")
+
+        llava_analysis = analyze_image_with_llava(file_path)
+
+        parts = [f"## 🖼️ Visual Study Note: '{filename}'\n"]
+        if ocr_text:
+            parts.append(f"### 📝 Extracted Text & Formulas (OCR)\n{ocr_text}\n")
+        if llava_analysis:
+            parts.append(f"### 🔍 Deep Diagram Analysis (LLaVA Vision AI)\n> **Visual Comprehension**:\n{llava_analysis}\n")
+
+        full_res = "\n\n".join(parts).strip()
+        if full_res:
+            return format_ocr_text_locally(full_res)
 
     # Plain text and Markdown fallback (.txt, .md)
     try:

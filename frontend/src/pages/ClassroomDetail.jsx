@@ -6,6 +6,7 @@ import { BookOpen, Sparkles, MessageSquare, Send, Upload, FileText, HelpCircle, 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TiltCard3D from '../components/TiltCard3D';
+import MathRenderer from '../components/MathRenderer';
 
 export default function ClassroomDetail() {
   const { id } = useParams();
@@ -1160,10 +1161,8 @@ export default function ClassroomDetail() {
                         </p>
                       </div>
                     ) : (
-                      <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-inner prose prose-invert max-w-none prose-table:border prose-table:border-slate-700 prose-td:p-3 prose-th:p-3 prose-th:bg-slate-800 text-sm">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                          {readingDoc.content_text}
-                        </ReactMarkdown>
+                      <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-inner max-w-none text-sm">
+                        <MathRenderer content={readingDoc.content_text} />
                       </div>
                     )}
                   </div>
