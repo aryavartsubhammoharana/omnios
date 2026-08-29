@@ -99,7 +99,7 @@ def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number
             "Content-Type": "application/json"
         }
 
-        model_to_use = "llama-3.2-11b-vision-preview"
+        model_to_use = "qwen/qwen3.6-27b"
 
         payload = {
             "model": model_to_use,
@@ -123,7 +123,9 @@ def analyze_image_batch_with_groq(image_path: str, image_count: int, page_number
 
         res = requests.post("https://api.groq.com/openai/v1/chat/completions", json=payload, headers=headers, timeout=40)
         if res.status_code == 200:
-            return res.json()["choices"][0]["message"]["content"].strip()
+            content = res.json()["choices"][0]["message"]["content"].strip()
+            content = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+            return content
         print(f"Groq Vision API Error ({res.status_code}): {res.text}")
     except Exception as e:
         print(f"Groq Vision call failed: {e}")
@@ -135,14 +137,16 @@ def parse_groq_batch_response(raw_text: str, local_image_ids: dict) -> dict:
     if not raw_text or not local_image_ids:
         return {}
 
+    cleaned_text = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
+
     results = {}
     if len(local_image_ids) == 1:
         first_id = list(local_image_ids.values())[0]
-        results[first_id] = raw_text.strip()
+        results[first_id] = cleaned_text
         return results
 
     pattern = r"(?:^|\n)\s*Image\s+(\d+)\s*:\s*"
-    splits = re.split(pattern, raw_text, flags=re.IGNORECASE)
+    splits = re.split(pattern, cleaned_text, flags=re.IGNORECASE)
 
     if len(splits) > 1:
         for i in range(1, len(splits), 2):
@@ -155,6 +159,6 @@ def parse_groq_batch_response(raw_text: str, local_image_ids: dict) -> dict:
 
     if not results and local_image_ids:
         first_id = list(local_image_ids.values())[0]
-        results[first_id] = raw_text.strip()
+        results[first_id] = cleaned_text
 
     return results
