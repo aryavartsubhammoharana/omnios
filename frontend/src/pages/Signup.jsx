@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { BookOpen, KeyRound, Mail, User, GraduationCap, Loader2, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '753894711311-648b2a1a8u1qke25t795d3q9g342p258.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '208360710553-s8ccnmol8g9klrljcumtoda23gqsokl3.apps.googleusercontent.com';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
