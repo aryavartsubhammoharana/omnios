@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     SARVAM_API_KEY: str = os.getenv("SARVAM_API_KEY", "")
     SARVAM_MODEL: str = os.getenv("SARVAM_MODEL", "sarvam-105b-conversations")
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
     YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
 
     class Config:

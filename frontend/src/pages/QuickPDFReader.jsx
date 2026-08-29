@@ -190,6 +190,14 @@ export default function QuickPDFReader() {
                 >
                   Sarvam
                 </button>
+                <button
+                  onClick={() => setAiProvider('groq')}
+                  className={`px-2 py-0.5 rounded font-semibold ${
+                    aiProvider === 'groq' ? 'bg-orange-600 text-white' : 'text-slate-400'
+                  }`}
+                >
+                  Groq ⚡
+                </button>
               </div>
             </div>
           </div>

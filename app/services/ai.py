@@ -1,6 +1,7 @@
 import requests
 import json
 from google import genai
+from groq import Groq
 from app.config import settings
 
 
@@ -13,7 +14,7 @@ def is_valid_ai_text(text: str) -> bool:
     if not text or len(text.strip()) < 30:
         return False
     error_signatures = [
-        "error querying", "sarvam api error", "gemini api error",
+        "error querying", "sarvam api error", "gemini api error", "groq api error",
         "httpsconnectionpool", "read timed out", "quota exceeded",
         "rate limit", "429", "500 internal", "timeout",
     ]
@@ -21,17 +22,10 @@ def is_valid_ai_text(text: str) -> bool:
     return not any(sig in t_lower for sig in error_signatures)
 
 
-# ---------------------------------------------------------------------------
-# Gemini AI
-# ---------------------------------------------------------------------------
-
-def query_gemini_ai(prompt: str, context: str = "") -> str:
-    """Query Google Gemini with model rotation and Sarvam fallback on quota exhaustion."""
-    if not settings.GEMINI_API_KEY:
-        return query_sarvam_ai(prompt, context)
-
+def _build_tutor_prompt(prompt: str, context: str) -> str:
+    """Build the shared structured tutor prompt used by all LLM providers."""
     if context and context.strip():
-        full_prompt = (
+        return (
             f"You are NoteAI, an intelligent, helpful, and friendly academic tutor.\n\n"
             f"--- RELEVANT CLASSROOM STUDY MATERIAL ---\n"
             f"{context[:12000]}\n"
@@ -51,16 +45,27 @@ def query_gemini_ai(prompt: str, context: str = "") -> str:
             f"   - `$formula$` for inline math, `$$formula$$` for display equations\n"
             f"   - NEVER write everything as one long paragraph\n"
         )
-    else:
-        full_prompt = (
-            f"You are NoteAI, an intelligent, helpful, and friendly academic tutor.\n\n"
-            f"STUDENT QUESTION / PROMPT: {prompt}\n\n"
-            f"Provide a clear, comprehensive answer with clean markdown formatting.\n"
-            f"Use ## headings, numbered lists, bullet points, **bold** key terms, and tables where appropriate.\n"
-            f"NEVER write one giant paragraph — always use structured markdown.\n"
-        )
+    return (
+        f"You are NoteAI, an intelligent, helpful, and friendly academic tutor.\n\n"
+        f"STUDENT QUESTION / PROMPT: {prompt}\n\n"
+        f"Provide a clear, comprehensive answer with clean markdown formatting.\n"
+        f"Use ## headings, numbered lists, bullet points, **bold** key terms, and tables where appropriate.\n"
+        f"NEVER write one giant paragraph — always use structured markdown.\n"
+    )
 
-    # Try SDK models in order
+
+# ---------------------------------------------------------------------------
+# Gemini AI  (Provider 1)
+# ---------------------------------------------------------------------------
+
+def query_gemini_ai(prompt: str, context: str = "") -> str:
+    """Query Google Gemini with model rotation. Falls back to Sarvam → Groq on quota exhaustion."""
+    if not settings.GEMINI_API_KEY:
+        return query_sarvam_ai(prompt, context)
+
+    full_prompt = _build_tutor_prompt(prompt, context)
+
+    # Try SDK models in rotation
     for model_name in [settings.GEMINI_MODEL or "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]:
         try:
             client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -79,22 +84,29 @@ def query_gemini_ai(prompt: str, context: str = "") -> str:
     except Exception as ex:
         print(f"Gemini REST fallback error: {ex}")
 
-    # Sarvam fallback
+    # Cascade to Sarvam
     print("Gemini quota exhausted — falling back to Sarvam AI...")
     sarvam_res = query_sarvam_ai(prompt=prompt, context=context)
     if is_valid_ai_text(sarvam_res):
         return f"{sarvam_res}\n\n*(Powered by Sarvam AI)*"
-    return sarvam_res
+
+    # Cascade to Groq
+    print("Sarvam also failed — falling back to Groq AI...")
+    groq_res = query_groq_ai(prompt=prompt, context=context)
+    if is_valid_ai_text(groq_res):
+        return f"{groq_res}\n\n*(Powered by Groq AI)*"
+
+    return groq_res
 
 
 # ---------------------------------------------------------------------------
-# Sarvam AI
+# Sarvam AI  (Provider 2)
 # ---------------------------------------------------------------------------
 
 def query_sarvam_ai(prompt: str, context: str = "") -> str:
     """Query Sarvam AI with short system prompt and capped context to avoid content_filter (400)."""
     if not settings.SARVAM_API_KEY:
-        return "Sarvam API key is not configured."
+        return query_groq_ai(prompt, context)
 
     try:
         headers = {
@@ -136,6 +148,46 @@ def query_sarvam_ai(prompt: str, context: str = "") -> str:
 
 
 # ---------------------------------------------------------------------------
+# Groq AI  (Provider 3 — ultra-fast LPU inference)
+# ---------------------------------------------------------------------------
+
+def query_groq_ai(prompt: str, context: str = "") -> str:
+    """Query Groq AI (LLaMA 3.3 70B) — ultra-fast LPU inference, great free tier."""
+    if not settings.GROQ_API_KEY:
+        return "Groq API key is not configured."
+
+    try:
+        client = Groq(api_key=settings.GROQ_API_KEY.strip())
+
+        system_content = (
+            "You are NoteAI, a helpful and friendly academic tutor. "
+            "Answer student questions clearly and accurately using proper markdown formatting. "
+            "Use ## headings, numbered lists, bullet points, **bold** key terms, tables, and math formulas. "
+            "Reference provided study notes when relevant."
+        )
+
+        # Cap context at 4000 chars (Groq's context window is generous)
+        if context and context.strip():
+            user_message = f"Study Notes (reference):\n{context.strip()[:4000]}\n\nStudent Question: {prompt}"
+        else:
+            user_message = prompt
+
+        response = client.chat.completions.create(
+            model=settings.GROQ_MODEL or "llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_message},
+            ],
+            temperature=0.7,
+            max_tokens=2048,
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        print(f"Groq API error: {e}")
+        return f"Groq API Error: {e}"
+
+
+# ---------------------------------------------------------------------------
 # Document utilities (summary, quiz, OCR structuring)
 # ---------------------------------------------------------------------------
 
@@ -168,7 +220,7 @@ def generate_quiz_questions(context: str, num_questions: int = 5) -> list:
 
 
 def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
-    """Structure raw OCR text into clean Markdown using Gemini → Sarvam → local fallback."""
+    """Structure raw OCR text into clean Markdown using Gemini → Sarvam → Groq → local fallback."""
     from app.services.extractor import format_ocr_text_locally
 
     if not raw_ocr_text or not raw_ocr_text.strip():
@@ -180,8 +232,7 @@ def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
         "You are an expert Document Formatter. Convert the following RAW OCR text extracted from lecture notes "
         "into clean, beautifully structured Markdown without losing any information.\n\n"
         "STRICT FORMATTING RULES:\n"
-        "1. REPAIR ALL BROKEN SENTENCES. OCR splits single sentences across lines "
-        "(e.g. 'What is a' / 'peptide bond?'). Join them into one complete line.\n"
+        "1. REPAIR ALL BROKEN SENTENCES. OCR splits single sentences across lines. Join them.\n"
         "2. Format question titles in bold on a single line (e.g. **2. What is a peptide bond?**).\n"
         "3. Convert tables/comparisons into clean Markdown tables.\n"
         "4. Use ## for Units/Chapters, ### for Sections.\n"
@@ -199,7 +250,7 @@ def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
                 contents=formatting_prompt,
             )
             if response.text and is_valid_ai_text(response.text):
-                print("[OK] Document text successfully structured via Gemini AI!")
+                print("[OK] Document structured via Gemini AI!")
                 return response.text.strip()
         except Exception as e:
             print(f"Note on Gemini structuring: {e}")
@@ -224,11 +275,31 @@ def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
             if res.status_code == 200:
                 result = res.json()["choices"][0]["message"]["content"].strip()
                 if is_valid_ai_text(result):
-                    print("[OK] Document text successfully structured via Sarvam AI!")
+                    print("[OK] Document structured via Sarvam AI!")
                     return result
         except Exception as e:
             print(f"Note on Sarvam structuring: {e}")
 
+    # Try Groq
+    if settings.GROQ_API_KEY:
+        try:
+            groq_client = Groq(api_key=settings.GROQ_API_KEY.strip())
+            response = groq_client.chat.completions.create(
+                model=settings.GROQ_MODEL or "llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are an expert Document Formatter. Convert raw OCR text into clean structured Markdown."},
+                    {"role": "user", "content": formatting_prompt},
+                ],
+                temperature=0.2,
+                max_tokens=4096,
+            )
+            result = response.choices[0].message.content.strip()
+            if is_valid_ai_text(result):
+                print("[OK] Document structured via Groq AI!")
+                return result
+        except Exception as e:
+            print(f"Note on Groq structuring: {e}")
+
     # Local fallback (instant, zero cost)
-    print("[OK] Document text structured via local sentence repair engine!")
+    print("[OK] Document structured via local sentence repair engine!")
     return local_clean

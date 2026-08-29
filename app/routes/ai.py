@@ -4,7 +4,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.file import DocumentFile
 from app.schemas.ai import DocumentChatRequest, DocumentSummaryRequest, AIChatResponse
-from app.services.ai import query_gemini_ai, query_sarvam_ai, generate_document_summary, is_valid_ai_text
+from app.services.ai import query_gemini_ai, query_sarvam_ai, query_groq_ai, generate_document_summary, is_valid_ai_text
 from app.services.vector_store import query_chroma_rag
 from app.utils.deps import get_current_user
 
@@ -72,27 +72,46 @@ def document_chat(
             context = "\n---\n".join(d.content_text for d in ready_docs if d.content_text)
             source_names = [d.filename for d in ready_docs]
 
-    # Query the selected provider with cross-provider fallback
+    # Query selected provider with full 3-provider cascade fallback
     provider = (data.ai_provider or "gemini").lower()
+
     if provider == "sarvam":
         answer = query_sarvam_ai(prompt=data.question, context=context)
         used = "Sarvam AI (sarvam-105b-conversations)"
         if not is_valid_ai_text(answer):
+            answer = query_groq_ai(prompt=data.question, context=context)
+            used = "Groq AI (LLaMA 3.3 70B)"
+        if not is_valid_ai_text(answer):
             answer = query_gemini_ai(prompt=data.question, context=context)
             used = "Gemini AI (gemini-2.5-flash)"
-    else:
+
+    elif provider == "groq":
+        answer = query_groq_ai(prompt=data.question, context=context)
+        used = "Groq AI (LLaMA 3.3 70B)"
+        if not is_valid_ai_text(answer):
+            answer = query_gemini_ai(prompt=data.question, context=context)
+            used = "Gemini AI (gemini-2.5-flash)"
+        if not is_valid_ai_text(answer):
+            answer = query_sarvam_ai(prompt=data.question, context=context)
+            used = "Sarvam AI (sarvam-105b-conversations)"
+
+    else:  # gemini (default)
         answer = query_gemini_ai(prompt=data.question, context=context)
         used = "Gemini AI (gemini-2.5-flash)"
         if not is_valid_ai_text(answer):
             answer = query_sarvam_ai(prompt=data.question, context=context)
             used = "Sarvam AI (sarvam-105b-conversations)"
+        if not is_valid_ai_text(answer):
+            answer = query_groq_ai(prompt=data.question, context=context)
+            used = "Groq AI (LLaMA 3.3 70B)"
 
     # Final safety guard — never expose raw error strings to the user
     if not is_valid_ai_text(answer):
         answer = (
-            "Both AI engines are temporarily unavailable (rate limit or timeout). "
+            "All AI engines are temporarily unavailable (rate limit or timeout). "
             "Please try again in a few seconds, or toggle the **Engine** at the top right. 🙏"
         )
+
         used = "System Notice"
 
     return AIChatResponse(answer=answer, provider_used=used, sources=source_names)
