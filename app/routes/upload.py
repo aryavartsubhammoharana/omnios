@@ -162,7 +162,16 @@ def delete_document(
         except Exception as e:
             print(f"Error removing physical file from disk: {e}")
 
-    # 2. Delete database record & extracted text content
+    # 2. Delete child records (vector chunks & study sessions) first to avoid FK constraint errors
+    from app.models.analytics import StudySession
+    from app.models.chunk import DocumentChunk
+    try:
+        db.query(DocumentChunk).filter(DocumentChunk.document_id == doc_id).delete()
+        db.query(StudySession).filter(StudySession.document_id == doc_id).delete()
+    except Exception as cascade_err:
+        print(f"Note on cascading delete for doc {doc_id}: {cascade_err}")
+
+    # 3. Delete database record & extracted text content
     db.delete(doc)
     db.commit()
 

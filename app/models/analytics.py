@@ -21,8 +21,8 @@ class StudySession(Base):
     __tablename__ = "study_sessions"
 
     id = Column(Integer, primary_key=True, index=True)
-    student_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    document_id = Column(Integer, ForeignKey("document_files.id"), nullable=False, index=True)
-    classroom_id = Column(Integer, ForeignKey("classrooms.id"), nullable=False, index=True)
+    student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    document_id = Column(Integer, ForeignKey("document_files.id", ondelete="CASCADE"), nullable=False, index=True)
+    classroom_id = Column(Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=False, index=True)
     time_spent_seconds = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
