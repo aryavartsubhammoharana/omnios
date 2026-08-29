@@ -518,40 +518,40 @@ export default function ClassroomDetail() {
           </div>
         </div>
 
-        {/* CLASSROOM BANNER CARD (Responsive Breadth / Height) */}
-        <div className="glass-card px-4 sm:px-6 py-3.5 rounded-2xl border border-gray-800/80 shadow-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div className="w-full sm:w-auto">
-              <div className="flex items-center space-x-2.5">
-                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">{classroom.name}</h1>
-                {isTeacher && (
-                  <button
-                    onClick={handleOpenEditClassroomModal}
-                    title="Edit Classroom Details"
-                    className="p-1 text-gray-400 hover:text-indigo-300 bg-gray-900/80 hover:bg-indigo-950 border border-gray-700 hover:border-indigo-600 rounded-lg transition"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+          {/* Main Feed & Classroom Info (Left 2 Cols) */}
+          <div className="lg:col-span-2 space-y-5 sm:space-y-6">
+            {/* CLASSROOM BANNER CARD (Shifted to Left Column) */}
+            <div className="glass-card px-4 sm:px-5 py-3.5 rounded-2xl border border-gray-800/80 shadow-lg">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="w-full sm:w-auto">
+                  <div className="flex items-center space-x-2.5">
+                    <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">{classroom.name}</h1>
+                    {isTeacher && (
+                      <button
+                        onClick={handleOpenEditClassroomModal}
+                        title="Edit Classroom Details"
+                        className="p-1 text-gray-400 hover:text-indigo-300 bg-gray-900/80 hover:bg-indigo-950 border border-gray-700 hover:border-indigo-600 rounded-lg transition"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">{classroom.description || 'Classroom feed and study workspace'}</p>
+                  <p className="text-[11px] text-gray-400 mt-1 font-medium">
+                    Instructor: <span className="text-indigo-300 font-semibold">{classroom.teacher_name}</span>
+                  </p>
+                </div>
+
+                <div className="w-full sm:w-auto bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-center shadow-inner flex justify-between sm:flex-col items-center gap-1 sm:gap-0 flex-shrink-0">
+                  <span className="text-[9px] text-gray-400 uppercase font-mono tracking-wider">Class Join Code</span>
+                  <span className="text-base font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
+                </div>
               </div>
-              <p className="text-xs text-gray-400 mt-0.5">{classroom.description || 'Classroom feed and study workspace'}</p>
-              <p className="text-[11px] text-gray-400 mt-1 font-medium">
-                Instructor: <span className="text-indigo-300 font-semibold">{classroom.teacher_name}</span>
-              </p>
             </div>
 
-            <div className="w-full sm:w-auto bg-gray-900/90 px-4 py-2 rounded-xl border border-gray-800 text-center shadow-inner flex justify-between sm:flex-col items-center gap-1 sm:gap-0">
-              <span className="text-[9px] text-gray-400 uppercase font-mono tracking-wider">Class Join Code</span>
-              <span className="text-base font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Main Feed (Left 2 Cols) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Create Post */}
-          <TiltCard3D className="p-5">
+            {/* Create Post */}
+            <TiltCard3D className="p-5">
             <h3 className="text-sm font-semibold text-slate-200 mb-3 flex items-center space-x-2">
               <MessageSquare className="w-4 h-4 text-indigo-400" />
               <span>Announce something to your class</span>
