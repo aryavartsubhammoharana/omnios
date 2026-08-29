@@ -486,14 +486,43 @@ export default function ClassroomDetail() {
       <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
 
       <div className="max-w-7xl mx-auto space-y-6 relative z-10">
-        {/* Top Navigation & Action Row */}
-        <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
-          <Link to="/dashboard" className="flex items-center space-x-1.5 text-gray-400 hover:text-white text-xs font-semibold transition">
-            <ArrowLeft className="w-4 h-4 text-indigo-400" />
-            <span>Back to Dashboard</span>
-          </Link>
-
+        {/* SLIM UNIFIED CLASSROOM HEADER BAR */}
+        <div className="glass-card px-4 py-3 rounded-2xl border border-gray-800/80 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3">
+          {/* Left: Back button + Class Name + Join Code + Instructor */}
           <div className="flex items-center space-x-3">
+            <Link
+              to="/dashboard"
+              className="p-2 bg-gray-900/90 hover:bg-gray-800 text-gray-400 hover:text-white rounded-xl border border-gray-800 transition flex-shrink-0"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft className="w-4 h-4 text-indigo-400" />
+            </Link>
+
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">{classroom.name}</h1>
+                <span className="bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 font-mono text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-inner">
+                  CODE: {classroom.code}
+                </span>
+                {isTeacher && (
+                  <button
+                    onClick={handleOpenEditClassroomModal}
+                    title="Edit Classroom Details"
+                    className="p-1 text-gray-400 hover:text-indigo-300 rounded-lg hover:bg-gray-800 transition"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+                Instructor: <span className="text-gray-300 font-semibold">{classroom.teacher_name}</span>
+                {classroom.description && <span className="text-gray-500 ml-2">· {classroom.description}</span>}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center space-x-2.5 self-end md:self-auto flex-shrink-0">
             {user?.role === 'student' && (
               <button
                 onClick={handleLeaveClassroom}
@@ -501,43 +530,17 @@ export default function ClassroomDetail() {
                 className="flex items-center space-x-1.5 bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-800 text-xs font-semibold px-3 py-1.5 rounded-xl transition"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>{leaving ? 'Leaving...' : 'Leave Classroom'}</span>
+                <span>{leaving ? 'Leaving...' : 'Leave Class'}</span>
               </button>
             )}
 
             <Link
               to={`/notebooklm?classroom_id=${id}`}
-              className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-indigo-600/20"
+              className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-1.5 rounded-xl transition shadow-lg shadow-indigo-600/20"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Open DLM Notebook Workspace</span>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>DLM Notebook</span>
             </Link>
-          </div>
-        </div>
-
-        {/* COMPACT HERO BANNER */}
-        <div className="glass-card px-5 py-4 rounded-2xl border border-gray-800/80 shadow-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div>
-              <div className="flex items-center space-x-2.5">
-                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">{classroom.name}</h1>
-                {isTeacher && (
-                  <button
-                    onClick={handleOpenEditClassroomModal}
-                    title="Edit Classroom Details"
-                    className="p-1 text-gray-400 hover:text-indigo-300 bg-gray-900/80 hover:bg-indigo-950 border border-gray-700 hover:border-indigo-600 rounded-lg transition"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 mt-0.5">{classroom.description || 'Classroom feed and study workspace'}</p>
-              <p className="text-[11px] text-gray-500 mt-1 font-medium">Instructor: <span className="text-indigo-300">{classroom.teacher_name}</span></p>
-            </div>
-            <div className="bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-center shadow-inner flex sm:flex-col items-center gap-1 sm:gap-0">
-              <span className="text-[9px] text-gray-400 uppercase font-mono tracking-wider">Class Join Code</span>
-              <span className="text-sm sm:text-base font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
-            </div>
           </div>
         </div>
 
