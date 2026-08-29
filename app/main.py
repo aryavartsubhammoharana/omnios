@@ -6,10 +6,9 @@ from fastapi.responses import FileResponse
 from sqlalchemy import text
 from app.config import settings
 from app.database import engine, Base
-from app.models import *  # Ensure all models are loaded
-from app.routes import auth, classroom, upload, ai, quiz, analytics
+from app.models import *
+from app.routes import auth, classroom, upload, ai, quiz, analytics, student_portal
 
-# Enable pgvector extension if supported on PostgreSQL
 with engine.connect() as conn:
     try:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
@@ -17,16 +16,14 @@ with engine.connect() as conn:
     except Exception as e:
         print(f"Note on pgvector extension: {e}")
 
-# Create DB tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version="1.0.0",
-    description="Google Classroom & NotebookLM Clone powered by Sarvam AI & Gemini AI"
+    description="NoteAI Academic Platform"
 )
 
-# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -35,48 +32,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Custom Middleware to force 200 OK (Disable 304 caching completely)
 @app.middleware("http")
 async def disable_304_cache_middleware(request: Request, call_next):
-    # Remove incoming cache validation headers from request scope to prevent Starlette 304 responses
     headers = dict(request.scope.get("headers", []))
     headers.pop(b"if-none-match", None)
     headers.pop(b"if-modified-since", None)
     request.scope["headers"] = list(headers.items())
 
     response = await call_next(request)
-    
-    # Force fresh 200 OK delivery with no-store cache headers
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
 
-# Ensure uploads directory exists and mount static files
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-# Include Routers
 app.include_router(auth.router)
 app.include_router(classroom.router)
 app.include_router(upload.router)
 app.include_router(ai.router)
 app.include_router(quiz.router)
 app.include_router(analytics.router)
+app.include_router(student_portal.router)
 
 @app.get("/api/health")
 def health_check():
     return {
-        "message": "Welcome to NoteAI - Google Classroom & NotebookLM Clone",
-        "status": "online",
-        "models": {
-            "gemini": settings.GEMINI_MODEL,
-            "sarvam": settings.SARVAM_MODEL
-        }
+        "message": "Welcome to NoteAI",
+        "status": "online"
     }
 
-# Serve Built 3D React Frontend Static Files
 dist_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend", "dist")
 if os.path.exists(dist_dir):
     app.mount("/assets", StaticFiles(directory=os.path.join(dist_dir, "assets")), name="assets")

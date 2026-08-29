@@ -52,15 +52,24 @@ export default function Navbar() {
             className="text-xs px-3.5 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5"
           >
             <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Classroom Dashboard</span>
+            <span>Classrooms</span>
           </Link>
           <Link
             to="/notebooklm"
-            className="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-medium transition flex items-center gap-1.5 hover:bg-indigo-600/30"
+            className="text-xs px-3.5 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5"
           >
-            <Bot className="w-3.5 h-3.5 text-indigo-400" />
-            <span>DLM Notebook Studio</span>
+            <Bot className="w-3.5 h-3.5 text-purple-400" />
+            <span>DLM Notebook</span>
           </Link>
+          {user.role === 'student' && (
+            <Link
+              to="/student/daily-hub"
+              className="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-medium transition flex items-center gap-1.5 hover:bg-indigo-600/30"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span>🎯 Daily AI Practice & Videos</span>
+            </Link>
+          )}
         </div>
       )}
 

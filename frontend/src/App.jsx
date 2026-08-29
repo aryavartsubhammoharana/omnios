@@ -12,12 +12,14 @@ import ClassroomDetail from './pages/ClassroomDetail';
 import NotebookLMStudio from './pages/NotebookLMStudio';
 import QuickPDFReader from './pages/QuickPDFReader';
 import QuizAttempt from './pages/QuizAttempt';
+import StudentDailyHub from './pages/StudentDailyHub';
+import FocusVideoPlayer from './pages/FocusVideoPlayer';
 
 export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <div className="min-h-screen bg-slate-950 text-slate-100 font-sans relative selection:bg-indigo-500 selection:text-white">
+        <div className="min-h-screen bg-[#090d16] text-gray-100 font-sans relative selection:bg-indigo-500 selection:text-white">
           <Background3D />
           <Navbar />
           <main className="relative z-10">
@@ -57,10 +59,42 @@ export default function App() {
                 }
               />
               <Route
+                path="/read-doc"
+                element={
+                  <ProtectedRoute>
+                    <QuickPDFReader />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/read-pdf"
+                element={
+                  <ProtectedRoute>
+                    <QuickPDFReader />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/quiz/:id"
                 element={
                   <ProtectedRoute>
                     <QuizAttempt />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/daily-hub"
+                element={
+                  <ProtectedRoute>
+                    <StudentDailyHub />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/focus-video/:videoId"
+                element={
+                  <ProtectedRoute>
+                    <FocusVideoPlayer />
                   </ProtectedRoute>
                 }
               />
