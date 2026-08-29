@@ -209,10 +209,20 @@ def generate_document_summary(context: str, summary_type: str = "bullet") -> str
     return query_gemini_ai(prompt=prompt, context=context)
 
 
-def generate_quiz_questions(context: str, num_questions: int = 5) -> list:
-    """Generate high-quality assessment quiz questions exclusively using Groq AI (with Sarvam fallback, NO Gemini)."""
+def generate_quiz_questions(context: str, num_questions: int = 5, difficulty: int = 5) -> list:
+    """Generate high-quality assessment quiz questions exclusively using Groq AI with 1-10 difficulty calibration."""
+    # Difficulty guidance prompt
+    diff_val = max(1, min(10, difficulty))
+    if diff_val <= 3:
+        diff_desc = f"Difficulty Level {diff_val}/10 (Foundational/Easy): Focus on core definitions, direct facts, basic recall, and straightforward terminology."
+    elif diff_val <= 7:
+        diff_desc = f"Difficulty Level {diff_val}/10 (Intermediate/Conceptual): Focus on conceptual understanding, comparisons, practical applications, and identifying relationships."
+    else:
+        diff_desc = f"Difficulty Level {diff_val}/10 (Advanced/Hard): Focus on complex analytical reasoning, multi-step problem solving, subtle edge cases, formula application, and tricky distractors."
+
     system_prompt = (
         "You are an expert educational assessment generator. Your task is to analyze the provided text or topic and generate a high-quality quiz.\n\n"
+        f"ASSESSMENT CALIBRATION:\n- {diff_desc}\n\n"
         "You must return ONLY a JSON object matching this exact structure, with no markdown formatting, no code blocks, and no conversational filler:\n\n"
         "{\n"
         '  "quiz_title": "string",\n'
@@ -235,7 +245,7 @@ def generate_quiz_questions(context: str, num_questions: int = 5) -> list:
     )
 
     user_prompt = (
-        f"Generate a {num_questions}-question multiple-choice quiz based strictly on the following classroom study material:\n\n"
+        f"Generate a {num_questions}-question multiple-choice quiz (Target Difficulty: {diff_val}/10) based strictly on the following classroom study material:\n\n"
         f"{context[:8000]}"
     )
 

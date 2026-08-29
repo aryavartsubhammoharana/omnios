@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { AuthContext } from '../context/AuthContext';
-import { BookOpen, Sparkles, MessageSquare, Send, Upload, FileText, HelpCircle, ArrowLeft, Eye, X, Book, Users, LogOut, Mail, UserCheck, AlertCircle, PlusCircle, Zap, Plus, Trash2, Clock, Edit3, Save } from 'lucide-react';
+import { BookOpen, Sparkles, MessageSquare, Send, Upload, FileText, HelpCircle, ArrowLeft, Eye, X, Book, Users, LogOut, Mail, UserCheck, AlertCircle, PlusCircle, Zap, Plus, Trash2, Clock, Edit3, Save, Sliders, BarChart3, CheckCircle2, CheckSquare, Square, Search, Award, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import TiltCard3D from '../components/TiltCard3D';
@@ -29,6 +29,20 @@ export default function ClassroomDetail() {
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [updatingClassroom, setUpdatingClassroom] = useState(false);
+
+  // AI Quiz Generation Modal State (Difficulty 1-10 + Custom Document Selector)
+  const [isAiQuizModalOpen, setIsAiQuizModalOpen] = useState(false);
+  const [aiQuizTitle, setAiQuizTitle] = useState('');
+  const [aiQuizNumQuestions, setAiQuizNumQuestions] = useState(5);
+  const [aiQuizDifficulty, setAiQuizDifficulty] = useState(5);
+  const [aiQuizSelectedDocIds, setAiQuizSelectedDocIds] = useState([]);
+
+  // Teacher Quiz Submissions Analytics Modal State
+  const [isSubmissionsModalOpen, setIsSubmissionsModalOpen] = useState(false);
+  const [selectedQuizForSubmissions, setSelectedQuizForSubmissions] = useState(null);
+  const [quizSubmissionsData, setQuizSubmissionsData] = useState(null);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [submissionsSearchQuery, setSubmissionsSearchQuery] = useState('');
 
   // Manual Quiz Modal State
   const [isManualQuizModalOpen, setIsManualQuizModalOpen] = useState(false);
@@ -211,21 +225,73 @@ export default function ClassroomDetail() {
     }
   };
 
-  const handleGenerateQuiz = async () => {
+  // AI Quiz Generation Handlers (Difficulty 1-10 + Document Selection)
+  const handleOpenAiQuizModal = () => {
+    setAiQuizTitle(`AI Practice Quiz - ${new Date().toLocaleDateString()}`);
+    setAiQuizNumQuestions(5);
+    setAiQuizDifficulty(5);
+    setAiQuizSelectedDocIds(documents.map(d => d.id));
+    setQuizError('');
+    setIsAiQuizModalOpen(true);
+  };
+
+  const handleToggleDocSelection = (docId) => {
+    setAiQuizSelectedDocIds((prev) =>
+      prev.includes(docId) ? prev.filter(i => i !== docId) : [...prev, docId]
+    );
+  };
+
+  const handleSelectAllDocs = () => {
+    if (aiQuizSelectedDocIds.length === documents.length) {
+      setAiQuizSelectedDocIds([]);
+    } else {
+      setAiQuizSelectedDocIds(documents.map(d => d.id));
+    }
+  };
+
+  const handleGenerateAiQuiz = async (e) => {
+    e?.preventDefault();
+    if (!aiQuizTitle.trim()) {
+      alert("Please enter a Quiz Title");
+      return;
+    }
+    if (aiQuizSelectedDocIds.length === 0) {
+      alert("Please select at least one study note or PDF document");
+      return;
+    }
     setGeneratingQuiz(true);
     setQuizError('');
     try {
       await API.post('/api/quiz/generate', {
         classroom_id: parseInt(id),
-        num_questions: 5,
-        title: `AI Practice Quiz - ${new Date().toLocaleDateString()}`
+        num_questions: parseInt(aiQuizNumQuestions),
+        difficulty: parseInt(aiQuizDifficulty),
+        document_ids: aiQuizSelectedDocIds,
+        title: aiQuizTitle.trim()
       });
+      setIsAiQuizModalOpen(false);
       loadData();
     } catch (err) {
       const msg = err.response?.data?.detail || "Quiz generation failed.";
       setQuizError(msg);
     } finally {
       setGeneratingQuiz(false);
+    }
+  };
+
+  // Teacher View Submissions Analytics Handler
+  const handleViewSubmissions = async (quiz) => {
+    setSelectedQuizForSubmissions(quiz);
+    setIsSubmissionsModalOpen(true);
+    setLoadingSubmissions(true);
+    setSubmissionsSearchQuery('');
+    try {
+      const res = await API.get(`/api/quiz/${quiz.id}/analytics`);
+      setQuizSubmissionsData(res.data);
+    } catch (err) {
+      console.error("Failed to load quiz submissions analytics", err);
+    } finally {
+      setLoadingSubmissions(false);
     }
   };
 
@@ -592,12 +658,12 @@ export default function ClassroomDetail() {
 
               {user?.role === 'teacher' && (
                 <div className="flex items-center space-x-2">
-                  {/* Lightning Zap Option: AI Auto-Generate Quiz */}
+                  {/* Lightning Zap Option: AI Assessment Quiz Generator */}
                   <button
-                    onClick={handleGenerateQuiz}
+                    onClick={handleOpenAiQuizModal}
                     disabled={generatingQuiz}
-                    title="⚡ Lightning AI Auto-Generate Quiz"
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1 shadow-md"
+                    title="⚡ AI Assessment Quiz Generator (Difficulty & Sources)"
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1 shadow-md shadow-indigo-600/20"
                   >
                     <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" />
                     <span>{generatingQuiz ? 'Generating...' : 'AI Quiz'}</span>
@@ -626,13 +692,14 @@ export default function ClassroomDetail() {
             {quizzes.length === 0 ? (
               <p className="text-xs text-slate-500 text-center py-4">No practice quizzes available yet.</p>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
                 {quizzes.map((quiz) => (
-                  <div key={quiz.id} className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 hover:border-slate-700 transition flex flex-col justify-between space-y-2">
+                  <div key={quiz.id} className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 hover:border-slate-700 transition flex flex-col justify-between space-y-2.5">
                     <div className="flex items-start justify-between">
                       <div>
                         <h4 className="text-xs font-bold text-slate-200">{quiz.title}</h4>
-                        <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1">
+                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{quiz.description}</p>
+                        <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1.5">
                           <span className="bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800 font-mono">
                             {quiz.questions_json?.length || 5} MCQs
                           </span>
@@ -654,12 +721,25 @@ export default function ClassroomDetail() {
                       )}
                     </div>
 
-                    <Link
-                      to={`/quiz/${quiz.id}`}
-                      className="w-full text-center bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-1.5 rounded-lg transition shadow"
-                    >
-                      Attempt Quiz
-                    </Link>
+                    <div className="flex items-center space-x-2 pt-1">
+                      {user?.role === 'teacher' && (
+                        <button
+                          onClick={() => handleViewSubmissions(quiz)}
+                          title="View student submissions & first attempt scores"
+                          className="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-800/80 text-xs font-semibold py-1.5 rounded-lg transition flex items-center justify-center space-x-1.5"
+                        >
+                          <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Submissions</span>
+                        </button>
+                      )}
+                      <Link
+                        to={`/quiz/${quiz.id}`}
+                        className={`${user?.role === 'teacher' ? 'flex-1' : 'w-full'} text-center bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-1.5 rounded-lg transition shadow flex items-center justify-center space-x-1`}
+                      >
+                        <Award className="w-3.5 h-3.5" />
+                        <span>Attempt Quiz</span>
+                      </Link>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -990,6 +1070,334 @@ export default function ClassroomDetail() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI ASSESSMENT QUIZ GENERATION MODAL FOR TEACHERS */}
+      {isAiQuizModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+          <div className="bg-slate-900 border border-indigo-900/80 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Zap className="w-5 h-5 text-amber-400 fill-amber-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">AI Assessment Quiz Generator</h3>
+                  <span className="text-[10px] text-indigo-400 font-mono">Calibrate Difficulty & Select Source Notes</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsAiQuizModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleGenerateAiQuiz} className="p-5 space-y-4 bg-slate-950 text-xs overflow-y-auto">
+              {/* Quiz Title */}
+              <div>
+                <label className="block text-slate-300 font-bold mb-1">Quiz Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={aiQuizTitle}
+                  onChange={(e) => setAiQuizTitle(e.target.value)}
+                  placeholder="e.g., Module 5: Lasers & Superconductivity Quiz"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-indigo-500 font-medium"
+                />
+              </div>
+
+              {/* Number of Questions */}
+              <div>
+                <label className="block text-slate-300 font-bold mb-1.5">Number of Questions</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[3, 5, 10, 15].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setAiQuizNumQuestions(num)}
+                      className={`py-2 rounded-xl text-xs font-bold border transition ${
+                        aiQuizNumQuestions === num
+                          ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-600/30'
+                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'
+                      }`}
+                    >
+                      {num} MCQs
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Difficulty Level Slider (1 to 10) */}
+              <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-300 font-bold flex items-center space-x-1.5">
+                    <Sliders className="w-4 h-4 text-indigo-400" />
+                    <span>Difficulty Level (1 - 10)</span>
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                    aiQuizDifficulty <= 3
+                      ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300'
+                      : aiQuizDifficulty <= 7
+                      ? 'bg-amber-950/80 border-amber-600 text-amber-300'
+                      : 'bg-red-950/80 border-red-600 text-red-300'
+                  }`}>
+                    {aiQuizDifficulty <= 3
+                      ? `Level ${aiQuizDifficulty}: Foundational / Easy`
+                      : aiQuizDifficulty <= 7
+                      ? `Level ${aiQuizDifficulty}: Intermediate / Applied`
+                      : `Level ${aiQuizDifficulty}: Expert / Advanced`}
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={aiQuizDifficulty}
+                  onChange={(e) => setAiQuizDifficulty(parseInt(e.target.value))}
+                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                />
+
+                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>1 (Basic Definitions)</span>
+                  <span>5 (Applied Concepts)</span>
+                  <span>10 (Tricky & Expert)</span>
+                </div>
+              </div>
+
+              {/* Source Document Selector */}
+              <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-300 font-bold flex items-center space-x-1.5">
+                    <FileText className="w-4 h-4 text-indigo-400" />
+                    <span>Select Source Study Notes ({aiQuizSelectedDocIds.length}/{documents.length})</span>
+                  </label>
+                  {documents.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleSelectAllDocs}
+                      className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold"
+                    >
+                      {aiQuizSelectedDocIds.length === documents.length ? 'Deselect All' : 'Select All'}
+                    </button>
+                  )}
+                </div>
+
+                {documents.length === 0 ? (
+                  <p className="text-[11px] text-amber-400">
+                    ⚠️ No study notes uploaded in this classroom yet. Please upload a PDF note first.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                    {documents.map((doc) => {
+                      const isSelected = aiQuizSelectedDocIds.includes(doc.id);
+                      return (
+                        <div
+                          key={doc.id}
+                          onClick={() => handleToggleDocSelection(doc.id)}
+                          className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition ${
+                            isSelected
+                              ? 'bg-indigo-950/60 border-indigo-600/80 text-white'
+                              : 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2 min-w-0">
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                            ) : (
+                              <Square className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                            )}
+                            <span className="truncate text-xs font-medium">{doc.filename}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono flex-shrink-0 ml-2">
+                            {doc.processing_status === 'ready' ? '✅ Ready' : '⏳ OCR'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Submit & Cancel */}
+              <div className="pt-2 flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAiQuizModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={generatingQuiz || documents.length === 0 || aiQuizSelectedDocIds.length === 0 || !aiQuizTitle.trim()}
+                  className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold transition shadow-lg shadow-indigo-600/20 flex items-center space-x-2"
+                >
+                  {generatingQuiz ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Groq AI Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                      <span>Generate Quiz (Groq AI)</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TEACHER QUIZ SUBMISSIONS & SCORES ANALYTICS MODAL */}
+      {isSubmissionsModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+          <div className="bg-slate-900 border border-indigo-900/80 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <BarChart3 className="w-5 h-5 text-indigo-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Student Submissions & Score Tracking</h3>
+                  <span className="text-[10px] text-indigo-400 font-mono">
+                    {selectedQuizForSubmissions?.title || 'Quiz Analytics'} • First Attempt Grades
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSubmissionsModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {loadingSubmissions ? (
+              <div className="p-12 flex flex-col items-center justify-center space-y-3 text-slate-400">
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+                <span className="text-xs font-mono">Loading classroom roster & scores...</span>
+              </div>
+            ) : quizSubmissionsData ? (
+              <div className="p-5 space-y-4 bg-slate-950 text-xs overflow-y-auto">
+                {/* Metric Summary Cards */}
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-xl">
+                    <span className="text-[10px] text-slate-400 font-mono block">Enrolled Students</span>
+                    <span className="text-lg font-bold text-white mt-1 block">{quizSubmissionsData.total_students}</span>
+                  </div>
+                  <div className="bg-emerald-950/40 border border-emerald-800/60 p-3 rounded-xl">
+                    <span className="text-[10px] text-emerald-400 font-mono block">Attempted</span>
+                    <span className="text-lg font-bold text-emerald-300 mt-1 block">{quizSubmissionsData.attempted_count}</span>
+                  </div>
+                  <div className="bg-amber-950/40 border border-amber-800/60 p-3 rounded-xl">
+                    <span className="text-[10px] text-amber-400 font-mono block">Pending</span>
+                    <span className="text-lg font-bold text-amber-300 mt-1 block">{quizSubmissionsData.pending_count}</span>
+                  </div>
+                  <div className="bg-indigo-950/40 border border-indigo-800/60 p-3 rounded-xl">
+                    <span className="text-[10px] text-indigo-400 font-mono block">Class Average</span>
+                    <span className="text-lg font-bold text-indigo-300 mt-1 block">
+                      {quizSubmissionsData.average_score != null
+                        ? `${quizSubmissionsData.average_score} / ${quizSubmissionsData.max_score}`
+                        : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+                  <input
+                    type="text"
+                    value={submissionsSearchQuery}
+                    onChange={(e) => setSubmissionsSearchQuery(e.target.value)}
+                    placeholder="Search student by name or email..."
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Submissions Roster Table */}
+                <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/60">
+                  <div className="grid grid-cols-12 bg-slate-900 p-3 text-[11px] font-bold text-slate-400 border-b border-slate-800">
+                    <span className="col-span-4">Student</span>
+                    <span className="col-span-3 text-center">Status</span>
+                    <span className="col-span-2 text-center">1st Score</span>
+                    <span className="col-span-3 text-right">Submitted At</span>
+                  </div>
+
+                  <div className="divide-y divide-slate-800/60 max-h-60 overflow-y-auto">
+                    {quizSubmissionsData.submissions
+                      .filter((s) => {
+                        const q = submissionsSearchQuery.toLowerCase();
+                        return s.student_name.toLowerCase().includes(q) || s.student_email.toLowerCase().includes(q);
+                      })
+                      .map((sub) => (
+                        <div key={sub.student_id} className="grid grid-cols-12 p-3 items-center text-xs hover:bg-slate-800/40 transition">
+                          {/* Student Name & Email */}
+                          <div className="col-span-4 flex items-center space-x-2 min-w-0">
+                            <div className="w-7 h-7 rounded-lg bg-indigo-950 text-indigo-300 border border-indigo-800 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                              {sub.student_name[0]?.toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-200 truncate">{sub.student_name}</p>
+                              <p className="text-[10px] text-slate-500 truncate">{sub.student_email}</p>
+                            </div>
+                          </div>
+
+                          {/* Status */}
+                          <div className="col-span-3 text-center">
+                            {sub.has_attempted ? (
+                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-950/80 border border-emerald-600/80 text-emerald-300">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                <span>Attempted</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-950/60 border border-amber-700/60 text-amber-300">
+                                <Clock className="w-3 h-3 text-amber-400" />
+                                <span>Pending</span>
+                              </span>
+                            )}
+                          </div>
+
+                          {/* First Attempt Score */}
+                          <div className="col-span-2 text-center">
+                            {sub.has_attempted ? (
+                              <span className="font-bold text-indigo-300 font-mono text-xs">
+                                {sub.first_attempt_score} / {sub.max_score}
+                                <span className="text-[10px] text-slate-400 block font-normal">({sub.percentage}%)</span>
+                              </span>
+                            ) : (
+                              <span className="text-slate-600 font-mono text-xs">-</span>
+                            )}
+                          </div>
+
+                          {/* Submission Date */}
+                          <div className="col-span-3 text-right text-[10px] text-slate-400 font-mono">
+                            {sub.completed_at
+                              ? new Date(sub.completed_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                              : 'Not yet'}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="p-8 text-center text-slate-500 text-xs">No submission data available.</p>
+            )}
+
+            <div className="p-3 bg-slate-950 border-t border-slate-800 flex justify-end">
+              <button
+                onClick={() => setIsSubmissionsModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
