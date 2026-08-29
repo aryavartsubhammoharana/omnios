@@ -72,14 +72,38 @@ def document_chat(data: DocumentChatRequest, current_user: User = Depends(get_cu
             context = "\n---\n".join(texts)
             source_names = [d.filename for d in ready_docs]
     
+    from app.services.ai import is_valid_ai_text
+
     provider = (data.ai_provider or "gemini").lower()
     if provider == "sarvam":
         answer = query_sarvam_ai(prompt=data.question, context=context)
         used = "Sarvam AI (sarvam-105b-conversations)"
+        # If Sarvam fails, try Gemini as fallback
+        if not is_valid_ai_text(answer):
+            print(f"Sarvam failed in route, falling back to Gemini: {answer[:100]}")
+            answer = query_gemini_ai(prompt=data.question, context=context)
+            used = "Gemini AI (gemini-2.5-flash) [Sarvam Fallback]"
     else:
         answer = query_gemini_ai(prompt=data.question, context=context)
         used = "Gemini AI (gemini-2.5-flash)"
-    
+        # If Gemini also fails (quota + Sarvam fallback both failed), show friendly message
+        if not is_valid_ai_text(answer):
+            print(f"Both AI providers failed: {answer[:100]}")
+            answer = (
+                "I'm having a bit of trouble connecting right now — both AI engines are experiencing "
+                "temporary limits. Please try again in a moment, or switch to a different engine using "
+                "the **Engine** toggle (Gemini / Sarvam) at the top right. 🙏"
+            )
+            used = "System Notice"
+
+    # Final safety guard — never return raw error strings to the user
+    if not is_valid_ai_text(answer):
+        answer = (
+            "Sorry, both AI engines are currently unavailable (rate limit or timeout). "
+            "Please try again in a few seconds, or toggle the Engine at top right. 🙏"
+        )
+        used = "System Notice"
+
     return AIChatResponse(
         answer=answer,
         provider_used=used,

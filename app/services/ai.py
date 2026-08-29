@@ -87,12 +87,16 @@ def query_sarvam_ai(prompt: str, context: str = "") -> str:
             "analogies, and step-by-step guidance."
         )
 
+        # Sanitize user prompt — Sarvam content_filter can trigger on repeated special chars like %%
+        safe_prompt = prompt.replace("%%", "marks").replace("%", " percent ")
+        safe_prompt = safe_prompt.strip()
+
         # Cap context at 3000 chars and merge into user message (safer for Sarvam's filter)
         if context and context.strip():
             trimmed_context = context.strip()[:3000]
-            user_message = f"Study Notes (reference):\n{trimmed_context}\n\nStudent Question: {prompt}"
+            user_message = f"Study Notes (reference):\n{trimmed_context}\n\nStudent Question: {safe_prompt}"
         else:
-            user_message = prompt
+            user_message = safe_prompt
 
         payload = {
             "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
