@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { BookOpen, Sparkles, LogOut, User, PlusCircle, Flame } from 'lucide-react';
+import { BookOpen, Sparkles, LogOut, User, PlusCircle, Flame, Bot } from 'lucide-react';
 import API from '../api/client';
 
 export default function Navbar() {
