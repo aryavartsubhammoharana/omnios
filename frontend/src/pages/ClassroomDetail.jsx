@@ -19,6 +19,7 @@ export default function ClassroomDetail() {
   const [documents, setDocuments] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [students, setStudents] = useState([]);
+  const [activeSidebarTab, setActiveSidebarTab] = useState('docs');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [generatingQuiz, setGeneratingQuiz] = useState(false);
@@ -590,302 +591,343 @@ export default function ClassroomDetail() {
           </div>
         </div>
 
-        {/* Sidebar (Right Col) */}
-        <div className="space-y-6">
-          {/* Enrolled Students List */}
+        {/* Unified Tabbed Sidebar (Right Col) */}
+        <div>
           <TiltCard3D className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-200 flex items-center space-x-2">
-                <Users className="w-4 h-4 text-indigo-400" />
-                <span>Enrolled Students ({students.length})</span>
-              </h3>
+            {/* Segmented Tab Navigation Switcher */}
+            <div className="flex items-center bg-gray-900/90 p-1 rounded-2xl border border-gray-800/80 mb-5 gap-1 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setActiveSidebarTab('docs')}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                  activeSidebarTab === 'docs'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Notes ({documents.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSidebarTab('quizzes')}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                  activeSidebarTab === 'quizzes'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span>Quizzes ({quizzes.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveSidebarTab('students')}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                  activeSidebarTab === 'students'
+                    ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Students ({students.length})</span>
+              </button>
             </div>
 
-            {students.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">No students enrolled in this class yet.</p>
-            ) : (
-              <div className="space-y-2.5 max-h-48 overflow-y-auto pr-1">
-                {students.map((st) => (
-                  <div key={st.id} className="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 flex items-center space-x-3">
-                    <div className="p-2 bg-indigo-950 rounded-lg text-indigo-400">
-                      <UserCheck className="w-4 h-4" />
-                    </div>
-                    <div className="truncate">
-                      <h4 className="text-xs font-bold text-slate-200 truncate">{st.full_name}</h4>
-                      {user?.role === 'teacher' && (
-                        <p className="text-[11px] text-indigo-300 font-mono flex items-center space-x-1 truncate mt-0.5">
-                          <Mail className="w-3 h-3 text-slate-500 inline" />
-                          <span>{st.email}</span>
-                        </p>
-                      )}
-                    </div>
+            {/* TAB 1: STUDY NOTES & DOCUMENTS */}
+            {activeSidebarTab === 'docs' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                      Classroom Study Notes
+                    </h3>
+                    <p className="text-[10px] text-gray-400">PDFs, Word Docs & Lecture Notes</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </TiltCard3D>
-
-          {/* Uploaded Study Notes & Documents Section */}
-          <TiltCard3D className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-200 flex items-center space-x-2">
-                <FileText className="w-4 h-4 text-indigo-400" />
-                <span>Classroom Study Notes & Documents</span>
-              </h3>
-              {user?.role === 'teacher' && (
-                <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>{uploading ? 'Uploading...' : 'Upload'}</span>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp"
-                    multiple
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-              )}
-            </div>
-
-            {/* Upload Progress Bar (0% to 100%) */}
-            {uploading && (
-              <div className="mb-4 bg-slate-900 p-3 rounded-xl border border-indigo-800/60">
-                <div className="flex justify-between text-xs text-indigo-300 font-mono mb-1">
-                  <span>Uploading Files...</span>
-                  <span>{uploadProgress}%</span>
-                </div>
-                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-indigo-500 h-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {documents.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">No study documents uploaded yet.</p>
-            ) : (
-              <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
-                {documents.map((doc) => {
-                  const status = doc.processing_status || 'ready';
-                  const isProcessing = status === 'processing';
-                  const isOcrProcessing = status === 'ocr_processing';
-                  const isPageOcr = status.startsWith('ocr_page_');
-                  const isReady = status === 'ready';
-                  const progress = doc.processing_progress || 100;
-                  const isDocOwner = user?.role === 'teacher' && doc.uploaded_by_id === user?.id;
-
-                  let statusText = `OCR Ready (100%)`;
-                  if (isProcessing) statusText = `Uploading (${progress}%)`;
-                  if (isOcrProcessing) statusText = `Processing (${progress}%)`;
-                  if (isPageOcr) {
-                    const parts = status.split('_');
-                    const curPage = parts[2];
-                    const totPages = parts[3];
-                    statusText = `Page ${curPage}/${totPages} OCR (${progress}%)`;
-                  }
-
-                  return (
-                    <div key={doc.id} className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 hover:border-indigo-500/40 transition">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs text-slate-200 font-medium truncate max-w-[150px]">{doc.filename}</span>
-                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
-                          isReady
-                            ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                            : 'bg-amber-950 text-amber-300 border-amber-800 animate-pulse'
-                        }`}>
-                          {statusText}
-                        </span>
-                      </div>
-
-                      {/* Skeleton loader if uploading or OCR processing */}
-                      {!isReady && (
-                        <div className="my-2 space-y-1 animate-pulse">
-                          <div className="h-2 bg-slate-800 rounded w-full"></div>
-                          <div className="h-2 bg-slate-800 rounded w-3/4"></div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-end space-x-1.5 mt-2">
-                        <button
-                          onClick={() => handleOpenDocumentReader(doc.id)}
-                          className="flex items-center space-x-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-800 transition"
-                        >
-                          <Eye className="w-3 h-3 text-indigo-400" />
-                          <span>Open PDF</span>
-                        </button>
-
-                        {/* Quick Q&A Button - Disabled until OCR is 100% Ready */}
-                        {isReady ? (
-                          <Link
-                            to={`/quick-reader?document_id=${doc.id}`}
-                            className="text-[11px] bg-indigo-950 text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-700 hover:bg-indigo-900 transition font-medium"
-                          >
-                            Quick Q&A
-                          </Link>
-                        ) : (
-                          <button
-                            disabled
-                            title="Please wait until GPU OCR completes (100%)"
-                            className="text-[11px] bg-slate-900 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-800 cursor-not-allowed font-mono opacity-60"
-                          >
-                            Quick Q&A (Processing...)
-                          </button>
-                        )}
-
-                        {isDocOwner && (
-                          <button
-                            onClick={(e) => handleDeleteDocument(doc.id, e)}
-                            title="Delete Study Note (Remove from Vector DB & Disk)"
-                            className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-slate-800 transition"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </TiltCard3D>
-
-          {/* AI Practice Quizzes Section */}
-          <TiltCard3D className="p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-200 flex items-center space-x-2">
-                <HelpCircle className="w-4 h-4 text-indigo-400" />
-                <span>Practice Quizzes</span>
-              </h3>
-
-              {user?.role === 'teacher' && (
-                <div className="flex items-center space-x-2">
-                  {/* Lightning Zap Option: AI Assessment Quiz Generator */}
-                  <button
-                    onClick={handleOpenAiQuizModal}
-                    disabled={generatingQuiz}
-                    title="⚡ AI Assessment Quiz Generator (Difficulty & Sources)"
-                    className="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1 shadow-md shadow-indigo-600/20"
-                  >
-                    <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" />
-                    <span>{generatingQuiz ? 'Generating...' : 'AI Quiz'}</span>
-                  </button>
-
-                  {/* Plus Option: Create Manual Quiz */}
-                  <button
-                    onClick={() => setIsManualQuizModalOpen(true)}
-                    title="➕ Create Manual Quiz"
-                    className="bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-700 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center space-x-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>Manual</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {quizError && (
-              <div className="mb-3 p-3 bg-amber-950/70 border border-amber-800/80 rounded-xl flex items-start space-x-2 text-xs text-amber-300">
-                <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-                <span>{quizError}</span>
-              </div>
-            )}
-
-            {!inProgressQuiz && quizzes.length === 0 ? (
-              <p className="text-xs text-slate-500 text-center py-4">No practice quizzes available yet.</p>
-            ) : (
-              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                {/* GEMINI / NOTEBOOKLM STYLE SHIMMER & SPARKLE WAVE IN-PROGRESS CARD */}
-                {inProgressQuiz && (
-                  <div className="relative overflow-hidden rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-4 shadow-2xl backdrop-blur-xl animate-pulse-glow transition">
-                    {/* Shimmer Sweep Layer */}
-                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
-
-                    {/* Header Row with Gemini Sparkle Icon & Progress % */}
-                    <div className="flex items-center justify-between mb-2.5">
-                      <div className="flex items-center space-x-2 min-w-0">
-                        <svg className="w-4 h-4 fill-indigo-400 animate-sparkle flex-shrink-0" viewBox="0 0 24 24">
-                          <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z"/>
-                        </svg>
-                        <h4 className="text-xs font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-cyan-300 bg-clip-text text-transparent truncate">
-                          {inProgressQuiz.title}
-                        </h4>
-                      </div>
-                      <span className="bg-indigo-950 text-cyan-300 border border-indigo-700/80 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex-shrink-0 animate-pulse">
-                        {inProgressQuiz.progress}%
-                      </span>
-                    </div>
-
-                    {/* Status Description */}
-                    <p className="text-[11px] text-slate-400 font-sans line-clamp-1 mb-2.5">
-                      {inProgressQuiz.statusText}
-                    </p>
-
-                    {/* Glowing Progress Bar */}
-                    <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden mb-2.5">
-                      <div
-                        className="bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 h-full rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${inProgressQuiz.progress}%` }}
+                  {user?.role === 'teacher' && (
+                    <label className="cursor-pointer bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20">
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>{uploading ? 'Uploading...' : 'Upload Notes'}</span>
+                      <input
+                        type="file"
+                        accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp"
+                        multiple
+                        onChange={handleFileUpload}
+                        className="hidden"
                       />
-                    </div>
+                    </label>
+                  )}
+                </div>
 
-                    {/* Skeleton Lines simulating content synthesis */}
-                    <div className="space-y-1.5 opacity-60">
-                      <div className="h-1.5 rounded bg-white/10 w-full" />
-                      <div className="h-1.5 rounded bg-white/10 w-4/5" />
+                {/* Upload Progress Bar (0% to 100%) */}
+                {uploading && (
+                  <div className="bg-slate-900 p-3 rounded-xl border border-indigo-800/60">
+                    <div className="flex justify-between text-xs text-indigo-300 font-mono mb-1">
+                      <span>Uploading Files...</span>
+                      <span>{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-indigo-500 h-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
                     </div>
                   </div>
                 )}
-                {quizzes.map((quiz) => (
-                  <div key={quiz.id} className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 hover:border-slate-700 transition flex flex-col justify-between space-y-2.5">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-200">{quiz.title}</h4>
-                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{quiz.description}</p>
-                        <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1.5">
-                          <span className="bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800 font-mono">
-                            {quiz.questions_json?.length || 5} MCQs
-                          </span>
-                          <span className="flex items-center space-x-1 text-slate-500">
-                            <Clock className="w-3 h-3 text-slate-500" />
-                            <span>{new Date(quiz.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+
+                {documents.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-8">No study documents uploaded yet.</p>
+                ) : (
+                  <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                    {documents.map((doc) => {
+                      const status = doc.processing_status || 'ready';
+                      const isProcessing = status === 'processing';
+                      const isOcrProcessing = status === 'ocr_processing';
+                      const isPageOcr = status.startsWith('ocr_page_');
+                      const isReady = status === 'ready';
+                      const progress = doc.processing_progress || 100;
+                      const isDocOwner = user?.role === 'teacher' && doc.uploaded_by_id === user?.id;
+
+                      let statusText = `OCR Ready (100%)`;
+                      if (isProcessing) statusText = `Uploading (${progress}%)`;
+                      if (isOcrProcessing) statusText = `Processing (${progress}%)`;
+                      if (isPageOcr) {
+                        const parts = status.split('_');
+                        const curPage = parts[2];
+                        const totPages = parts[3];
+                        statusText = `Page ${curPage}/${totPages} OCR (${progress}%)`;
+                      }
+
+                      return (
+                        <div key={doc.id} className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 hover:border-indigo-500/40 transition">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs text-slate-200 font-medium truncate max-w-[170px]" title={doc.filename}>{doc.filename}</span>
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${
+                              isReady
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                : 'bg-amber-950 text-amber-300 border-amber-800 animate-pulse'
+                            }`}>
+                              {statusText}
+                            </span>
+                          </div>
+
+                          {!isReady && (
+                            <div className="my-2 space-y-1 animate-pulse">
+                              <div className="h-2 bg-slate-800 rounded w-full"></div>
+                              <div className="h-2 bg-slate-800 rounded w-3/4"></div>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-end space-x-1.5 mt-2">
+                            <button
+                              onClick={() => handleOpenDocumentReader(doc.id)}
+                              className="flex items-center space-x-1 text-[11px] bg-slate-800 hover:bg-slate-700 text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-800 transition"
+                            >
+                              <Eye className="w-3 h-3 text-indigo-400" />
+                              <span>Open Document</span>
+                            </button>
+
+                            {isReady ? (
+                              <Link
+                                to={`/quick-reader?document_id=${doc.id}`}
+                                className="text-[11px] bg-indigo-950 text-indigo-300 px-2.5 py-1 rounded-lg border border-indigo-700 hover:bg-indigo-900 transition font-medium"
+                              >
+                                Quick Q&A
+                              </Link>
+                            ) : (
+                              <button
+                                disabled
+                                title="Please wait until GPU OCR completes (100%)"
+                                className="text-[11px] bg-slate-900 text-slate-600 px-2.5 py-1 rounded-lg border border-slate-800 cursor-not-allowed font-mono opacity-60"
+                              >
+                                Quick Q&A (Processing...)
+                              </button>
+                            )}
+
+                            {isDocOwner && (
+                              <button
+                                onClick={(e) => handleDeleteDocument(doc.id, e)}
+                                title="Delete Study Note (Remove from Vector DB & Disk)"
+                                className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-slate-800 transition"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: PRACTICE QUIZZES */}
+            {activeSidebarTab === 'quizzes' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                      Practice Quizzes
+                    </h3>
+                    <p className="text-[10px] text-gray-400">Classroom Assessments & MCQs</p>
+                  </div>
+
+                  {user?.role === 'teacher' && (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handleOpenAiQuizModal}
+                        disabled={generatingQuiz}
+                        title="⚡ AI Assessment Quiz Generator"
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1 shadow-md shadow-indigo-600/20"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 animate-pulse" />
+                        <span>{generatingQuiz ? 'Generating...' : 'AI Quiz'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => setIsManualQuizModalOpen(true)}
+                        title="➕ Create Manual Quiz"
+                        className="bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-700 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center space-x-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Manual</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {quizError && (
+                  <div className="p-3 bg-amber-950/70 border border-amber-800/80 rounded-xl flex items-start space-x-2 text-xs text-amber-300">
+                    <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                    <span>{quizError}</span>
+                  </div>
+                )}
+
+                {!inProgressQuiz && quizzes.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-8">No practice quizzes available yet.</p>
+                ) : (
+                  <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                    {/* In-Progress Sparkle Card */}
+                    {inProgressQuiz && (
+                      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/40 bg-slate-900/90 p-4 shadow-2xl backdrop-blur-xl animate-pulse-glow transition">
+                        <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
+
+                        <div className="flex items-center justify-between mb-2.5">
+                          <div className="flex items-center space-x-2 min-w-0">
+                            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse flex-shrink-0" />
+                            <h4 className="text-xs font-bold bg-gradient-to-r from-blue-300 via-purple-300 to-cyan-300 bg-clip-text text-transparent truncate">
+                              {inProgressQuiz.title}
+                            </h4>
+                          </div>
+                          <span className="bg-indigo-950 text-cyan-300 border border-indigo-700/80 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold flex-shrink-0 animate-pulse">
+                            {inProgressQuiz.progress}%
                           </span>
                         </div>
+
+                        <p className="text-[11px] text-slate-400 font-sans line-clamp-1 mb-2.5">
+                          {inProgressQuiz.statusText}
+                        </p>
+
+                        <div className="w-full bg-slate-800/80 rounded-full h-1.5 overflow-hidden mb-2.5">
+                          <div
+                            className="bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 h-full rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${inProgressQuiz.progress}%` }}
+                          />
+                        </div>
                       </div>
+                    )}
 
-                      {user?.role === 'teacher' && (
-                        <button
-                          onClick={(e) => handleDeleteQuiz(quiz.id, e)}
-                          title="Delete Quiz"
-                          className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-slate-800 transition"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
+                    {quizzes.map((quiz) => (
+                      <div key={quiz.id} className="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 hover:border-slate-700 transition flex flex-col justify-between space-y-2.5">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-200">{quiz.title}</h4>
+                            <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{quiz.description}</p>
+                            <div className="flex items-center space-x-2 text-[10px] text-slate-400 mt-1.5">
+                              <span className="bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800 font-mono">
+                                {quiz.questions_json?.length || 5} MCQs
+                              </span>
+                              <span className="flex items-center space-x-1 text-slate-500">
+                                <Clock className="w-3 h-3 text-slate-500" />
+                                <span>{new Date(quiz.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                              </span>
+                            </div>
+                          </div>
 
-                    <div className="flex items-center space-x-2 pt-1">
-                      {user?.role === 'teacher' && (
-                        <button
-                          onClick={() => handleViewSubmissions(quiz)}
-                          title="View student submissions & first attempt scores"
-                          className="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-800/80 text-xs font-semibold py-1.5 rounded-lg transition flex items-center justify-center space-x-1.5"
-                        >
-                          <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Submissions</span>
-                        </button>
-                      )}
-                      <Link
-                        to={`/quiz/${quiz.id}`}
-                        className={`${user?.role === 'teacher' ? 'flex-1' : 'w-full'} text-center bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-1.5 rounded-lg transition shadow flex items-center justify-center space-x-1`}
-                      >
-                        <Award className="w-3.5 h-3.5" />
-                        <span>Attempt Quiz</span>
-                      </Link>
-                    </div>
+                          {user?.role === 'teacher' && (
+                            <button
+                              onClick={(e) => handleDeleteQuiz(quiz.id, e)}
+                              title="Delete Quiz"
+                              className="p-1 text-slate-500 hover:text-red-400 rounded hover:bg-slate-800 transition"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-2 pt-1">
+                          {user?.role === 'teacher' && (
+                            <button
+                              onClick={() => handleViewSubmissions(quiz)}
+                              title="View student submissions & first attempt scores"
+                              className="flex-1 text-center bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-800/80 text-xs font-semibold py-1.5 rounded-lg transition flex items-center justify-center space-x-1.5"
+                            >
+                              <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>Submissions</span>
+                            </button>
+                          )}
+                          <Link
+                            to={`/quiz/${quiz.id}`}
+                            className={`${user?.role === 'teacher' ? 'flex-1' : 'w-full'} text-center bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold py-1.5 rounded-lg transition shadow flex items-center justify-center space-x-1`}
+                          >
+                            <Award className="w-3.5 h-3.5" />
+                            <span>Attempt Quiz</span>
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: ENROLLED STUDENTS */}
+            {activeSidebarTab === 'students' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                      Enrolled Students
+                    </h3>
+                    <p className="text-[10px] text-gray-400">{students.length} Student(s) currently enrolled</p>
+                  </div>
+                </div>
+
+                {students.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-8">No students enrolled in this class yet.</p>
+                ) : (
+                  <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                    {students.map((st) => (
+                      <div key={st.id} className="bg-slate-900/80 p-3 rounded-xl border border-slate-800 flex items-center space-x-3 hover:border-indigo-500/30 transition">
+                        <div className="p-2 bg-indigo-950 rounded-xl text-indigo-400 border border-indigo-800/60">
+                          <UserCheck className="w-4 h-4" />
+                        </div>
+                        <div className="truncate flex-1">
+                          <h4 className="text-xs font-bold text-slate-200 truncate">{st.full_name}</h4>
+                          {user?.role === 'teacher' && (
+                            <p className="text-[11px] text-indigo-300 font-mono flex items-center space-x-1 truncate mt-0.5">
+                              <Mail className="w-3 h-3 text-slate-500 inline" />
+                              <span>{st.email}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </TiltCard3D>
