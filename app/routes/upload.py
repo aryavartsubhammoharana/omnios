@@ -163,8 +163,6 @@ async def upload_file(
     doc = DocumentFile(
         filename=file.filename,
         file_path=saved_path,
-        file_size=file_size,
-        mime_type=file.content_type or "application/octet-stream",
         uploaded_by_id=current_user.id,
         classroom_id=classroom_id,
         processing_status="processing",
@@ -180,7 +178,7 @@ async def upload_file(
     return {
         "id": doc.id,
         "filename": doc.filename,
-        "file_size": doc.file_size,
+        "file_size": file_size,
         "classroom_id": doc.classroom_id,
         "processing_status": doc.processing_status,
         "processing_progress": doc.processing_progress,
