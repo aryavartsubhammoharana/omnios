@@ -5,13 +5,14 @@ import API from '../api/client';
 import { 
   BookOpen, LogOut, Sparkles, Flame, User, Bot, 
   GraduationCap, Settings, Mail, X, Check, Loader2,
-  Camera, Lock, KeyRound, Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award, ShieldCheck
+  Camera, Lock, KeyRound, Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award, ShieldCheck, Menu
 } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout, confirmRole, updateProfile, changePassword, uploadAvatar, deleteAccount } = useContext(AuthContext);
   const navigate = useNavigate();
   const [streak, setStreak] = useState(1);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // Mandatory Role Selection Modal State (Google Login First-Time Onboarding)
   const [mandatoryRole, setMandatoryRole] = useState('student');
@@ -155,40 +156,42 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="h-[61px] bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40">
+      <nav className="h-[61px] bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/80 px-3 sm:px-6 flex items-center justify-between sticky top-0 z-40">
         {/* Brand Logo (Left) */}
-        <div className="flex items-center space-x-6">
+        <div className="flex items-center space-x-3 sm:space-x-6 flex-shrink-0">
           <Link to="/dashboard" className="flex items-center space-x-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition">
-              <BookOpen className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition flex-shrink-0">
+              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-indigo-400 tracking-tight">
+                <span className="text-base sm:text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-indigo-400 tracking-tight whitespace-nowrap">
                   NoteAI
                 </span>
                 <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                   PRO
                 </span>
               </div>
-              <p className="text-[10px] text-gray-400 font-medium tracking-tight">DLMNotebook + Classroom</p>
+              <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium tracking-tight whitespace-nowrap hidden xs:block">
+                DLMNotebook + Classroom
+              </p>
             </div>
           </Link>
         </div>
 
-        {/* Navigation Tabs (Center) */}
+        {/* Desktop Navigation Tabs (Center) */}
         {user && !isRolePending && (
-          <div className="hidden md:flex items-center bg-gray-900/90 border border-gray-800/80 rounded-xl p-1 gap-1 shadow-inner">
+          <div className="hidden lg:flex items-center bg-gray-900/90 border border-gray-800/80 rounded-xl p-1 gap-1 shadow-inner flex-shrink-0">
             <Link
               to="/dashboard"
-              className="text-xs px-3.5 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5"
+              className="text-xs px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5 whitespace-nowrap"
             >
               <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
               <span>Classrooms</span>
             </Link>
             <Link
               to="/notebooklm"
-              className="text-xs px-3.5 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5"
+              className="text-xs px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5 whitespace-nowrap"
             >
               <Bot className="w-3.5 h-3.5 text-purple-400" />
               <span>DLM Notebook</span>
@@ -196,7 +199,7 @@ export default function Navbar() {
             {user.role === 'student' && (
               <Link
                 to="/student/daily-hub"
-                className="text-xs px-3.5 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-medium transition flex items-center gap-1.5 hover:bg-indigo-600/30"
+                className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-medium transition flex items-center gap-1.5 hover:bg-indigo-600/30 whitespace-nowrap"
               >
                 <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
                 <span>🎯 Daily AI Practice & Videos</span>
@@ -205,18 +208,19 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* User Controls & Streak (Right) */}
-        <div className="flex items-center space-x-3">
+        {/* User Controls & Streak & Mobile Menu (Right) */}
+        <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           {user ? (
-            <div className="flex items-center space-x-2.5">
+            <div className="flex items-center space-x-2 sm:space-x-2.5">
               {/* Gamified Streak Counter */}
               {!isRolePending && (
                 <div 
                   title={`${streak} consecutive active study days`}
-                  className="flex items-center space-x-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-inner"
+                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-inner whitespace-nowrap flex-shrink-0"
                 >
                   <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
-                  <span>{streak} {streak === 1 ? 'Day' : 'Days'} Streak</span>
+                  <span className="hidden sm:inline">{streak} {streak === 1 ? 'Day' : 'Days'} Streak</span>
+                  <span className="sm:hidden">{streak}d</span>
                 </div>
               )}
 
@@ -224,39 +228,52 @@ export default function Navbar() {
               <button
                 onClick={() => !isRolePending && setShowProfileModal(true)}
                 disabled={isRolePending}
-                className="flex items-center space-x-2 bg-gray-900/90 hover:bg-gray-800 border border-gray-800 px-3 py-1.5 rounded-xl text-xs transition group cursor-pointer shadow-inner disabled:opacity-50"
+                className="flex items-center space-x-1.5 sm:space-x-2 bg-gray-900/90 hover:bg-gray-800 border border-gray-800 px-2 sm:px-3 py-1.5 rounded-xl text-xs transition group cursor-pointer shadow-inner disabled:opacity-50 flex-shrink-0"
                 title="Edit Student Profile & Class"
               >
                 {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.full_name} className="w-5 h-5 rounded-full object-cover border border-indigo-500/50" />
+                  <img src={user.avatar_url} alt={user.full_name} className="w-5 h-5 rounded-full object-cover border border-indigo-500/50 flex-shrink-0" />
                 ) : (
-                  <div className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-[10px]">
+                  <div className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-[10px] flex-shrink-0">
                     {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
                   </div>
                 )}
-                <span className="font-medium text-gray-200 group-hover:text-white max-w-[100px] truncate">{user.full_name}</span>
+                <span className="font-medium text-gray-200 group-hover:text-white max-w-[70px] sm:max-w-[110px] truncate whitespace-nowrap hidden xs:inline">
+                  {user.full_name}
+                </span>
                 {user.student_class && (
-                  <span className="text-[9px] bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded font-mono hidden sm:inline">
+                  <span className="text-[9px] bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded font-mono hidden md:inline whitespace-nowrap">
                     {user.student_class}
                   </span>
                 )}
-                <span className="text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-bold uppercase">
+                <span className="text-[9px] sm:text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-bold uppercase whitespace-nowrap">
                   {user.role}
                 </span>
-                <Settings className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-300" />
+                <Settings className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-300 hidden sm:block" />
               </button>
 
-              {/* Logout Button */}
+              {/* Logout Button (Desktop / Tablet) */}
               <button
                 onClick={handleLogout}
-                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-xl transition text-xs flex items-center gap-1"
+                className="hidden sm:flex p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-xl transition text-xs items-center gap-1 flex-shrink-0"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
               </button>
+
+              {/* Mobile / Tablet Hamburger Menu Button */}
+              {!isRolePending && (
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="lg:hidden p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition flex-shrink-0"
+                  aria-label="Toggle navigation menu"
+                >
+                  {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+                </button>
+              )}
             </div>
           ) : (
-            <div className="flex items-center space-x-2.5">
+            <div className="flex items-center space-x-2 sm:space-x-2.5">
               <Link to="/login" className="text-xs font-medium text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition">
                 Login
               </Link>
@@ -267,6 +284,64 @@ export default function Navbar() {
           )}
         </div>
       </nav>
+
+      {/* MOBILE / TABLET SLIDE-DOWN NAVIGATION MENU */}
+      {mobileMenuOpen && user && !isRolePending && (
+        <div className="lg:hidden bg-gray-950/95 backdrop-blur-xl border-b border-gray-800/80 px-4 py-3 space-y-2 sticky top-[61px] z-40 shadow-2xl animate-in slide-in-from-top-2 duration-200">
+          <Link
+            to="/dashboard"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl bg-gray-900/60 hover:bg-indigo-950 text-gray-200 hover:text-white border border-gray-800/80 transition text-xs font-medium"
+          >
+            <BookOpen className="w-4 h-4 text-indigo-400" />
+            <span>Classrooms Hub</span>
+          </Link>
+
+          <Link
+            to="/notebooklm"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl bg-gray-900/60 hover:bg-purple-950 text-gray-200 hover:text-white border border-gray-800/80 transition text-xs font-medium"
+          >
+            <Bot className="w-4 h-4 text-purple-400" />
+            <span>DLM Notebook Studio</span>
+          </Link>
+
+          {user.role === 'student' && (
+            <Link
+              to="/student/daily-hub"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 hover:text-white border border-indigo-800/60 transition text-xs font-medium"
+            >
+              <Sparkles className="w-4 h-4 text-indigo-400" />
+              <span>🎯 Daily AI Practice & Videos</span>
+            </Link>
+          )}
+
+          <div className="pt-2 border-t border-gray-800 flex items-center justify-between gap-2">
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setShowProfileModal(true);
+              }}
+              className="flex-1 flex items-center justify-center space-x-2 py-2 px-3 bg-gray-900 hover:bg-gray-800 rounded-xl text-xs text-gray-300 font-medium border border-gray-800 transition"
+            >
+              <Settings className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Profile Settings</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleLogout();
+              }}
+              className="flex items-center justify-center space-x-1.5 py-2 px-3 bg-red-950/60 hover:bg-red-900 rounded-xl text-xs text-red-300 font-medium border border-red-800 transition"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Mandatory Non-Dismissible Role Selection Onboarding Modal (Google First Login) */}
       {isRolePending && (
