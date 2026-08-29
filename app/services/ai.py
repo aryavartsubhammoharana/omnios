@@ -128,3 +128,62 @@ Each object must have:
             "explanation": "Extracted directly from the uploaded classroom study PDF.",
             "sub_topic": "Unit 1: Cells & Biomolecules"
         }]
+
+def structure_ocr_text_with_sarvam(raw_ocr_text: str) -> str:
+    """Uses Sarvam AI (with Gemini fallback) to convert raw OCR lines into structured Markdown with tables, bold questions, and headings."""
+    if not raw_ocr_text or not raw_ocr_text.strip():
+        return raw_ocr_text
+
+    prompt = (
+        "You are an expert Document Formatter. Convert the following RAW OCR text extracted from lecture notes "
+        "into clean, beautifully structured Markdown without losing any information.\n\n"
+        "STRICT FORMATTING RULES:\n"
+        "1. Convert any tables, comparisons, or differences into clean Markdown tables (| Col 1 | Col 2 |).\n"
+        "2. Format all questions in bold on separate lines (e.g. **1. What is a peptide bond?** or **Q2. Explain photosynthesis.**).\n"
+        "3. Use appropriate Markdown headings (## for Units/Chapters, ### for Sections/Short Questions/Broad Questions).\n"
+        "4. Preserve page separators (e.g. '### 📄 Page 1 of 4').\n"
+        "5. Do NOT summarize or delete content. Keep all questions, options, definitions, and terms intact.\n"
+        "6. Return ONLY the formatted markdown content without conversational chatter.\n\n"
+        f"RAW OCR TEXT:\n{raw_ocr_text[:12000]}"
+    )
+
+    # 1. Try Sarvam AI First
+    if settings.SARVAM_API_KEY:
+        try:
+            url = "https://api.sarvam.ai/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {settings.SARVAM_API_KEY.strip()}",
+                "api-key": settings.SARVAM_API_KEY.strip()
+            }
+            payload = {
+                "model": settings.SARVAM_MODEL or "sarvam-105b-conversations",
+                "messages": [
+                    {"role": "system", "content": "You are an expert Document Formatter. Convert raw OCR text into structured Markdown."},
+                    {"role": "user", "content": prompt}
+                ],
+                "temperature": 0.2
+            }
+            res = requests.post(url, json=payload, headers=headers, timeout=60)
+            if res.status_code == 200:
+                data = res.json()
+                result = data["choices"][0]["message"]["content"].strip()
+                if result and len(result) > 50:
+                    print("[OK] Raw OCR text structured via Sarvam AI!")
+                    return result
+        except Exception as e:
+            print(f"Sarvam structuring fallback to Gemini: {e}")
+
+    # 2. Try Gemini AI Fallback
+    try:
+        gemini_result = query_gemini_ai(prompt=prompt)
+        if gemini_result and not gemini_result.startswith("Gemini API Error"):
+            print("[OK] Raw OCR text structured via Gemini AI!")
+            return gemini_result
+    except Exception:
+        pass
+
+    # 3. Fallback to Local Regex Formatter
+    from app.services.extractor import format_ocr_text_locally
+    return format_ocr_text_locally(raw_ocr_text)
+

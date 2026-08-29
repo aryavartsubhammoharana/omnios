@@ -44,11 +44,15 @@ def process_file_text_in_background(doc_id: int):
 
         doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
         if doc:
-            doc.content_text = extracted_text if (extracted_text and extracted_text.strip()) else f"Classroom Study Material File '{doc.filename}' uploaded by teacher."
+            # 2. Structure raw OCR text with Sarvam AI into beautiful Markdown tables & headings
+            from app.services.ai import structure_ocr_text_with_sarvam
+            structured_text = structure_ocr_text_with_sarvam(extracted_text) if extracted_text else ""
+
+            doc.content_text = structured_text if (structured_text and structured_text.strip()) else f"Classroom Study Material File '{doc.filename}' uploaded by teacher."
             doc.processing_status = "ready"
             doc.processing_progress = 100
             db.commit()
-            print(f"✅ Document {doc_id} ('{doc.filename}') all pages processed 100%!")
+            print(f"[OK] Document {doc_id} ('{doc.filename}') text structured and saved 100%!")
 
             # 2. Semantic Text Chunking & ChromaDB Vector Indexing
             try:
