@@ -7,21 +7,25 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchCurrentUser = async () => {
     const token = localStorage.getItem('noteai_token');
     if (token) {
-      API.get('/api/auth/me')
-        .then((res) => {
-          setUser(res.data);
-        })
-        .catch(() => {
-          localStorage.removeItem('noteai_token');
-          setUser(null);
-        })
-        .finally(() => setLoading(false));
+      try {
+        const res = await API.get('/api/auth/me');
+        setUser(res.data);
+      } catch (err) {
+        localStorage.removeItem('noteai_token');
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     } else {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    fetchCurrentUser();
   }, []);
 
   const login = async (email, password) => {
@@ -31,11 +35,24 @@ export const AuthProvider = ({ children }) => {
     return res.data.user;
   };
 
-  const signup = async (email, password, full_name, role) => {
-    const res = await API.post('/api/auth/signup', { email, password, full_name, role });
+  const signup = async (email, password, full_name, role, student_class) => {
+    const res = await API.post('/api/auth/signup', { email, password, full_name, role, student_class });
     localStorage.setItem('noteai_token', res.data.access_token);
     setUser(res.data.user);
     return res.data.user;
+  };
+
+  const googleLogin = async ({ credential, access_token, role = 'student', student_class = null }) => {
+    const res = await API.post('/api/auth/google', { credential, access_token, role, student_class });
+    localStorage.setItem('noteai_token', res.data.access_token);
+    setUser(res.data.user);
+    return res.data.user;
+  };
+
+  const updateProfile = async (profileData) => {
+    const res = await API.put('/api/auth/profile', profileData);
+    setUser(res.data);
+    return res.data;
   };
 
   const logout = () => {
@@ -44,7 +61,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, googleLogin, updateProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );
