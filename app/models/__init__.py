@@ -5,10 +5,10 @@ from app.models.file import DocumentFile
 from app.models.quiz import Quiz, QuizAttempt
 from app.models.analytics import StudentStreak, StudySession
 from app.models.chunk import DocumentChunk
+from app.models.image import ImageRecord, ImageBatch
 
 __all__ = [
     "Base", "User", "Classroom", "Enrollment", "Post", 
     "DocumentFile", "Quiz", "QuizAttempt", "StudentStreak", 
-    "StudySession", "DocumentChunk"
+    "StudySession", "DocumentChunk", "ImageRecord", "ImageBatch"
 ]
-
