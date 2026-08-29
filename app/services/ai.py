@@ -151,40 +151,53 @@ def query_sarvam_ai(prompt: str, context: str = "") -> str:
 # Groq AI  (Provider 3 — ultra-fast LPU inference)
 # ---------------------------------------------------------------------------
 
+def _get_groq_models():
+    base = [settings.GROQ_MODEL, "qwen/qwen3.8-27b", "groq/compound", "openai/gpt-oss-120b", "groq/compound-mini", "qwen/qwen3.6-27b"]
+    seen = set()
+    result = []
+    for m in base:
+        if m and m not in seen:
+            seen.add(m)
+            result.append(m)
+    return result
+
 def query_groq_ai(prompt: str, context: str = "") -> str:
-    """Query Groq AI (LLaMA 3.3 70B) — ultra-fast LPU inference, great free tier."""
+    """Query Groq AI — ultra-fast LPU inference with automatic model rotation across active models."""
     if not settings.GROQ_API_KEY:
         return "Groq API key is not configured."
 
-    try:
-        client = Groq(api_key=settings.GROQ_API_KEY.strip())
+    client = Groq(api_key=settings.GROQ_API_KEY.strip())
 
-        system_content = (
-            "You are NoteAI, a helpful and friendly academic tutor. "
-            "Answer student questions clearly and accurately using proper markdown formatting. "
-            "Use ## headings, numbered lists, bullet points, **bold** key terms, tables, and math formulas. "
-            "Reference provided study notes when relevant."
-        )
+    system_content = (
+        "You are NoteAI, a helpful and friendly academic tutor. "
+        "Answer student questions clearly and accurately using proper markdown formatting. "
+        "Use ## headings, numbered lists, bullet points, **bold** key terms, tables, and math formulas. "
+        "Reference provided study notes when relevant."
+    )
 
-        # Cap context at 4000 chars (Groq's context window is generous)
-        if context and context.strip():
-            user_message = f"Study Notes (reference):\n{context.strip()[:4000]}\n\nStudent Question: {prompt}"
-        else:
-            user_message = prompt
+    if context and context.strip():
+        user_message = f"Study Notes (reference):\n{context.strip()[:4000]}\n\nStudent Question: {prompt}"
+    else:
+        user_message = prompt
 
-        response = client.chat.completions.create(
-            model=settings.GROQ_MODEL or "llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.7,
-            max_tokens=2048,
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"Groq API error: {e}")
-        return f"Groq API Error: {e}"
+    for model_name in _get_groq_models():
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {"role": "system", "content": system_content},
+                    {"role": "user", "content": user_message},
+                ],
+                temperature=0.7,
+                max_tokens=2048,
+            )
+            content = response.choices[0].message.content
+            if content and content.strip():
+                return content.strip()
+        except Exception as e:
+            print(f"Groq model '{model_name}' attempt error: {e}")
+
+    return "Error: All Groq models failed to respond."
 
 
 # ---------------------------------------------------------------------------
@@ -228,24 +241,27 @@ def generate_quiz_questions(context: str, num_questions: int = 5) -> list:
 
     raw_json_str = ""
 
-    # 1. Primary: Groq AI LPU LLaMA 3.3 70B (Fast, reliable JSON generation)
+    # 1. Primary: Groq AI with automatic active model rotation
     if settings.GROQ_API_KEY:
-        try:
-            client = Groq(api_key=settings.GROQ_API_KEY.strip())
-            response = client.chat.completions.create(
-                model=settings.GROQ_MODEL or "llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.3,
-                max_tokens=3000,
-                response_format={"type": "json_object"}
-            )
-            raw_json_str = response.choices[0].message.content.strip()
-            print("[OK] Quiz generated successfully via Groq AI!")
-        except Exception as e:
-            print(f"Groq Quiz generation error: {e}")
+        client = Groq(api_key=settings.GROQ_API_KEY.strip())
+        for model_name in _get_groq_models():
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.3,
+                    max_tokens=3000
+                )
+                text_content = response.choices[0].message.content
+                if text_content and text_content.strip():
+                    raw_json_str = text_content.strip()
+                    print(f"[OK] Quiz generated successfully via Groq AI (model: {model_name})!")
+                    break
+            except Exception as e:
+                print(f"Groq model '{model_name}' quiz error: {e}")
 
     # 2. Fallback: Sarvam AI (if Groq fails or key is missing)
     if not raw_json_str and settings.SARVAM_API_KEY:
