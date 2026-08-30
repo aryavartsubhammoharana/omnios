@@ -171,13 +171,13 @@ export default function Navbar() {
   return (
     <>
       {/* ── TOP NAVBAR ── */}
-      <nav className="h-[61px] bg-gray-950/85 backdrop-blur-xl border-b border-gray-800/80 px-3 sm:px-6 flex items-center justify-between sticky top-0 z-40 select-none">
+      <nav className={`h-[61px] bg-gray-950/85 backdrop-blur-xl border-b border-gray-800/80 px-3 sm:px-6 flex items-center justify-between sticky top-0 z-30 select-none ${user && !isRolePending ? 'md:pl-[84px]' : ''}`}>
         {/* Left: Menu Hamburger Trigger + OmniOS Logo */}
         <div className="flex items-center space-x-3 sm:space-x-4 flex-shrink-0">
           {user && !isRolePending && (
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white transition shadow-sm flex items-center justify-center cursor-pointer group"
+              className="md:hidden p-2 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white transition shadow-sm flex items-center justify-center cursor-pointer group"
               title="Main menu"
             >
               <Menu className="w-5 h-5 text-gray-300 group-hover:scale-110 transition-transform" />
@@ -274,8 +274,8 @@ export default function Navbar() {
 
       {/* ── GOOGLE CLASSROOM STYLE COLLAPSIBLE SIDEBAR ── */}
       <NavigationSidebar
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        isPinned={sidebarOpen}
+        onTogglePin={() => setSidebarOpen(!sidebarOpen)}
         onOpenSettings={() => setShowProfileModal(true)}
       />
 

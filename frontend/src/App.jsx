@@ -24,7 +24,7 @@ function AppContent() {
     <div className="min-h-screen bg-[#090d16] text-gray-100 font-sans relative selection:bg-indigo-500 selection:text-white">
       {!isAuthRoute && <Background3D />}
       {!isAuthRoute && <Navbar />}
-      <main className="relative z-10">
+      <main className={`relative z-10 ${!isAuthRoute ? 'md:pl-[68px]' : ''}`}>
         <Routes>
           <Route
             path="/login"
