@@ -8,6 +8,7 @@ from app.schemas.ai import DocumentChatRequest, DocumentSummaryRequest, AIChatRe
 from app.services.ai import query_gemini_ai, query_sarvam_ai, query_groq_ai, generate_document_summary, is_valid_ai_text
 from app.services.vector_store import query_vector_store
 from app.utils.deps import get_current_user
+from app.routes.analytics import record_learning_activity
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
 
@@ -108,6 +109,9 @@ def document_chat(
 
     if not is_valid_ai_text(answer):
         answer = query_gemini_ai(prompt=data.question, context=context)
+
+    # Genuine academic engagement: Update streak with 0-load idempotency
+    record_learning_activity(current_user.id, db)
 
     return AIChatResponse(
         answer=answer,

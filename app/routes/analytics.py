@@ -77,7 +77,65 @@ def track_document_view(
     }
 
 
+def record_learning_activity(user_id: int, db: Session) -> int:
+    """
+    Lightweight, high-efficiency streak recording.
+    Updates the student's daily streak strictly when learning activities occur:
+    1. Taking or submitting a quiz
+    2. Asking AI doubts & chat questions
+    3. Reading classroom/library PDF documents
+    
+    Zero server pressure: If activity was already recorded today (IST), this is an instantaneous no-op.
+    """
+    try:
+        today = get_ist_now().date()
+        streak = db.query(StudentStreak).filter(StudentStreak.student_id == user_id).first()
+        if not streak:
+            streak = StudentStreak(
+                student_id=user_id,
+                current_streak=1,
+                longest_streak=1,
+                last_active_date=today,
+                total_study_seconds=60
+            )
+            db.add(streak)
+            db.commit()
+            return 1
+
+        if streak.last_active_date is None:
+            streak.current_streak = 1
+            streak.last_active_date = today
+            streak.total_study_seconds += 60
+            db.commit()
+            return 1
+        
+        delta = (today - streak.last_active_date).days
+        if delta == 1:
+            # Consecutive day! Increment streak
+            streak.current_streak += 1
+            if streak.current_streak > streak.longest_streak:
+                streak.longest_streak = streak.current_streak
+            streak.last_active_date = today
+            streak.total_study_seconds += 60
+            db.commit()
+        elif delta == 0:
+            # Already active today - streak already counted for today! Zero overhead.
+            pass
+        elif delta > 1:
+            # Streak was broken (gap of 2+ days) - reset to 1
+            streak.current_streak = 1
+            streak.last_active_date = today
+            streak.total_study_seconds += 60
+            db.commit()
+
+        return streak.current_streak
+    except Exception as e:
+        print(f"Error in record_learning_activity: {e}")
+        return 1
+
+
 @router.get("/streak")
+@router.get("/my-streak")
 def get_my_streak(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

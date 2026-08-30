@@ -15,6 +15,7 @@ from app.services.ai import generate_quiz_questions
 from app.services.extractor import extract_text_from_file
 from app.utils.deps import get_current_user
 from app.utils.time_utils import get_ist_now
+from app.routes.analytics import record_learning_activity
 
 router = APIRouter(prefix="/api/quiz", tags=["Quiz"])
 
@@ -234,6 +235,9 @@ def submit_quiz_attempt(
     db.add(attempt)
     db.commit()
     db.refresh(attempt)
+
+    # Genuine academic engagement: Update streak with 0-load idempotency
+    record_learning_activity(current_user.id, db)
 
     return QuizAttemptOut(
         id=attempt.id,

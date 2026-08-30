@@ -53,13 +53,23 @@ export default function Navbar() {
     if (user) {
       setEditName(user.full_name || '');
       setEditClass(user.student_class || 'Class 11 Science');
-      API.get('/api/analytics/my-streak')
-        .then((res) => {
-          if (res.data?.current_streak !== undefined) {
-            setStreak(res.data.current_streak);
-          }
-        })
-        .catch(() => {});
+      
+      const loadStreak = () => {
+        API.get('/api/analytics/my-streak')
+          .then((res) => {
+            if (res.data?.current_streak !== undefined) {
+              setStreak(res.data.current_streak);
+            }
+          })
+          .catch(() => {});
+      };
+
+      loadStreak();
+
+      // Lightweight event listener for immediate UI updates when learning activities happen
+      const handleActivity = () => loadStreak();
+      window.addEventListener('noteai:learning-activity', handleActivity);
+      return () => window.removeEventListener('noteai:learning-activity', handleActivity);
     }
   }, [user]);
 
@@ -248,10 +258,17 @@ export default function Navbar() {
               {/* Gamified Streak Counter */}
               {!isRolePending && (
                 <div 
-                  title={`${streak} consecutive active study days`}
-                  className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold shadow-inner whitespace-nowrap flex-shrink-0"
+                  title={streak > 0 
+                    ? `${streak} consecutive active learning day${streak > 1 ? 's' : ''}. Keep solving quizzes, asking AI doubts, and reading PDFs!`
+                    : 'Start your streak today! Read a PDF, chat with AI, or complete a practice quiz.'
+                  }
+                  className={`flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1 rounded-full border text-xs font-semibold shadow-inner whitespace-nowrap flex-shrink-0 transition-colors ${
+                    streak > 0 
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' 
+                      : 'bg-gray-800/40 border-gray-700/60 text-gray-400'
+                  }`}
                 >
-                  <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400 animate-pulse" />
+                  <Flame className={`w-3.5 h-3.5 ${streak > 0 ? 'text-amber-400 fill-amber-400 animate-pulse' : 'text-gray-500 fill-gray-500'}`} />
                   <span className="hidden sm:inline">{streak} {streak === 1 ? 'Day' : 'Days'} Streak</span>
                   <span className="sm:hidden">{streak}d</span>
                 </div>

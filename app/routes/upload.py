@@ -17,6 +17,7 @@ from app.services.vector_store import (
     index_document_in_vector_store,
     delete_document_from_vector_store
 )
+from app.routes.analytics import record_learning_activity
 
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
 UPLOAD_DIR = "uploads"
@@ -325,6 +326,9 @@ def get_document_details(
 
     if not has_access:
         raise HTTPException(status_code=403, detail="You do not have permission to access this document")
+
+    # Genuine academic engagement: Update streak with 0-load idempotency
+    record_learning_activity(current_user.id, db)
 
     file_url = f"/{doc.file_path.replace(chr(92), '/')}" if doc.file_path else None
 
