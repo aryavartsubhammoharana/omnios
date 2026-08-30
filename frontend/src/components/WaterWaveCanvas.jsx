@@ -1,143 +1,168 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
-export const WaterWaveCanvas = () => {
+/**
+ * WaterWaveCanvas Component
+ * High-performance 2D Discrete Fluid Wave Simulation with:
+ * - Ultra-smooth Bilinear Interpolation for Sub-Pixel Optical Refraction (Zero Jagged Artifacts)
+ * - Cosine Bell-Curve Hydrodynamic Wake Generation
+ * - "Silent Pond" Viscous Damping with pristine resting equilibrium
+ * - Dynamic Glowing Plus (+) Cursor Transformation on Logo Proximity
+ */
+const WaterWaveCanvas = () => {
   const canvasRef = useRef(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true, alpha: false });
     if (!ctx) return;
 
     let animationFrameId;
     let width = 0;
     let height = 0;
 
-    // Simulation grid dimensions (1 cell = 4 screen pixels for 120fps fluid physics)
-    const SIM_SCALE = 4;
+    // Simulation Grid Configuration
+    const SIM_SCALE = 2; // High-precision 2x sub-grid
     let simWidth = 0;
     let simHeight = 0;
-    let bufferSize = 0;
 
-    let buffer1;
-    let buffer2;
-    let currentBuffer;
-    let nextBuffer;
-
-    // Natural fluid damping for authentic pond physics (dissipates to stillness in ~1.5s)
-    const DAMPING = 0.968;
-    const EPSILON = 0.005; // Resting threshold for absolute still water
-
-    // Offscreen logo canvas
-    const sourceCanvas = document.createElement('canvas');
-    const sourceCtx = sourceCanvas.getContext('2d');
+    let buffer1 = null;
+    let buffer2 = null;
+    let currentBuffer = null;
+    let nextBuffer = null;
     let sourceData = null;
 
-    // Logo image
-    const logoImg = new Image();
-    logoImg.src = '/logo.png';
-    let logoLoaded = false;
+    const DAMPING = 0.974; // Silky fluid viscosity
+    const EPSILON = 0.003; // Smooth zero-energy threshold for silent pond
 
-    // Custom Glowing Plus Cursor when near logo
-    const PLUS_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'><path d='M14 3 L14 25 M3 14 L25 14' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round'/><circle cx='14' cy='14' r='2.5' fill='%236366f1'/></svg>") 14 14, crosshair`;
-
-    // Mouse velocity & interaction state
     const mouse = {
       x: -1,
       y: -1,
       prevX: -1,
       prevY: -1,
-      active: false,
+      active: false
     };
 
-    const drawSourceTexture = () => {
-      if (!sourceCtx || width === 0 || height === 0) return;
+    // Custom Electric Cyan & Indigo SVG Plus Cursor (with glowing aura)
+    const PLUS_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'><defs><filter id='glow' x='-40%' y='-40%' width='180%' height='180%'><feGaussianBlur stdDeviation='2.5' result='blur'/><feMerge><feMergeNode in='blur'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><circle cx='18' cy='18' r='12' fill='rgba(99,102,241,0.2)' stroke='%2338bdf8' stroke-width='1.2' stroke-dasharray='3 2'/><path d='M18 6 L18 30 M6 18 L30 18' stroke='%2338bdf8' stroke-width='2.4' stroke-linecap='round' filter='url(%23glow)'/><circle cx='18' cy='18' r='2.5' fill='%23ffffff'/></svg>") 18 18, crosshair`;
+
+    // Offscreen Canvas for Crystal-Clear OmniOS Logo Rendering
+    const sourceCanvas = document.createElement('canvas');
+    const sourceCtx = sourceCanvas.getContext('2d', { alpha: false });
+
+    const logoImg = new Image();
+    logoImg.src = '/logo.png';
+    let logoLoaded = false;
+
+    logoImg.onload = () => {
+      logoLoaded = true;
+      drawSourceBackground();
+    };
+
+    const drawSourceBackground = () => {
+      if (width === 0 || height === 0 || !sourceCtx) return;
 
       sourceCanvas.width = width;
       sourceCanvas.height = height;
 
-      // 1. Deep Oceanic Calm Backdrop
+      // Deep Matte Background (#111113)
+      sourceCtx.fillStyle = '#111113';
+      sourceCtx.fillRect(0, 0, width, height);
+
+      // Subtle Ambient Indigo & Slate Vignette Glow
       const bgGrad = sourceCtx.createRadialGradient(
-        width * 0.5,
-        height * 0.5,
-        10,
-        width * 0.5,
-        height * 0.5,
-        Math.max(width, height) * 0.75
+        width * 0.5, height * 0.5, 40,
+        width * 0.5, height * 0.5, Math.max(width, height) * 0.65
       );
-      bgGrad.addColorStop(0, '#101528');
-      bgGrad.addColorStop(0.5, '#090d18');
-      bgGrad.addColorStop(1, '#05070c');
+      bgGrad.addColorStop(0, 'rgba(30, 27, 75, 0.45)');
+      bgGrad.addColorStop(0.5, 'rgba(15, 23, 42, 0.25)');
+      bgGrad.addColorStop(1, 'rgba(17, 17, 19, 0.95)');
       sourceCtx.fillStyle = bgGrad;
       sourceCtx.fillRect(0, 0, width, height);
 
-      // 2. Large Centered OmniOS Logo (Prominent crisp logo in silent pond)
-      if (logoLoaded && logoImg.width > 0) {
-        const logoSize = Math.min(width * 0.76, height * 0.76, 460);
-        const logoX = (width - logoSize) * 0.5;
-        const logoY = (height - logoSize) * 0.5;
+      // Center OmniOS Logo (1:1 Ratio, No Cropping, Smooth Quality)
+      if (logoLoaded) {
+        const logoSize = Math.min(width * 0.72, height * 0.72, 420);
+        const lx = (width - logoSize) * 0.5;
+        const ly = (height - logoSize) * 0.5;
 
-        // Radiant calm ambient aura behind logo
+        // Ambient Logo Halo Glow
         const auraGrad = sourceCtx.createRadialGradient(
-          width * 0.5,
-          height * 0.5,
-          10,
-          width * 0.5,
-          height * 0.5,
-          logoSize * 0.8
+          width * 0.5, height * 0.5, logoSize * 0.25,
+          width * 0.5, height * 0.5, logoSize * 0.75
         );
-        auraGrad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
-        auraGrad.addColorStop(0.45, 'rgba(99, 102, 241, 0.25)');
-        auraGrad.addColorStop(0.8, 'rgba(14, 165, 233, 0.08)');
+        auraGrad.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
+        auraGrad.addColorStop(0.5, 'rgba(147, 51, 234, 0.12)');
         auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         sourceCtx.fillStyle = auraGrad;
-        sourceCtx.fillRect(logoX - 60, logoY - 60, logoSize + 120, logoSize + 120);
+        sourceCtx.fillRect(0, 0, width, height);
 
-        // Draw Logo
-        sourceCtx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+        // Logo Container with Rounded Corners
+        sourceCtx.save();
+        sourceCtx.imageSmoothingEnabled = true;
+        sourceCtx.imageSmoothingQuality = 'high';
+
+        const cornerRadius = Math.max(16, Math.min(32, logoSize * 0.08));
+        sourceCtx.beginPath();
+        sourceCtx.moveTo(lx + cornerRadius, ly);
+        sourceCtx.lineTo(lx + logoSize - cornerRadius, ly);
+        sourceCtx.quadraticCurveTo(lx + logoSize, ly, lx + logoSize, ly + cornerRadius);
+        sourceCtx.lineTo(lx + logoSize, ly + logoSize - cornerRadius);
+        sourceCtx.quadraticCurveTo(lx + logoSize, ly + logoSize, lx + logoSize - cornerRadius, ly + logoSize);
+        sourceCtx.lineTo(lx + cornerRadius, ly + logoSize);
+        sourceCtx.quadraticCurveTo(lx, ly + logoSize, lx, ly + logoSize - cornerRadius);
+        sourceCtx.lineTo(lx, ly + cornerRadius);
+        sourceCtx.quadraticCurveTo(lx, ly, lx + cornerRadius, ly);
+        sourceCtx.closePath();
+        sourceCtx.clip();
+
+        sourceCtx.drawImage(logoImg, lx, ly, logoSize, logoSize);
+        sourceCtx.restore();
+
+        // Subtle Logo Edge Border
+        sourceCtx.save();
+        sourceCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        sourceCtx.lineWidth = 1.5;
+        sourceCtx.beginPath();
+        sourceCtx.roundRect ? sourceCtx.roundRect(lx, ly, logoSize, logoSize, cornerRadius) : sourceCtx.strokeRect(lx, ly, logoSize, logoSize);
+        sourceCtx.stroke();
+        sourceCtx.restore();
       }
 
-      try {
-        sourceData = sourceCtx.getImageData(0, 0, width, height);
-      } catch (e) {
-        console.warn('Water canvas image data read notice:', e);
-      }
+      sourceData = sourceCtx.getImageData(0, 0, width, height);
     };
 
-    const initSimulation = () => {
-      if (!canvas.parentElement) return;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      width = canvas.width = Math.floor(rect.width);
-      height = canvas.height = Math.floor(rect.height);
+    const handleResize = () => {
+      const parent = canvas.parentElement;
+      if (!parent) return;
 
-      simWidth = Math.ceil(width / SIM_SCALE);
-      simHeight = Math.ceil(height / SIM_SCALE);
-      bufferSize = simWidth * simHeight;
+      const dpr = 1; // High performance full resolution
+      width = parent.clientWidth * dpr;
+      height = parent.clientHeight * dpr;
 
-      // Clean zeroed buffers (Primal state = Completely Still Calm Water)
-      buffer1 = new Float32Array(bufferSize);
-      buffer2 = new Float32Array(bufferSize);
+      canvas.width = width;
+      canvas.height = height;
+
+      simWidth = Math.max(2, Math.floor(width / SIM_SCALE));
+      simHeight = Math.max(2, Math.floor(height / SIM_SCALE));
+
+      const totalSimPixels = simWidth * simHeight;
+      buffer1 = new Float32Array(totalSimPixels);
+      buffer2 = new Float32Array(totalSimPixels);
       currentBuffer = buffer1;
       nextBuffer = buffer2;
 
-      drawSourceTexture();
+      drawSourceBackground();
     };
 
-    logoImg.onload = () => {
-      logoLoaded = true;
-      drawSourceTexture();
-    };
-
-    initSimulation();
-
-    const handleResize = () => {
-      initSimulation();
-    };
+    handleResize();
     window.addEventListener('resize', handleResize);
 
-    // Disturb water surface ONLY upon user cursor action
+    // Smooth Cosine Bell-Curve Wave Drop
     const addDrop = (x, y, radius, strength) => {
+      if (!currentBuffer || width === 0 || height === 0) return;
+
       const simX = Math.floor(x / SIM_SCALE);
       const simY = Math.floor(y / SIM_SCALE);
       const simRadius = Math.max(1, Math.floor(radius / SIM_SCALE));
@@ -149,24 +174,28 @@ export const WaterWaveCanvas = () => {
 
       const rSq = simRadius * simRadius;
 
-      for (let py = minY; py <= maxY; py++) {
-        for (let px = minX; px <= maxX; px++) {
-          const dx = px - simX;
-          const dy = py - simY;
+      for (let j = minY; j <= maxY; j++) {
+        const dy = j - simY;
+        const rowOffset = j * simWidth;
+        for (let i = minX; i <= maxX; i++) {
+          const dx = i - simX;
           const distSq = dx * dx + dy * dy;
-          if (distSq <= rSq) {
-            const factor = Math.cos((Math.sqrt(distSq) / simRadius) * Math.PI * 0.5);
-            currentBuffer[py * simWidth + px] += strength * factor;
+          if (distSq < rSq) {
+            const dist = Math.sqrt(distSq);
+            // Smooth Cosine Bell-Curve Profile
+            const factor = Math.cos((dist / simRadius) * (Math.PI * 0.5));
+            currentBuffer[rowOffset + i] += strength * factor;
           }
         }
       }
     };
 
+    // Continuous Fluid Stroke Interpolation (Dense 2.5px spacing)
     const addDropLine = (x0, y0, x1, y1, radius, strength) => {
       const dx = x1 - x0;
       const dy = y1 - y0;
       const dist = Math.hypot(dx, dy);
-      const steps = Math.max(1, Math.floor(dist / (SIM_SCALE * 1.5)));
+      const steps = Math.max(1, Math.ceil(dist / 2.5));
 
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
@@ -176,13 +205,12 @@ export const WaterWaveCanvas = () => {
 
     const updateCursorState = (x, y) => {
       if (width === 0 || height === 0) return;
-      const logoSize = Math.min(width * 0.76, height * 0.76, 460);
+      const logoSize = Math.min(width * 0.72, height * 0.72, 420);
       const centerX = width * 0.5;
       const centerY = height * 0.5;
       const distFromCenter = Math.hypot(x - centerX, y - centerY);
-      const logoRadius = (logoSize * 0.5) * 1.08; // Logo zone
+      const logoRadius = (logoSize * 0.5) * 1.1;
 
-      // When cursor is over or near the logo, transform cursor to PLUS (+)
       if (distFromCenter <= logoRadius) {
         canvas.style.cursor = PLUS_CURSOR;
       } else {
@@ -199,12 +227,11 @@ export const WaterWaveCanvas = () => {
 
       if (mouse.active && mouse.prevX >= 0 && mouse.prevY >= 0) {
         const speed = Math.hypot(currentX - mouse.prevX, currentY - mouse.prevY);
-        // Wave energy directly proportional to cursor drag
-        const strength = Math.min(220, 40 + speed * 3.2);
-        const radius = Math.min(30, 15 + speed * 0.35);
+        const strength = Math.min(220, 35 + speed * 2.8);
+        const radius = Math.min(28, 14 + speed * 0.3);
         addDropLine(mouse.prevX, mouse.prevY, currentX, currentY, radius, strength);
       } else {
-        addDrop(currentX, currentY, 18, 70);
+        addDrop(currentX, currentY, 18, 65);
       }
 
       mouse.prevX = currentX;
@@ -224,8 +251,7 @@ export const WaterWaveCanvas = () => {
       mouse.x = currentX;
       mouse.y = currentY;
       mouse.active = true;
-      // Gentle initial surface entry wake
-      addDrop(currentX, currentY, 20, 80);
+      addDrop(currentX, currentY, 20, 75);
     };
 
     const handleMouseLeave = () => {
@@ -238,6 +264,30 @@ export const WaterWaveCanvas = () => {
     canvas.addEventListener('mousemove', handleMouseMove, { passive: true });
     canvas.addEventListener('mouseenter', handleMouseEnter, { passive: true });
     canvas.addEventListener('mouseleave', handleMouseLeave, { passive: true });
+
+    // High-Precision Bilinear Sub-Pixel Color Sampling Function
+    const sampleBilinear = (src32, srcW, srcH, fx, fy) => {
+      const x0 = Math.max(0, Math.min(srcW - 1, Math.floor(fx)));
+      const y0 = Math.max(0, Math.min(srcH - 1, Math.floor(fy)));
+      const x1 = Math.min(srcW - 1, x0 + 1);
+      const y1 = Math.min(srcH - 1, y0 + 1);
+
+      const dx = fx - x0;
+      const dy = fy - y0;
+      const invDx = 1.0 - dx;
+      const invDy = 1.0 - dy;
+
+      const p00 = src32[y0 * srcW + x0];
+      const p10 = src32[y0 * srcW + x1];
+      const p01 = src32[y1 * srcW + x0];
+      const p11 = src32[y1 * srcW + x1];
+
+      const r = (p00 & 0xff) * invDx * invDy + (p10 & 0xff) * dx * invDy + (p01 & 0xff) * invDx * dy + (p11 & 0xff) * dx * dy;
+      const g = ((p00 >> 8) & 0xff) * invDx * invDy + ((p10 >> 8) & 0xff) * dx * invDy + ((p01 >> 8) & 0xff) * invDx * dy + ((p11 >> 8) & 0xff) * dx * dy;
+      const b = ((p00 >> 16) & 0xff) * invDx * invDy + ((p10 >> 16) & 0xff) * dx * invDy + ((p01 >> 16) & 0xff) * invDx * dy + ((p11 >> 16) & 0xff) * dx * dy;
+
+      return { r: r | 0, g: g | 0, b: b | 0 };
+    };
 
     const render = () => {
       if (!sourceData || width === 0 || height === 0) {
@@ -267,10 +317,8 @@ export const WaterWaveCanvas = () => {
               0.5) -
             nextBuffer[idx];
 
-          // Natural liquid viscosity damping
           waveHeight *= DAMPING;
 
-          // Dissipate below threshold to guarantee pristine, crystal-clear resting stillness (Silent Pond)
           if (Math.abs(waveHeight) < EPSILON) {
             waveHeight = 0;
           } else {
@@ -291,8 +339,8 @@ export const WaterWaveCanvas = () => {
       const srcW = width;
       const srcH = height;
 
-      // Fast path: If water is completely still, blit pristine un-distorted crystal pond
       if (maxEnergy === 0) {
+        // Pristine resting crystal pond
         outData32.set(srcData32);
       } else {
         for (let y = 0; y < height; y++) {
@@ -308,38 +356,25 @@ export const WaterWaveCanvas = () => {
             const gradX = currentBuffer[simIdx + 1] - currentBuffer[simIdx - 1];
             const gradY = currentBuffer[simRowNext + simX] - currentBuffer[(simY - 1 < 0 ? 0 : simY - 1) * simWidth + simX];
 
-            // If local surface is flat, direct sample
             if (gradX === 0 && gradY === 0) {
               outData32[outRow + x] = srcData32[y * srcW + x];
               continue;
             }
 
-            // Optical surface refraction coordinates
-            let refX = Math.floor(x + gradX * 0.85);
-            let refY = Math.floor(y + gradY * 0.85);
+            // High-Definition Sub-Pixel Coordinates
+            const refX = x + gradX * 0.85;
+            const refY = y + gradY * 0.85;
 
-            if (refX < 0) refX = 0;
-            if (refX >= srcW) refX = srcW - 1;
-            if (refY < 0) refY = 0;
-            if (refY >= srcH) refY = srcH - 1;
-
-            let pixel = srcData32[refY * srcW + refX];
+            // Bilinear Interpolation for Velvety Smooth Refraction
+            const sampled = sampleBilinear(srcData32, srcW, srcH, refX, refY);
 
             // Specular caustic wave gleam
-            const shading = Math.floor((gradX - gradY) * 1.5);
-            if (shading !== 0) {
-              let r = pixel & 0xff;
-              let g = (pixel >> 8) & 0xff;
-              let b = (pixel >> 16) & 0xff;
+            const shading = (gradX - gradY) * 1.35;
+            let r = Math.min(255, Math.max(0, sampled.r + shading * 0.6));
+            let g = Math.min(255, Math.max(0, sampled.g + shading * 0.8));
+            let b = Math.min(255, Math.max(0, sampled.b + shading * 1.15));
 
-              r = Math.min(255, Math.max(0, r + shading * 0.65));
-              g = Math.min(255, Math.max(0, g + shading * 0.85));
-              b = Math.min(255, Math.max(0, b + shading * 1.15));
-
-              pixel = (0xff000000) | (b << 16) | (g << 8) | r;
-            }
-
-            outData32[outRow + x] = pixel;
+            outData32[outRow + x] = (0xff000000) | (b << 16) | (g << 8) | r;
           }
         }
       }
@@ -370,4 +405,5 @@ export const WaterWaveCanvas = () => {
   );
 };
 
+export { WaterWaveCanvas };
 export default WaterWaveCanvas;

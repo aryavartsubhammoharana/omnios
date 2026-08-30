@@ -79,7 +79,7 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
       <aside
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`fixed inset-y-0 left-0 z-50 bg-[#0d111a] border-r border-gray-800/80 shadow-2xl flex flex-col justify-between transition-all duration-300 ease-out select-none ${
+        className={`fixed inset-y-0 left-0 z-50 bg-[#0d111a] border-r border-gray-800/80 shadow-2xl flex flex-col justify-between transition-[width,box-shadow] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[width] select-none ${
           isExpanded ? 'w-72 sm:w-80 shadow-black/80' : 'w-[68px]'
         }`}
       >
