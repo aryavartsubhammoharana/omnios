@@ -415,33 +415,6 @@ export default function QuickPDFReader() {
         <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
 
         <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-          {/* Top Hero Banner */}
-          <div className="glass-card p-6 sm:p-8 rounded-3xl border border-gray-800/80 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-3">
-                <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-sky-500/20 text-sky-300 border border-sky-500/30 flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-sky-400" />
-                  <span>Dual Document Workspace</span>
-                </span>
-                <span className="text-[11px] text-gray-400 font-mono">Classroom PDFs + Developer Reference Library</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Document & PDF Reader Hub
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-400 max-w-2xl leading-relaxed">
-                Read all your enrolled classroom lecture notes, plus official developer master formula sheets and blueprints with LaTeX math rendering and AI Copilot.
-              </p>
-            </div>
-
-            <Link
-              to="/dashboard"
-              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center space-x-2 shrink-0 cursor-pointer"
-            >
-              <GraduationCap className="w-4 h-4" />
-              <span>Browse Classrooms</span>
-            </Link>
-          </div>
-
           {/* Search Bar + Section Filter Tabs */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             {/* Filter Tabs */}
