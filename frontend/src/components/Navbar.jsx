@@ -1,18 +1,19 @@
 import React, { useContext, useEffect, useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API from '../api/client';
 import { 
   BookOpen, LogOut, Sparkles, Flame, User, Bot, 
   GraduationCap, Settings, Mail, X, Check, Loader2,
-  Camera, Lock, KeyRound, Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award, ShieldCheck, Menu
+  Camera, Lock, KeyRound, Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award, ShieldCheck, Menu, FileText, ChevronRight
 } from 'lucide-react';
 
 export default function Navbar() {
   const { user, logout, confirmRole, updateProfile, changePassword, uploadAvatar, deleteAccount } = useContext(AuthContext);
   const navigate = useNavigate();
+  const location = useLocation();
   const [streak, setStreak] = useState(1);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Mandatory Role Selection Modal State (Google Login First-Time Onboarding)
   const [mandatoryRole, setMandatoryRole] = useState('student');
@@ -53,6 +54,17 @@ export default function Navbar() {
         .catch(() => {});
     }
   }, [user]);
+
+  // Close sidebar on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -154,11 +166,28 @@ export default function Navbar() {
 
   const isRolePending = user && user.is_role_confirmed === false;
 
+  const isActivePath = (path) => {
+    if (path === '/dashboard' && location.pathname === '/dashboard') return true;
+    if (path !== '/dashboard' && location.pathname.startsWith(path)) return true;
+    return false;
+  };
+
   return (
     <>
-      <nav className="h-[61px] bg-gray-950/80 backdrop-blur-xl border-b border-gray-800/80 px-3 sm:px-6 flex items-center justify-between sticky top-0 z-40">
-        {/* Brand Logo (Left) */}
-        <div className="flex items-center space-x-3 sm:space-x-6 flex-shrink-0">
+      {/* ── TOP NAVBAR ── */}
+      <nav className="h-[61px] bg-gray-950/85 backdrop-blur-xl border-b border-gray-800/80 px-3 sm:px-6 flex items-center justify-between sticky top-0 z-40 select-none">
+        {/* Left: Menu Hamburger Trigger + OmniOS Logo */}
+        <div className="flex items-center space-x-3 sm:space-x-4 flex-shrink-0">
+          {user && !isRolePending && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white transition shadow-sm flex items-center justify-center cursor-pointer group"
+              title="Open Navigation Menu"
+            >
+              <Menu className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+            </button>
+          )}
+
           <Link to="/dashboard" className="flex items-center space-x-2.5 group">
             <img 
               src="/logo.png" 
@@ -175,42 +204,13 @@ export default function Navbar() {
                 </span>
               </div>
               <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium tracking-tight whitespace-nowrap hidden xs:block">
-                OmniAI + Classroom
+                Academic & AI Studio
               </p>
             </div>
           </Link>
         </div>
 
-        {/* Desktop Navigation Tabs (Center) */}
-        {user && !isRolePending && (
-          <div className="hidden lg:flex items-center bg-gray-900/90 border border-gray-800/80 rounded-xl p-1 gap-1 shadow-inner flex-shrink-0">
-            <Link
-              to="/dashboard"
-              className="text-xs px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Classrooms</span>
-            </Link>
-            <Link
-              to="/notebooklm"
-              className="text-xs px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5 whitespace-nowrap"
-            >
-              <Bot className="w-3.5 h-3.5 text-purple-400" />
-              <span>OmniAI Studio</span>
-            </Link>
-            {user.role === 'student' && (
-              <Link
-                to="/student/daily-hub"
-                className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 font-medium transition flex items-center gap-1.5 hover:bg-indigo-600/30 whitespace-nowrap"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span>🎯 Daily AI Practice & Videos</span>
-              </Link>
-            )}
-          </div>
-        )}
-
-        {/* User Controls & Streak & Mobile Menu (Right) */}
+        {/* Right: Streak Counter + Profile Pill + Logout */}
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           {user ? (
             <div className="flex items-center space-x-2 sm:space-x-2.5">
@@ -254,25 +254,14 @@ export default function Navbar() {
                 <Settings className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-300 hidden sm:block" />
               </button>
 
-              {/* Logout Button (Desktop / Tablet) */}
+              {/* Quick Logout Button */}
               <button
                 onClick={handleLogout}
-                className="hidden sm:flex p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-xl transition text-xs items-center gap-1 flex-shrink-0"
+                className="hidden sm:flex p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-xl transition text-xs items-center gap-1 flex-shrink-0 cursor-pointer"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
               </button>
-
-              {/* Mobile / Tablet Hamburger Menu Button */}
-              {!isRolePending && (
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="lg:hidden p-2 rounded-xl bg-gray-900 border border-gray-800 text-gray-300 hover:text-white hover:bg-gray-800 transition flex-shrink-0"
-                  aria-label="Toggle navigation menu"
-                >
-                  {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-                </button>
-              )}
             </div>
           ) : (
             <div className="flex items-center space-x-2 sm:space-x-2.5">
@@ -287,62 +276,180 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* MOBILE / TABLET SLIDE-DOWN NAVIGATION MENU */}
-      {mobileMenuOpen && user && !isRolePending && (
-        <div className="lg:hidden bg-gray-950/95 backdrop-blur-xl border-b border-gray-800/80 px-4 py-3 space-y-2 sticky top-[61px] z-40 shadow-2xl animate-in slide-in-from-top-2 duration-200">
-          <Link
-            to="/dashboard"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl bg-gray-900/60 hover:bg-indigo-950 text-gray-200 hover:text-white border border-gray-800/80 transition text-xs font-medium"
+      {/* ── COLLAPSIBLE LEFT SIDEBAR DRAWER MENU ── */}
+      {user && !isRolePending && (
+        <>
+          {/* Backdrop Overlay */}
+          <div
+            onClick={() => setSidebarOpen(false)}
+            className={`fixed inset-0 bg-black/65 backdrop-blur-sm z-50 transition-opacity duration-300 ${
+              sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+          />
+
+          {/* Left Sliding Drawer */}
+          <aside
+            className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-[#0d111a]/95 backdrop-blur-2xl border-r border-gray-800/80 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-out transform select-none ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
           >
-            <BookOpen className="w-4 h-4 text-indigo-400" />
-            <span>Classrooms Hub</span>
-          </Link>
+            {/* Top: Header & Brand */}
+            <div>
+              <div className="p-4 sm:p-5 border-b border-gray-800/80 flex items-center justify-between">
+                <div className="flex items-center space-x-2.5">
+                  <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-xl object-cover border border-indigo-500/40 shadow-md" />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-extrabold text-white text-base tracking-tight">OmniOS</span>
+                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">PRO</span>
+                    </div>
+                    <p className="text-[10px] text-gray-400">Navigation Menu</p>
+                  </div>
+                </div>
 
-          <Link
-            to="/notebooklm"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl bg-gray-900/60 hover:bg-purple-950 text-gray-200 hover:text-white border border-gray-800/80 transition text-xs font-medium"
-          >
-            <Bot className="w-4 h-4 text-purple-400" />
-            <span>OmniAI Studio</span>
-          </Link>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-1.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800 transition cursor-pointer"
+                  title="Close Menu"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-          {user.role === 'student' && (
-            <Link
-              to="/student/daily-hub"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 hover:text-white border border-indigo-800/60 transition text-xs font-medium"
-            >
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span>🎯 Daily AI Practice & Videos</span>
-            </Link>
-          )}
+              {/* User Mini Profile Card */}
+              <div className="p-4 border-b border-gray-800/60 bg-gray-950/40">
+                <div className="flex items-center space-x-3">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.full_name} className="w-10 h-10 rounded-xl object-cover border border-indigo-500/50 shadow" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center font-bold text-sm shadow">
+                      {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-bold text-white truncate">{user.full_name}</h4>
+                    <p className="text-[10px] text-gray-400 truncate font-mono">{user.email}</p>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        {user.role}
+                      </span>
+                      {user.student_class && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
+                          {user.student_class}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-          <div className="pt-2 border-t border-gray-800 flex items-center justify-between gap-2">
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setShowProfileModal(true);
-              }}
-              className="flex-1 flex items-center justify-center space-x-2 py-2 px-3 bg-gray-900 hover:bg-gray-800 rounded-xl text-xs text-gray-300 font-medium border border-gray-800 transition"
-            >
-              <Settings className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Profile Settings</span>
-            </button>
+              {/* Navigation Options List */}
+              <div className="p-3 sm:p-4 space-y-1.5">
+                <div className="px-3 py-1 text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
+                  Workspace Apps
+                </div>
 
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                handleLogout();
-              }}
-              className="flex items-center justify-center space-x-1.5 py-2 px-3 bg-red-950/60 hover:bg-red-900 rounded-xl text-xs text-red-300 font-medium border border-red-800 transition"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
+                {/* 1. Classrooms */}
+                <Link
+                  to="/dashboard"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition group ${
+                    isActivePath('/dashboard')
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-900/80 border border-transparent hover:border-gray-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <BookOpen className={`w-4 h-4 ${isActivePath('/dashboard') ? 'text-white' : 'text-indigo-400 group-hover:scale-110 transition'}`} />
+                    <span>Classrooms Hub</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition" />
+                </Link>
+
+                {/* 2. OmniAI Studio */}
+                <Link
+                  to="/notebooklm"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition group ${
+                    isActivePath('/notebooklm')
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-900/80 border border-transparent hover:border-gray-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <Bot className={`w-4 h-4 ${isActivePath('/notebooklm') ? 'text-white' : 'text-purple-400 group-hover:scale-110 transition'}`} />
+                    <span>OmniAI Studio</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition" />
+                </Link>
+
+                {/* 3. Daily AI Practice & Videos (Student only) */}
+                {user.role === 'student' && (
+                  <Link
+                    to="/student/daily-hub"
+                    onClick={() => setSidebarOpen(false)}
+                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition group ${
+                      isActivePath('/student/daily-hub')
+                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
+                        : 'text-gray-300 hover:text-white hover:bg-gray-900/80 border border-transparent hover:border-gray-800'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Sparkles className={`w-4 h-4 ${isActivePath('/student/daily-hub') ? 'text-white' : 'text-amber-400 group-hover:scale-110 transition'}`} />
+                      <span>🎯 Daily AI Practice & Videos</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition" />
+                  </Link>
+                )}
+
+                {/* 4. Quick Document & PDF Reader */}
+                <Link
+                  to="/quick-reader"
+                  onClick={() => setSidebarOpen(false)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition group ${
+                    isActivePath('/quick-reader')
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-gray-300 hover:text-white hover:bg-gray-900/80 border border-transparent hover:border-gray-800'
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <FileText className={`w-4 h-4 ${isActivePath('/quick-reader') ? 'text-white' : 'text-cyan-400 group-hover:scale-110 transition'}`} />
+                    <span>Document & PDF Reader</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Bottom: Settings & Logout */}
+            <div className="p-4 border-t border-gray-800/80 space-y-2 bg-gray-950/60">
+              <button
+                onClick={() => {
+                  setSidebarOpen(false);
+                  setShowProfileModal(true);
+                }}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white text-xs font-medium transition cursor-pointer"
+              >
+                <div className="flex items-center space-x-2.5">
+                  <Settings className="w-4 h-4 text-indigo-400" />
+                  <span>Profile & Class Settings</span>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
+              </button>
+
+              <button
+                onClick={() => {
+                  setSidebarOpen(false);
+                  handleLogout();
+                }}
+                className="w-full flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 text-red-300 hover:text-red-200 text-xs font-semibold transition cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log Out</span>
+              </button>
+            </div>
+          </aside>
+        </>
       )}
 
       {/* Mandatory Non-Dismissible Role Selection Onboarding Modal (Google First Login) */}
