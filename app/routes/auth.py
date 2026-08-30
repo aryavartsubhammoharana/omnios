@@ -262,10 +262,10 @@ def update_profile(
     db: Session = Depends(get_db)
 ):
     if profile_data.full_name is not None:
-        current_user.full_name = profile_data.full_name
+        current_user.full_name = profile_data.full_name.strip()
     if profile_data.student_class is not None:
-        current_user.student_class = profile_data.student_class
-    if profile_data.avatar_url is not None:
+        current_user.student_class = profile_data.student_class.strip()
+    if getattr(profile_data, 'avatar_url', None) is not None:
         current_user.avatar_url = profile_data.avatar_url
 
     db.commit()

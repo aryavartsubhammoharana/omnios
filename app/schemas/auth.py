@@ -37,6 +37,7 @@ class GoogleAuthRequest(BaseModel):
 class UserProfileUpdate(BaseModel):
     full_name: Optional[str] = None
     student_class: Optional[str] = None
+    avatar_url: Optional[str] = None
 
 class UserOut(BaseModel):
     id: int
