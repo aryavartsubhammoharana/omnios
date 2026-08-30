@@ -8,6 +8,8 @@ import {
   Camera, Lock, KeyRound, Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award, ShieldCheck, Menu, FileText, ChevronRight
 } from 'lucide-react';
 
+import NavigationSidebar from './NavigationSidebar';
+
 export default function Navbar() {
   const { user, logout, confirmRole, updateProfile, changePassword, uploadAvatar, deleteAccount } = useContext(AuthContext);
   const navigate = useNavigate();
@@ -166,12 +168,6 @@ export default function Navbar() {
 
   const isRolePending = user && user.is_role_confirmed === false;
 
-  const isActivePath = (path) => {
-    if (path === '/dashboard' && location.pathname === '/dashboard') return true;
-    if (path !== '/dashboard' && location.pathname.startsWith(path)) return true;
-    return false;
-  };
-
   return (
     <>
       {/* ── TOP NAVBAR ── */}
@@ -180,11 +176,11 @@ export default function Navbar() {
         <div className="flex items-center space-x-3 sm:space-x-4 flex-shrink-0">
           {user && !isRolePending && (
             <button
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 rounded-xl bg-gray-900/90 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white transition shadow-sm flex items-center justify-center cursor-pointer group"
-              title="Open Navigation Menu"
+              title="Main menu"
             >
-              <Menu className="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform" />
+              <Menu className="w-5 h-5 text-gray-300 group-hover:scale-110 transition-transform" />
             </button>
           )}
 
@@ -276,181 +272,12 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* ── COLLAPSIBLE LEFT SIDEBAR DRAWER MENU ── */}
-      {user && !isRolePending && (
-        <>
-          {/* Backdrop Overlay */}
-          <div
-            onClick={() => setSidebarOpen(false)}
-            className={`fixed inset-0 bg-black/65 backdrop-blur-sm z-50 transition-opacity duration-300 ${
-              sidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-            }`}
-          />
-
-          {/* Left Sliding Drawer */}
-          <aside
-            className={`fixed inset-y-0 left-0 z-50 w-72 sm:w-80 bg-[#0d111a]/95 backdrop-blur-2xl border-r border-gray-800/80 shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-out transform select-none ${
-              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-            }`}
-          >
-            {/* Top: Header & Brand */}
-            <div>
-              <div className="p-4 sm:p-5 border-b border-gray-800/80 flex items-center justify-between">
-                <div className="flex items-center space-x-2.5">
-                  <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-xl object-cover border border-indigo-500/40 shadow-md" />
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-extrabold text-white text-base tracking-tight">OmniOS</span>
-                      <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">PRO</span>
-                    </div>
-                    <p className="text-[10px] text-gray-400">Navigation Menu</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => setSidebarOpen(false)}
-                  className="p-1.5 rounded-xl bg-gray-900 border border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800 transition cursor-pointer"
-                  title="Close Menu"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* User Mini Profile Card */}
-              <div className="p-4 border-b border-gray-800/60 bg-gray-950/40">
-                <div className="flex items-center space-x-3">
-                  {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.full_name} className="w-10 h-10 rounded-xl object-cover border border-indigo-500/50 shadow" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-400 flex items-center justify-center font-bold text-sm shadow">
-                      {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-white truncate">{user.full_name}</h4>
-                    <p className="text-[10px] text-gray-400 truncate font-mono">{user.email}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <span className="text-[9px] px-1.5 py-0.5 rounded uppercase font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                        {user.role}
-                      </span>
-                      {user.student_class && (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-800/60">
-                          {user.student_class}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Navigation Options List */}
-              <div className="p-3 sm:p-4 space-y-1.5">
-                <div className="px-3 py-1 text-[10px] font-mono text-gray-400 uppercase tracking-wider font-semibold">
-                  Workspace Apps
-                </div>
-
-                {/* 1. Classrooms */}
-                <Link
-                  to="/dashboard"
-                  onClick={() => setSidebarOpen(false)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition group ${
-                    isActivePath('/dashboard')
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-900/80 border border-transparent hover:border-gray-800'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <BookOpen className={`w-4 h-4 ${isActivePath('/dashboard') ? 'text-white' : 'text-indigo-400 group-hover:scale-110 transition'}`} />
-                    <span>Classrooms Hub</span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition" />
-                </Link>
-
-                {/* 2. OmniAI Studio */}
-                <Link
-                  to="/notebooklm"
-                  onClick={() => setSidebarOpen(false)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition group ${
-                    isActivePath('/notebooklm')
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-900/80 border border-transparent hover:border-gray-800'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Bot className={`w-4 h-4 ${isActivePath('/notebooklm') ? 'text-white' : 'text-purple-400 group-hover:scale-110 transition'}`} />
-                    <span>OmniAI Studio</span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition" />
-                </Link>
-
-                {/* 3. Daily AI Practice & Videos (Student only) */}
-                {user.role === 'student' && (
-                  <Link
-                    to="/student/daily-hub"
-                    onClick={() => setSidebarOpen(false)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition group ${
-                      isActivePath('/student/daily-hub')
-                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
-                        : 'text-gray-300 hover:text-white hover:bg-gray-900/80 border border-transparent hover:border-gray-800'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Sparkles className={`w-4 h-4 ${isActivePath('/student/daily-hub') ? 'text-white' : 'text-amber-400 group-hover:scale-110 transition'}`} />
-                      <span>🎯 Daily AI Practice & Videos</span>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition" />
-                  </Link>
-                )}
-
-                {/* 4. Quick Document & PDF Reader */}
-                <Link
-                  to="/quick-reader"
-                  onClick={() => setSidebarOpen(false)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition group ${
-                    isActivePath('/quick-reader')
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-900/80 border border-transparent hover:border-gray-800'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <FileText className={`w-4 h-4 ${isActivePath('/quick-reader') ? 'text-white' : 'text-cyan-400 group-hover:scale-110 transition'}`} />
-                    <span>Document & PDF Reader</span>
-                  </div>
-                  <ChevronRight className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 transition" />
-                </Link>
-              </div>
-            </div>
-
-            {/* Bottom: Settings & Logout */}
-            <div className="p-4 border-t border-gray-800/80 space-y-2 bg-gray-950/60">
-              <button
-                onClick={() => {
-                  setSidebarOpen(false);
-                  setShowProfileModal(true);
-                }}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-gray-900/80 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white text-xs font-medium transition cursor-pointer"
-              >
-                <div className="flex items-center space-x-2.5">
-                  <Settings className="w-4 h-4 text-indigo-400" />
-                  <span>Profile & Class Settings</span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-gray-500" />
-              </button>
-
-              <button
-                onClick={() => {
-                  setSidebarOpen(false);
-                  handleLogout();
-                }}
-                className="w-full flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 text-red-300 hover:text-red-200 text-xs font-semibold transition cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Log Out</span>
-              </button>
-            </div>
-          </aside>
-        </>
-      )}
+      {/* ── GOOGLE CLASSROOM STYLE COLLAPSIBLE SIDEBAR ── */}
+      <NavigationSidebar
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        onOpenSettings={() => setShowProfileModal(true)}
+      />
 
       {/* Mandatory Non-Dismissible Role Selection Onboarding Modal (Google First Login) */}
       {isRolePending && (
