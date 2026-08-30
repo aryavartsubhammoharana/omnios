@@ -205,6 +205,27 @@ The autonomous diagnostic quiz engine does not generate random trivia. Instead, 
 1. **Enrolled Classroom Lecture Notes**: The system retrieves recent text chunks from the student's active classrooms in PostgreSQL & ChromaDB.
 2. **Historical Diagnostic Gap Analysis**: The engine reviews past `StudentDailyQuiz` records to identify recurring weak concepts and reinforce them with variant questions.
 
+### 📅 Day-Wise Class Subject Academic Schedule (`app/routes/student_portal.py`):
+The daily practice quiz systematically rotates across all fundamental subjects according to the Indian Standard Time (`IST`) day of the week:
+
+#### 🎓 Class 10 & Secondary Foundation Schedule:
+- **Monday (सोमवार)**: **Science (विज्ञान)** — Physics, Chemistry & Biology (8 MCQs on Light, Electricity, Life Processes, Chemical Reactions & Acid-Bases).
+- **Tuesday (मंगलवार)**: **Social Science / SST (सामाजिक विज्ञान)** — History (Nationalism), Geography (Resources), Civics (Power Sharing) & Economics (8 MCQs).
+- **Wednesday (बुधवार)**: **Mathematics (गणित - Numericals)** — 8 step-by-step problem-solving MCQs with LaTeX equations ($...$) covering Quadratic Equations, Trigonometry, Geometry & Progressions.
+- **Thursday (गुरुवार)**: **English** — Short 120-150 word Unseen Reading Comprehension Passage (5 MCQs) + English Applied Grammar & Vocabulary (5 MCQs on Tenses, Modals, Voice).
+- **Friday (शुक्रवार)**: **Hindi (हिंदी)** — 120-word रोचक अपठित गद्यांश (5 MCQs) + हिंदी व्याकरण (5 MCQs on समास, संधि, पद-परिचय, मुहावरे) strictly generated in Hindi Devanagari script via Sarvam AI.
+- **Saturday (शनिवार)**: **Math & Science Revision** — 8 high-yield STEM numericals and conceptual questions reviewing the week's key topics.
+- **Sunday (रविवार)**: **Weekly Comprehensive Mock Assessment** — 10 balanced cross-subject diagnostic questions covering Science, SST, Math, English, and Hindi.
+
+#### 🔬 Class 11 / 12 Senior Secondary & Competitive (JEE/NEET) Schedule:
+- **Monday**: Physics (Mechanics, Electromagnetism, Optics & Core Derivations)
+- **Tuesday**: Chemistry (Organic Mechanisms, Physical Equilibrium & Periodic Trends)
+- **Wednesday**: Mathematics / Biology (Calculus, Vectors, Genetics & Cell Physiology)
+- **Thursday**: English Core (Advanced Reading Comprehension & Applied Literary Devices)
+- **Friday**: Computer Science / Applied Electives (Algorithms, Python Structures, Networks)
+- **Saturday**: JEE / NEET Mixed High-Yield Diagnostic Problems
+- **Sunday**: Full Syllabus Comprehensive Weekly Mock Revision
+
 ### 🎯 How Questions Are Calibrated to Student Standards:
 1. **Targeted Difficulty & Competency Scaling**:
    - Prompts pass the student's configured grade level (*Class 9 to College*), adjusting vocabulary, problem complexity, and distractors.
