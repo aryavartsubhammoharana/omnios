@@ -2,6 +2,8 @@ import React, { useState, useContext, useEffect, useRef } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
+import ThreadFabricCanvas from '../components/ThreadFabricCanvas';
+import MagneticGoogleButton from '../components/MagneticGoogleButton';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '208360710553-s8ccnmol8g9klrljcumtoda23gqsokl3.apps.googleusercontent.com';
 
@@ -17,7 +19,6 @@ export default function Login() {
 
   // Left-pane cursor tracking & 3D tilt
   const leftPaneRef = useRef(null);
-  const canvasRef = useRef(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0, normalizedX: 0, normalizedY: 0 });
 
   useEffect(() => {
@@ -57,120 +58,6 @@ export default function Login() {
       } catch (e) {}
     };
   }, [user]);
-
-  // Interactive Neural Particle Canvas on Left Pane
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animationFrameId;
-
-    const resizeCanvas = () => {
-      canvas.width = canvas.parentElement?.clientWidth || 600;
-      canvas.height = canvas.parentElement?.clientHeight || 800;
-    };
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-
-    // Particle nodes
-    const particleCount = 45;
-    const particles = Array.from({ length: particleCount }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      vx: (Math.random() - 0.5) * 0.8,
-      vy: (Math.random() - 0.5) * 0.8,
-      radius: Math.random() * 2 + 1.2,
-      baseAlpha: Math.random() * 0.5 + 0.3
-    }));
-
-    let targetMouse = { x: canvas.width / 2, y: canvas.height / 2, active: false };
-
-    const handleMouseMove = (e) => {
-      if (!canvas) return;
-      const rect = canvas.getBoundingClientRect();
-      targetMouse.x = e.clientX - rect.left;
-      targetMouse.y = e.clientY - rect.top;
-      targetMouse.active = true;
-    };
-
-    const handleMouseLeave = () => {
-      targetMouse.active = false;
-    };
-
-    const container = leftPaneRef.current;
-    if (container) {
-      container.addEventListener('mousemove', handleMouseMove);
-      container.addEventListener('mouseleave', handleMouseLeave);
-    }
-
-    const render = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Connect particles
-      for (let i = 0; i < particles.length; i++) {
-        const p1 = particles[i];
-        p1.x += p1.vx;
-        p1.y += p1.vy;
-
-        if (p1.x < 0 || p1.x > canvas.width) p1.vx *= -1;
-        if (p1.y < 0 || p1.y > canvas.height) p1.vy *= -1;
-
-        // Draw particle node
-        ctx.beginPath();
-        ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(129, 140, 248, 0.7)';
-        ctx.shadowColor = '#6366f1';
-        ctx.shadowBlur = 8;
-        ctx.fill();
-
-        // Connect with nearby particles
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 110) {
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(99, 102, 241, ${0.22 * (1 - dist / 110)})`;
-            ctx.lineWidth = 0.8;
-            ctx.stroke();
-          }
-        }
-
-        // Connect with mouse cursor
-        if (targetMouse.active) {
-          const dx = p1.x - targetMouse.x;
-          const dy = p1.y - targetMouse.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < 160) {
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(targetMouse.x, targetMouse.y);
-            ctx.strokeStyle = `rgba(56, 189, 248, ${0.45 * (1 - dist / 160)})`;
-            ctx.lineWidth = 1.2;
-            ctx.stroke();
-          }
-        }
-      }
-
-      animationFrameId = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      if (container) {
-        container.removeEventListener('mousemove', handleMouseMove);
-        container.removeEventListener('mouseleave', handleMouseLeave);
-      }
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
 
   const handleLeftPaneMouseMove = (e) => {
     if (!leftPaneRef.current) return;
@@ -228,18 +115,18 @@ export default function Login() {
   return (
     <div className="min-h-screen w-full bg-[#080b11] text-gray-100 flex flex-col lg:flex-row select-none overflow-hidden">
       {/* =========================================================================
-          LEFT SIDE: Interactive 1:1 Logo + Neural Cursor Reactive Showcase
+          LEFT SIDE: Interactive Thread & Fabric Physics Canvas Animation + 1:1 Logo
           ========================================================================= */}
       <div
         ref={leftPaneRef}
         onMouseMove={handleLeftPaneMouseMove}
-        className="relative lg:w-1/2 min-h-[380px] lg:min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#070a13] to-[#04060a] flex flex-col items-center justify-center p-8 sm:p-12 overflow-hidden border-b lg:border-b-0 lg:border-r border-gray-800/60"
+        className="relative lg:w-1/2 min-h-[350px] lg:min-h-screen bg-gradient-to-br from-[#0a0e1a] via-[#070a13] to-[#04060a] flex flex-col items-center justify-center p-8 sm:p-12 overflow-hidden border-b lg:border-b-0 lg:border-r border-gray-800/60"
       >
         {/* Dynamic Cursor Spotlight Effect */}
         <div
           className="pointer-events-none absolute -inset-px transition-opacity duration-300 opacity-70"
           style={{
-            background: `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(99, 102, 241, 0.18), rgba(56, 189, 248, 0.08) 35%, transparent 70%)`
+            background: `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(99, 102, 241, 0.2), rgba(56, 189, 248, 0.08) 35%, transparent 70%)`
           }}
         />
 
@@ -247,14 +134,14 @@ export default function Login() {
         <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-indigo-600/15 rounded-full blur-[100px] pointer-events-none animate-pulse-glow" />
         <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-cyan-600/15 rounded-full blur-[100px] pointer-events-none animate-pulse-glow" />
 
-        {/* Neural Network Interactive Canvas */}
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none z-0" />
+        {/* Interactive Thread & Fabric Physics Canvas */}
+        <ThreadFabricCanvas containerRef={leftPaneRef} />
 
         {/* Centerpiece 3D Interactive Logo Container */}
         <div
           className="relative z-10 flex flex-col items-center text-center max-w-md transition-transform duration-200 ease-out"
           style={{
-            transform: `perspective(1000px) rotateY(${mousePos.normalizedX * 12}deg) rotateX(${-mousePos.normalizedY * 12}deg)`
+            transform: `perspective(1000px) rotateY(${mousePos.normalizedX * 10}deg) rotateX(${-mousePos.normalizedY * 10}deg)`
           }}
         >
           {/* 1:1 Project Logo Card with Glowing Borders */}
@@ -296,7 +183,7 @@ export default function Login() {
 
         {/* Bottom subtle cursor hint */}
         <div className="absolute bottom-4 text-[10px] text-gray-500 tracking-wider font-mono">
-          [ Move cursor to interact with neural grid ]
+          [ Elastic thread & fabric physics simulation ]
         </div>
       </div>
 
@@ -304,7 +191,7 @@ export default function Login() {
           RIGHT SIDE: Sleek Minimalist Authentication Form
           ========================================================================= */}
       <div className="lg:w-1/2 min-h-screen bg-[#0d111a] flex items-center justify-center p-6 sm:p-12 relative z-20">
-        <div className="w-full max-w-[420px] space-y-7">
+        <div className="w-full max-w-[420px] space-y-6">
           {/* Header */}
           <div className="text-center sm:text-left space-y-2">
             <div className="flex items-center justify-center sm:justify-start gap-2.5 mb-2">
@@ -327,8 +214,8 @@ export default function Login() {
           )}
 
           <div className="space-y-4">
-            {/* Google Authentication Section */}
-            <div className="space-y-2">
+            {/* Google Authentication: 3D Magnetic Spotlight & Dynamic Border Sheen Card */}
+            <MagneticGoogleButton>
               <div className="w-full min-h-[44px] flex items-center justify-center">
                 <div id="googleSignInBtnDiv" className="w-full flex justify-center"></div>
               </div>
@@ -339,7 +226,7 @@ export default function Login() {
                   <span>Verifying Google Identity...</span>
                 </div>
               )}
-            </div>
+            </MagneticGoogleButton>
 
             {/* OR Divider Line */}
             <div className="relative flex items-center justify-center py-2">
