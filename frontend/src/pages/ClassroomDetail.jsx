@@ -13,6 +13,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import MathRenderer from '../components/MathRenderer';
 import { formatISTDateTime, formatISTDate } from '../utils/formatDate';
+import useLiveSync from '../utils/useLiveSync';
+import LiveToast from '../components/LiveToast';
 
 export default function ClassroomDetail() {
   const { id } = useParams();
@@ -115,21 +117,56 @@ export default function ClassroomDetail() {
     }
   };
 
+  // Live Notifications
+  const [liveToast, setLiveToast] = useState(null);
+
   useEffect(() => {
     loadData();
   }, [id]);
 
-  useEffect(() => {
-    const hasUnfinishedDocs = documents.some(d => d.processing_status && d.processing_status !== 'ready');
-    if (!hasUnfinishedDocs && !uploading) return;
+  // Non-disruptive silent background sync
+  useLiveSync(async () => {
+    if (!id) return;
+    try {
+      // 1. Silent sync for posts
+      const resPosts = await API.get(`/api/classroom/${id}/posts`);
+      if (resPosts.data && Array.isArray(resPosts.data)) {
+        setPosts(prevPosts => {
+          if (prevPosts.length > 0 && resPosts.data.length > prevPosts.length) {
+            const newCount = resPosts.data.length - prevPosts.length;
+            setLiveToast({
+              message: `✨ ${newCount} new announcement${newCount > 1 ? 's' : ''} in classroom`,
+              type: 'sparkle'
+            });
+            setTimeout(() => setLiveToast(null), 4000);
+          }
+          return resPosts.data;
+        });
+      }
 
-    const interval = setInterval(() => {
-      API.get(`/api/upload/list?classroom_id=${id}`).then((res) => {
-        setDocuments(res.data);
-      });
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [id, documents, uploading]);
+      // 2. Silent sync for documents & OCR readiness
+      const resDocs = await API.get(`/api/upload/list?classroom_id=${id}`);
+      if (resDocs.data && Array.isArray(resDocs.data)) {
+        setDocuments(prevDocs => {
+          prevDocs.forEach(oldDoc => {
+            if (oldDoc.processing_status && oldDoc.processing_status !== 'ready') {
+              const updatedDoc = resDocs.data.find(d => d.id === oldDoc.id);
+              if (updatedDoc && updatedDoc.processing_status === 'ready') {
+                setLiveToast({
+                  message: `📄 Notes ready: ${updatedDoc.filename}`,
+                  type: 'doc'
+                });
+                setTimeout(() => setLiveToast(null), 4000);
+              }
+            }
+          });
+          return resDocs.data;
+        });
+      }
+    } catch (err) {
+      // Silent error suppression on transient network blips
+    }
+  }, 5000);
 
   // Auto-refresh readingDoc modal while OCR is still in progress
   useEffect(() => {
@@ -1755,6 +1792,15 @@ export default function ClassroomDetail() {
         </div>
       )}
       </div>
+
+      {/* Non-Disruptive Live Notification Toast */}
+      {liveToast && (
+        <LiveToast
+          message={liveToast.message}
+          type={liveToast.type}
+          onClose={() => setLiveToast(null)}
+        />
+      )}
     </div>
   );
 }

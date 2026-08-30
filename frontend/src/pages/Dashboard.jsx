@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import API from '../api/client';
 import { AuthContext } from '../context/AuthContext';
 import { Plus, LogIn, BookOpen, Users, Sparkles, FileText, ArrowRight, Copy, Check, School, ShieldCheck, Flame } from 'lucide-react';
+import useLiveSync from '../utils/useLiveSync';
 
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
@@ -27,6 +28,9 @@ export default function Dashboard() {
   useEffect(() => {
     fetchClassrooms();
   }, []);
+
+  // Silent non-disruptive background sync
+  useLiveSync(fetchClassrooms, 8000);
 
   const handleCreateClass = async (e) => {
     e.preventDefault();
