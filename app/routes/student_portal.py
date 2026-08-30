@@ -217,24 +217,34 @@ def get_or_generate_daily_quiz(
                 notes_text += f"\n--- Material from {d.filename} ---\n{d.content_text[:2000]}\n"
 
     if not notes_text.strip():
-        notes_text = f"Curriculum and core concepts for {student_class} Subject: {sched['subject']} ({sched['focus']})."
+from app.services.curriculum_registry import get_active_term_chapters, build_advanced_diagnostic_prompt
 
-    prompt = (
-        f"You are an expert curriculum test creator for {student_class}.\n"
-        f"Today's Scheduled Subject: {sched['subject']} ({today.strftime('%A')})\n"
-        f"Core Focus: {sched['focus']}\n"
-        f"Instruction: {sched['instruction']}\n\n"
-        f"Study Material Context:\n{notes_text[:4000]}\n\n"
-        f"CRITICAL REQUIREMENTS:\n"
-        f"1. Generate exactly {sched['q_count']} multiple-choice questions.\n"
-        f"2. Return ONLY a valid JSON array of objects with keys:\n"
-        f'   - "id": number (1 to {sched["q_count"]})\n'
-        f'   - "question": string\n'
-        f'   - "options": array of 4 distinct string choices\n'
-        f'   - "correct_index": integer (0, 1, 2, or 3)\n'
-        f'   - "topic": concise 2-4 word topic tag\n'
-        f'   - "explanation": brief explanation of why the correct answer is right.\n'
-        f"Output pure JSON only, no markdown ticks, no commentary."
+    past_quizzes = db.query(StudentDailyQuiz).filter(
+        StudentDailyQuiz.student_id == current_user.id,
+        StudentDailyQuiz.is_completed == True
+    ).order_by(StudentDailyQuiz.completed_at.desc()).limit(5).all()
+
+    accumulated_weak_topics = []
+    for pq in past_quizzes:
+        if pq.weak_topics:
+            accumulated_weak_topics.extend(pq.weak_topics)
+
+    active_chapters = get_active_term_chapters(
+        class_name=student_class,
+        subject=sched["subject"],
+        current_month=today.month
+    )
+
+    prompt = build_advanced_diagnostic_prompt(
+        student_name=current_user.full_name or "Student",
+        target_class=student_class,
+        subject=sched["subject"],
+        weekday_name=today.strftime("%A"),
+        active_chapters=active_chapters,
+        weak_topics=accumulated_weak_topics,
+        study_notes_context=notes_text,
+        q_count=sched["q_count"],
+        lang=sched.get("lang", "en")
     )
 
     ai_response = ""
