@@ -215,6 +215,8 @@ def list_documents(
                     DocumentFile.uploaded_by_id == current_user.id
                 ).order_by(DocumentFile.created_at.desc()).all()
 
+    classroom_map = {c.id: c.name for c in db.query(Classroom).all()}
+
     return [
         {
             "id": doc.id,
@@ -222,7 +224,8 @@ def list_documents(
             "filename": doc.filename,
             "folder_name": doc.folder_name or "General Notes",
             "classroom_id": doc.classroom_id,
-            "file_url": f"/{doc.file_path.replace(chr(92), '/')}",
+            "classroom_name": classroom_map.get(doc.classroom_id, "Classroom Notes" if doc.classroom_id else "Personal Notes"),
+            "file_url": f"/{doc.file_path.replace(chr(92), '/')}" if doc.file_path else None,
             "processing_status": doc.processing_status,
             "processing_progress": doc.processing_progress,
             "uploaded_by_id": doc.uploaded_by_id,
@@ -289,7 +292,7 @@ def get_developer_documents(
     current_user: User = Depends(get_current_user),
 ):
     dev_docs = db.query(DocumentFile).filter(
-        DocumentFile.classroom_id == None,
+        DocumentFile.folder_name == "Developer Library",
         DocumentFile.processing_status == "ready"
     ).order_by(DocumentFile.created_at.desc()).all()
 

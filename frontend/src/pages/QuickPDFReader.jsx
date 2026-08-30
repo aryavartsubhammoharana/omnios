@@ -15,7 +15,7 @@ export default function QuickPDFReader() {
   const documentId = searchParams.get('document_id');
 
   // Hub States
-  const [activeTab, setActiveTab] = useState('classroom'); // 'all' | 'classroom' | 'developer'
+  const [activeTab, setActiveTab] = useState('classroom'); // 'classroom' | 'developer'
   const [classroomDocs, setClassroomDocs] = useState([]);
   const [developerDocs, setDeveloperDocs] = useState([]);
   const [loadingHub, setLoadingHub] = useState(false);
@@ -70,25 +70,19 @@ export default function QuickPDFReader() {
   const fetchAllDocuments = async () => {
     setLoadingHub(true);
     try {
-      // 1. Fetch Classroom Documents
-      const classRes = await API.get('/api/classroom/list').catch(() => ({ data: [] }));
-      const classrooms = Array.isArray(classRes.data) ? classRes.data : [];
+      // 1. Fetch Classroom Documents using unified /api/upload/list endpoint
+      const docsRes = await API.get('/api/upload/list').catch(() => ({ data: [] }));
+      const allDocs = Array.isArray(docsRes.data) ? docsRes.data : [];
       
-      const docPromises = classrooms.map(c => 
-        API.get(`/api/classroom/${c.id}`)
-          .then(res => {
-            const docs = res.data?.documents || [];
-            return docs.map(d => ({ ...d, classroom_name: c.name, classroom_id: c.id }));
-          })
-          .catch(() => [])
-      );
+      // Filter strictly for classroom PDF files only
+      const pdfs = allDocs.filter(d => (d.filename || '').toLowerCase().endsWith('.pdf'));
+      setClassroomDocs(pdfs);
 
-      const nestedDocs = await Promise.all(docPromises);
-      setClassroomDocs(nestedDocs.flat());
-
-      // 2. Fetch Developer Documents dynamically from backend (no pre-made mock data)
+      // 2. Fetch Developer Documents dynamically from backend
       const devRes = await API.get('/api/upload/developer-docs').catch(() => ({ data: [] }));
-      setDeveloperDocs(Array.isArray(devRes.data) ? devRes.data : []);
+      const devDocs = Array.isArray(devRes.data) ? devRes.data : [];
+      const devPdfs = devDocs.filter(d => (d.filename || '').toLowerCase().endsWith('.pdf'));
+      setDeveloperDocs(devPdfs);
     } catch (err) {
       console.error("Error fetching documents", err);
     } finally {
@@ -231,7 +225,7 @@ export default function QuickPDFReader() {
             <div className="flex items-center bg-gray-900/90 border border-gray-800 p-1 rounded-2xl shadow-inner text-xs font-medium shrink-0">
               <button
                 onClick={() => setActiveTab('classroom')}
-                className={`px-3.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer ${
                   activeTab === 'classroom' ? 'bg-indigo-600 text-white font-semibold shadow' : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -240,7 +234,7 @@ export default function QuickPDFReader() {
               </button>
               <button
                 onClick={() => setActiveTab('developer')}
-                className={`px-3.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 cursor-pointer ${
                   activeTab === 'developer' ? 'bg-indigo-600 text-white font-semibold shadow' : 'text-gray-400 hover:text-white'
                 }`}
               >
@@ -256,7 +250,7 @@ export default function QuickPDFReader() {
                 type="text"
                 value={hubSearch}
                 onChange={(e) => setHubSearch(e.target.value)}
-                placeholder="Search notes, chapters, documents..."
+                placeholder="Search notes, chapters, PDF documents..."
                 className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
               />
               {hubSearch && (
@@ -279,28 +273,28 @@ export default function QuickPDFReader() {
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-white tracking-tight">
-                      Section 1: Classroom PDFs & Study Materials
+                      Section 1: Classroom PDFs
                     </h2>
                     <p className="text-[11px] text-gray-400">
-                      Uploaded notes, assignments, and PDFs from your enrolled classrooms
+                      Official lecture PDFs and notes uploaded in your enrolled classrooms
                     </p>
                   </div>
                 </div>
                 <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
-                  {filteredClassroomDocs.length} Documents
+                  {filteredClassroomDocs.length} PDFs
                 </span>
               </div>
 
               {loadingHub ? (
                 <div className="py-12 flex flex-col items-center justify-center text-indigo-400 space-y-2">
                   <Loader2 className="w-7 h-7 animate-spin" />
-                  <p className="text-xs text-gray-400">Loading classroom documents...</p>
+                  <p className="text-xs text-gray-400">Loading classroom PDFs...</p>
                 </div>
               ) : filteredClassroomDocs.length === 0 ? (
                 <div className="glass-card p-8 rounded-2xl border border-gray-800/80 text-center space-y-3">
                   <FileText className="w-8 h-8 text-gray-500 mx-auto" />
                   <p className="text-xs text-gray-400">
-                    {hubSearch ? 'No classroom documents match your search.' : 'No PDFs uploaded in your classrooms yet.'}
+                    {hubSearch ? 'No classroom PDFs match your search.' : 'No PDFs uploaded in your classrooms yet.'}
                   </p>
                   <Link to="/dashboard" className="inline-block text-xs text-indigo-400 hover:underline">
                     Go to Classrooms to upload or view notes
@@ -308,50 +302,45 @@ export default function QuickPDFReader() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredClassroomDocs.map((doc) => {
-                    const isDocx = (doc.filename || '').endsWith('.docx') || (doc.filename || '').endsWith('.doc');
-                    return (
-                      <div
-                        key={doc.id}
-                        className="glass-card p-5 rounded-2xl border border-gray-800 hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-500/10 transition flex flex-col justify-between space-y-4 group"
-                      >
-                        <div className="space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div className={`p-2.5 rounded-xl border ${
-                              isDocx ? 'bg-sky-950/80 text-sky-400 border-sky-800/60' : 'bg-indigo-950/80 text-indigo-400 border-indigo-800/60'
-                            }`}>
-                              {isDocx ? <FileText className="w-5 h-5" /> : <Book className="w-5 h-5" />}
-                            </div>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-900 text-gray-400 border border-gray-800">
-                              {doc.classroom_name}
-                            </span>
+                  {filteredClassroomDocs.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="glass-card p-5 rounded-2xl border border-gray-800 hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-500/10 transition flex flex-col justify-between space-y-4 group"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between">
+                          <div className="p-2.5 rounded-xl border bg-indigo-950/80 text-indigo-400 border-indigo-800/60">
+                            <Book className="w-5 h-5" />
                           </div>
-
-                          <div>
-                            <h3 className="text-sm font-bold text-white group-hover:text-sky-300 transition line-clamp-2 leading-snug">
-                              {doc.filename}
-                            </h3>
-                            <p className="text-[11px] text-gray-400 font-medium mt-1 truncate">
-                              Type: <span className="text-indigo-400 font-semibold">{isDocx ? 'Word Document' : 'Classroom PDF'}</span>
-                            </p>
-                          </div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-900 text-gray-400 border border-gray-800">
+                            {doc.classroom_name || 'Classroom'}
+                          </span>
                         </div>
 
-                        <div className="pt-2 border-t border-gray-800/80 flex items-center justify-between">
-                          <span className="text-[10px] text-gray-500 font-mono">
-                            {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'Active Note'}
-                          </span>
-                          <Link
-                            to={`/quick-reader?document_id=${doc.id}`}
-                            className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600 text-sky-300 hover:text-white border border-sky-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer shadow"
-                          >
-                            <Sparkles className="w-3.5 h-3.5 text-sky-400 group-hover:text-white" />
-                            <span>Read & Ask AI</span>
-                          </Link>
+                        <div>
+                          <h3 className="text-sm font-bold text-white group-hover:text-sky-300 transition line-clamp-2 leading-snug">
+                            {doc.filename}
+                          </h3>
+                          <p className="text-[11px] text-gray-400 font-medium mt-1 truncate">
+                            Folder: <span className="text-indigo-400 font-semibold">{doc.folder_name || 'General Notes'}</span>
+                          </p>
                         </div>
                       </div>
-                    );
-                  })}
+
+                      <div className="pt-2 border-t border-gray-800/80 flex items-center justify-between">
+                        <span className="text-[10px] text-gray-500 font-mono">
+                          {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'Active Note'}
+                        </span>
+                        <Link
+                          to={`/quick-reader?document_id=${doc.id}`}
+                          className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600 text-sky-300 hover:text-white border border-sky-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer shadow"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-sky-400 group-hover:text-white" />
+                          <span>Read & Ask AI</span>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -467,7 +456,6 @@ export default function QuickPDFReader() {
 
   const isProcessing = documentInfo.processing_status !== 'ready';
   const filename = documentInfo.filename || '';
-  const isDocx = filename.endsWith('.docx') || filename.endsWith('.doc');
 
   let paperBg = 'bg-[#0f172a] text-gray-100 border-gray-800 shadow-2xl';
   let canvasBg = 'bg-[#090d16]';
@@ -493,12 +481,8 @@ export default function QuickPDFReader() {
           <div className="h-4 w-px bg-gray-800" />
 
           <div className="flex items-center space-x-2.5">
-            <div className={`p-1.5 rounded-lg border ${
-              isDocx 
-                ? 'bg-sky-950/80 border-sky-800/50 text-sky-400' 
-                : 'bg-indigo-950/80 border-indigo-800/50 text-indigo-400'
-            }`}>
-              {isDocx ? <FileText className="w-4 h-4" /> : <Book className="w-4 h-4" />}
+            <div className="p-1.5 rounded-lg border bg-indigo-950/80 border-indigo-800/50 text-indigo-400">
+              <Book className="w-4 h-4" />
             </div>
 
             <div>
@@ -506,7 +490,7 @@ export default function QuickPDFReader() {
                 {documentInfo.filename}
               </h1>
               <span className="text-[10px] text-gray-400 font-mono hidden sm:inline">
-                {isDocx ? 'Word DOC' : 'PDF Document'} • {totalPages} Pages
+                PDF Document • {totalPages} Pages
               </span>
             </div>
 
