@@ -98,20 +98,25 @@ async def upload_files(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != "teacher":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only teachers can upload study materials and notes.",
-        )
+    if classroom_id:
+        is_teacher = db.query(Classroom).filter(Classroom.id == classroom_id, Classroom.teacher_id == current_user.id).first()
+        if not is_teacher:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only classroom teachers can upload notes directly to a classroom stream.",
+            )
+        default_folder = "General Notes"
+    else:
+        default_folder = "Personal Notes"
 
     allowed_extensions = [
         ".pdf", ".docx", ".doc", ".pptx", ".ppt", ".txt", ".md",
         ".png", ".jpg", ".jpeg", ".webp", ".json", ".csv", ".py", ".cpp", ".java"
     ]
 
-    target_folder = (folder_name or "General Notes").strip()
+    target_folder = (folder_name or default_folder).strip()
     if not target_folder:
-        target_folder = "General Notes"
+        target_folder = default_folder
 
     saved_documents = []
 
