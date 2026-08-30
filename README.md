@@ -108,31 +108,31 @@ Strict multi-tenant authorization filters were implemented at both the REST API 
 
 ## 3. Dual Vector Database Architecture (Classroom vs Global Vector DB)
 
-NoteAI employs a dual-layer ChromaDB Vector Store architecture designed to balance **classroom privacy** with **system-wide collective intelligence**:
+NoteAI employs a **single, unified ChromaDB Vector Collection** named **`"ournotes"`** for the entire server, holding all document chunks (classroom materials and personal study notes) in one high-performance vector space:
 
 ```
                               Document Upload & Ingestion
                                            │
-                        ┌──────────────────┴──────────────────┐
-                        ▼                                     ▼
-          [Classroom Vector Database]               [Global Vector Database]
-         - Collection: `classroom_{CODE}`          - Collection: `global_knowledge_base`
-         - Scope: Isolated to single class         - Scope: Unified anonymous knowledge
-         - Metadata: doc_id, filename, user_id     - Metadata: Anonymous hash, collection_key
-         - Lifecycle: Deleted on class delete      - Lifecycle: PERMANENTLY RETAINED
+                                           ▼
+                     ┌───────────────────────────────────────────┐
+                     │   Single Server Collection: `"ournotes"`  │
+                     │  - Space: Cosine Similarity Metric        │
+                     │  - Metadata: doc_id, filename, user_id,   │
+                     │    classroom_id, classroom_code, index    │
+                     └───────────────────────────────────────────┘
 ```
 
-### 🏫 A. Classroom Vector Database (`classroom_{CODE}`)
-- **Architecture**: Every classroom gets its own isolated ChromaDB collection named `classroom_{CODE.upper()}` (e.g. `classroom_PHY12`).
-- **Metadata Tagging**: Chunks include rich metadata: `doc_id`, `classroom_id`, `classroom_code`, `filename`, `chunk_index`, and `total_chunks`.
-- **Purpose**: Used for high-precision classroom doubt solving, teacher quiz generation, and student chapter revisions.
-- **Privacy**: Only accessible to students and instructors enrolled in that specific classroom.
-
-### 🌐 B. Global Vector Database (`global_knowledge_base`)
-- **Architecture**: A single, unified ChromaDB collection holding embedded academic knowledge from across the platform.
-- **Pure Anonymity**: Chunks are stripped of all personal and identifying metadata (no teacher names, no student IDs, no filenames).
-- **Permanent Retention**: Chunks indexed in the Global Vector Database are **NEVER deleted**, even if the original note or teacher account is removed.
-- **Purpose**: Powers the platform's autonomous 24-hour daily practice quizzes, cross-topic conceptual recommendations, and global AI tutoring.
+### 🏛️ Unified Vector Storage Architecture (`app/services/vector_store.py`)
+- **Single Collection Name**: **`"ournotes"`**
+- **Unified Chunk Ingestion (`index_document_in_vector_store`)**:
+  - All document chunks (Classroom Lecture Notes, Word Documents, Slides, and Personal Student Notes) are indexed into the single `"ournotes"` collection.
+  - Chunks include rich search metadata: `doc_id`, `filename`, `classroom_id`, `classroom_code`, `uploaded_by_id`, `chunk_index`, and `total_chunks`.
+- **Dynamic Scoped Retrieval (`query_vector_store`)**:
+  - **Single Document Queries**: Filters strictly via `where={"doc_id": doc_id}` on `"ournotes"`.
+  - **Classroom Queries**: Filters strictly via `where={"classroom_id": c_id}` on `"ournotes"`.
+  - **Personal & Multi-Classroom Queries**: Automatically matches `uploaded_by_id` and the user's active enrolled classroom IDs on `"ournotes"`.
+- **Clean Document Lifecycle**:
+  - Deleting a document removes its chunks from `"ournotes"` where `doc_id = doc_id`.
 
 ---
 
