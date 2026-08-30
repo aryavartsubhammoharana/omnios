@@ -13,6 +13,7 @@ from app.models.quiz import StudentDailyQuiz
 from app.models.analytics import StudentStreak, VideoFocusSession
 from app.routes.auth import get_current_user
 from app.services.ai import query_groq_ai, query_sarvam_ai, query_gemini_ai, is_valid_ai_text
+from app.services.curriculum_registry import get_active_term_chapters, build_advanced_diagnostic_prompt
 from app.services.youtube_service import get_curated_weak_topic_videos, get_video_transcript
 from app.utils.time_utils import get_ist_now
 
@@ -217,7 +218,7 @@ def get_or_generate_daily_quiz(
                 notes_text += f"\n--- Material from {d.filename} ---\n{d.content_text[:2000]}\n"
 
     if not notes_text.strip():
-from app.services.curriculum_registry import get_active_term_chapters, build_advanced_diagnostic_prompt
+        notes_text = f"Curriculum and core concepts for {student_class} Subject: {sched['subject']} ({sched['focus']})."
 
     past_quizzes = db.query(StudentDailyQuiz).filter(
         StudentDailyQuiz.student_id == current_user.id,
