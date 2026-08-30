@@ -17,6 +17,7 @@ from app.services.vector_store import (
     index_document_in_vector_store,
     delete_document_from_vector_store
 )
+from app.utils.gcs import upload_file_to_gcs, delete_file_from_gcs, USE_GCS
 from app.routes.analytics import record_learning_activity
 
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
@@ -131,16 +132,27 @@ async def upload_files(
         unique_code = secrets.token_hex(5)
         saved_filename = f"{unique_code}{ext}"
         saved_path = os.path.join(DOCUMENTS_DIR, saved_filename)
+        
+        content = await file.read()
+        
+        file_url_path = saved_path
+        if USE_GCS:
+            gcs_url = upload_file_to_gcs(content, file.filename, file.content_type)
+            if gcs_url:
+                file_url_path = gcs_url
+            else:
+                with open(saved_path, "wb") as buffer:
+                    buffer.write(content)
+        else:
+            with open(saved_path, "wb") as buffer:
+                buffer.write(content)
 
-        with open(saved_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        file_size = os.path.getsize(saved_path)
+        file_size = len(content)
 
         doc = DocumentFile(
             unique_code=unique_code,
             filename=file.filename,
-            file_path=saved_path,
+            file_path=file_url_path,
             uploaded_by_id=current_user.id,
             classroom_id=classroom_id,
             folder_name=target_folder,
@@ -209,7 +221,13 @@ def list_documents(
 
     classroom_map = {c.id: c.name for c in db.query(Classroom).all()}
 
-    valid_docs = [d for d in docs if d.file_path and os.path.exists(d.file_path)]
+    valid_docs = []
+    for d in docs:
+        if d.file_path:
+            if d.file_path.startswith("http"):
+                valid_docs.append(d)
+            elif os.path.exists(d.file_path):
+                valid_docs.append(d)
 
     return [
         {
@@ -219,7 +237,7 @@ def list_documents(
             "folder_name": doc.folder_name or "General Notes",
             "classroom_id": doc.classroom_id,
             "classroom_name": classroom_map.get(doc.classroom_id, "Classroom Notes" if doc.classroom_id else "Personal Notes"),
-            "file_url": f"/{doc.file_path.replace(chr(92), '/')}" if doc.file_path else None,
+            "file_url": doc.file_path if str(doc.file_path).startswith("http") else f"/{str(doc.file_path).replace(chr(92), '/')}" if doc.file_path else None,
             "processing_status": doc.processing_status,
             "processing_progress": doc.processing_progress,
             "uploaded_by_id": doc.uploaded_by_id,
@@ -243,11 +261,14 @@ def delete_document(
     if doc.uploaded_by_id != current_user.id and current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="You do not have permission to delete this document")
 
-    if doc.file_path and os.path.exists(doc.file_path):
-        try:
-            os.remove(doc.file_path)
-        except Exception as e:
-            print(f"Error removing document file: {e}")
+    if doc.file_path:
+        if str(doc.file_path).startswith("http"):
+            delete_file_from_gcs(doc.file_path)
+        elif os.path.exists(doc.file_path):
+            try:
+                os.remove(doc.file_path)
+            except OSError as e:
+                print(f"Error deleting file {doc.file_path}: {e}")
 
     try:
         delete_document_from_vector_store(doc_id=doc.id)
@@ -330,7 +351,7 @@ def get_document_details(
     # Genuine academic engagement: Update streak with 0-load idempotency
     record_learning_activity(current_user.id, db)
 
-    file_url = f"/{doc.file_path.replace(chr(92), '/')}" if doc.file_path else None
+    file_url = doc.file_path if doc.file_path and str(doc.file_path).startswith("http") else f"/{doc.file_path.replace(chr(92), '/')}" if doc.file_path else None
 
     return {
         "id": doc.id,
@@ -353,8 +374,15 @@ def get_raw_pdf_file(
     db: Session = Depends(get_db),
 ):
     doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
-    if not doc or not doc.file_path or not os.path.exists(doc.file_path):
+    if not doc or not doc.file_path:
         raise HTTPException(status_code=404, detail="Physical PDF file not found on server")
+    
+    if str(doc.file_path).startswith("http"):
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=doc.file_path)
+        
+    if not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=404, detail="Physical PDF file not found locally")
     
     return FileResponse(
         path=doc.file_path,
