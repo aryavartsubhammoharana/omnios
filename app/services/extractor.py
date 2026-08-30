@@ -92,8 +92,8 @@ def stitch_pages_to_2x2_grid(page_images: list[Image.Image], page_numbers: list[
 
 
 def scan_grid_image_with_vision(grid_path: str, page_numbers: list[int]) -> str:
+    import time
     from google import genai
-    from groq import Groq
 
     if not os.path.exists(grid_path):
         return ""
@@ -105,50 +105,49 @@ def scan_grid_image_with_vision(grid_path: str, page_numbers: list[int]) -> str:
         f"--- Page {page_numbers[0]} ---\n[Extracted Text]\n"
     )
 
-    if settings.GEMINI_API_KEY:
-        try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY.strip())
-            with open(grid_path, "rb") as f:
-                img_bytes = f.read()
+    if not settings.GEMINI_API_KEY:
+        return ""
 
-            response = client.models.generate_content(
-                model=settings.GEMINI_MODEL or "gemini-2.5-flash",
-                contents=[
-                    {"role": "user", "parts": [{"text": prompt}, {"inline_data": {"mime_type": "image/jpeg", "data": img_bytes}}]}
-                ]
-            )
-            if response.text and len(response.text.strip()) > 30:
-                return response.text.strip()
-        except Exception as e:
-            print(f"Gemini 2x2 grid scan error: {e}")
+    try:
+        client = genai.Client(api_key=settings.GEMINI_API_KEY.strip())
+        with open(grid_path, "rb") as f:
+            img_bytes = f.read()
 
-    if settings.GROQ_API_KEY:
-        try:
-            client = Groq(api_key=settings.GROQ_API_KEY.strip())
-            with open(grid_path, "rb") as f:
-                b64 = base64.b64encode(f.read()).decode("utf-8")
+        candidate_models = [
+            "gemini-3.5-flash-lite",
+            "gemini-flash-latest",
+            "gemini-3.5-flash",
+            "gemini-2.5-flash"
+        ]
 
-            response = client.chat.completions.create(
-                model="openai/gpt-oss-120b",
-                messages=[
-                    {"role": "system", "content": "You are a fast OCR transcriber. Output clean Markdown."},
-                    {"role": "user", "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
-                    ]}
-                ],
-                max_tokens=2500
-            )
-            content = response.choices[0].message.content
-            if content and len(content.strip()) > 30:
-                return content.strip()
-        except Exception as e:
-            print(f"Groq vision grid scan error: {e}")
+        for attempt in range(3):
+            for model_name in candidate_models:
+                try:
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=[
+                            {
+                                "role": "user",
+                                "parts": [
+                                    {"text": prompt},
+                                    {"inline_data": {"mime_type": "image/jpeg", "data": img_bytes}}
+                                ]
+                            }
+                        ]
+                    )
+                    if response.text and len(response.text.strip()) > 30:
+                        return response.text.strip()
+                except Exception as e:
+                    time.sleep(1.0)
+            time.sleep(2.0)
+    except Exception as e:
+        print(f"Vision 2x2 grid scan error: {e}")
 
     return ""
 
 
 def extract_scanned_pdf_via_2x2_grid(file_path: str, total_pages: int, on_page_progress=None) -> str:
+    import time
     filename = os.path.basename(file_path)
     extracted_batches = []
     batch_size = 4
@@ -188,6 +187,8 @@ def extract_scanned_pdf_via_2x2_grid(file_path: str, total_pages: int, on_page_p
 
             if on_page_progress:
                 on_page_progress(end_p, total_pages, True)
+
+            time.sleep(1.2)
 
         doc.close()
     except Exception as e:
