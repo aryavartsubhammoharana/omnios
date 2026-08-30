@@ -5,7 +5,8 @@ import {
   ArrowLeft, Sparkles, Send, Bot, User, Book, Loader2, 
   FileText, Download, Copy, Check, ZoomIn, ZoomOut, RotateCcw,
   ChevronLeft, ChevronRight, Maximize2, Minimize2, Search, 
-  Moon, Sun, Coffee, Columns, AlignLeft
+  Moon, Sun, Coffee, Columns, AlignLeft, BookOpen, Layers,
+  ExternalLink, GraduationCap, Clock, HelpCircle
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
 
@@ -13,10 +14,16 @@ export default function QuickPDFReader() {
   const [searchParams] = useSearchParams();
   const documentId = searchParams.get('document_id');
 
+  // Single Document Mode States
   const [documentInfo, setDocumentInfo] = useState(null);
   const [loadingDoc, setLoadingDoc] = useState(true);
   const [aiProvider, setAiProvider] = useState('groq');
   const [copied, setCopied] = useState(false);
+
+  // Document Hub / Library Mode States (when no document_id in URL)
+  const [availableDocs, setAvailableDocs] = useState([]);
+  const [loadingHub, setLoadingHub] = useState(false);
+  const [hubSearch, setHubSearch] = useState('');
 
   // Document Viewer Controls
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -29,7 +36,7 @@ export default function QuickPDFReader() {
   const [fontSize, setFontSize] = useState(14);
   const viewerContainerRef = useRef(null);
 
-  // Ephemeral AI Chat
+  // AI Chat Assistant States
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
@@ -40,8 +47,13 @@ export default function QuickPDFReader() {
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef(null);
 
+  // Fetch single document if document_id is present
   const fetchDoc = async () => {
-    if (!documentId) return;
+    if (!documentId) {
+      setLoadingDoc(false);
+      return;
+    }
+    setLoadingDoc(true);
     try {
       const res = await API.get(`/api/upload/document/${documentId}`);
       setDocumentInfo(res.data);
@@ -53,8 +65,39 @@ export default function QuickPDFReader() {
     }
   };
 
+  // Fetch document library hub when no specific document_id is selected
+  const fetchHubDocuments = async () => {
+    setLoadingHub(true);
+    try {
+      const classRes = await API.get('/api/classroom/list');
+      const classrooms = Array.isArray(classRes.data) ? classRes.data : [];
+      
+      const docPromises = classrooms.map(c => 
+        API.get(`/api/classroom/${c.id}`)
+          .then(res => {
+            const docs = res.data?.documents || [];
+            return docs.map(d => ({ ...d, classroom_name: c.name, classroom_id: c.id }));
+          })
+          .catch(() => [])
+      );
+
+      const nestedDocs = await Promise.all(docPromises);
+      const flattened = nestedDocs.flat();
+      setAvailableDocs(flattened);
+    } catch (err) {
+      console.error("Error fetching document hub", err);
+    } finally {
+      setLoadingHub(false);
+    }
+  };
+
   useEffect(() => {
-    fetchDoc();
+    if (documentId) {
+      fetchDoc();
+    } else {
+      setLoadingDoc(false);
+      fetchHubDocuments();
+    }
   }, [documentId]);
 
   useEffect(() => {
@@ -163,19 +206,168 @@ export default function QuickPDFReader() {
     }
   };
 
+  // -------------------------------------------------------------
+  // 1. NO DOCUMENT SELECTED: Render Document Hub & Notes Library
+  // -------------------------------------------------------------
+  if (!documentId) {
+    const filteredDocs = availableDocs.filter(d => 
+      (d.filename || '').toLowerCase().includes(hubSearch.toLowerCase()) ||
+      (d.classroom_name || '').toLowerCase().includes(hubSearch.toLowerCase())
+    );
+
+    return (
+      <div className="min-h-[calc(100vh-61px)] bg-[#090d16] text-gray-100 p-4 sm:p-8 relative overflow-hidden select-none">
+        <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
+        <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
+
+        <div className="max-w-6xl mx-auto space-y-6 relative z-10">
+          {/* Header Card */}
+          <div className="glass-card p-6 sm:p-8 rounded-3xl border border-gray-800/80 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-3">
+                <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-sky-500/20 text-sky-300 border border-sky-500/30 flex items-center gap-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-sky-400" />
+                  <span>AI Document Workspace</span>
+                </span>
+                <span className="text-[11px] text-gray-400 font-mono">LaTeX Math + AI Doubt Solver</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Document & PDF Reader Hub
+              </h1>
+              <p className="text-xs sm:text-sm text-gray-400 max-w-2xl leading-relaxed">
+                Select any notes, textbook chapter, or assignment from your classrooms to read with distraction-free formatting, formulas rendering, and split-screen AI doubt solving.
+              </p>
+            </div>
+
+            <Link
+              to="/dashboard"
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center space-x-2 shrink-0 cursor-pointer"
+            >
+              <GraduationCap className="w-4 h-4" />
+              <span>Go to Classrooms</span>
+            </Link>
+          </div>
+
+          {/* Search Filter Bar */}
+          <div className="flex items-center space-x-3 bg-gray-900/90 border border-gray-800/80 rounded-2xl p-2.5 shadow-inner">
+            <Search className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
+            <input
+              type="text"
+              value={hubSearch}
+              onChange={(e) => setHubSearch(e.target.value)}
+              placeholder="Search notes, chapters, or classrooms..."
+              className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
+            />
+            {hubSearch && (
+              <button
+                onClick={() => setHubSearch('')}
+                className="text-xs text-gray-400 hover:text-white px-2 py-1"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* Document Cards Grid */}
+          {loadingHub ? (
+            <div className="py-20 flex flex-col items-center justify-center text-indigo-400 space-y-3">
+              <Loader2 className="w-8 h-8 animate-spin" />
+              <p className="text-xs text-gray-400">Loading your classroom documents...</p>
+            </div>
+          ) : filteredDocs.length === 0 ? (
+            <div className="glass-card p-12 rounded-3xl border border-gray-800 text-center space-y-4">
+              <div className="w-12 h-12 bg-indigo-950/80 border border-indigo-700/50 rounded-2xl mx-auto flex items-center justify-center text-indigo-400 shadow-inner">
+                <FileText className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">No Documents Found</h3>
+                <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto">
+                  {hubSearch
+                    ? "No documents matched your search filter. Try another keyword."
+                    : "No study notes or PDFs have been uploaded in your enrolled classrooms yet."}
+                </p>
+              </div>
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-indigo-300 border border-gray-700 text-xs font-semibold rounded-xl transition"
+              >
+                <span>Browse Classrooms</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredDocs.map((doc) => {
+                const isDocx = (doc.filename || '').endsWith('.docx') || (doc.filename || '').endsWith('.doc');
+                return (
+                  <div
+                    key={doc.id}
+                    className="glass-card p-5 rounded-2xl border border-gray-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 transition flex flex-col justify-between space-y-4 group"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div className={`p-2.5 rounded-xl border ${
+                          isDocx 
+                            ? 'bg-sky-950/80 text-sky-400 border-sky-800/60' 
+                            : 'bg-indigo-950/80 text-indigo-400 border-indigo-800/60'
+                        }`}>
+                          {isDocx ? <FileText className="w-5 h-5" /> : <Book className="w-5 h-5" />}
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-900 text-gray-400 border border-gray-800">
+                          {isDocx ? 'Word DOC' : 'PDF'}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm font-bold text-white group-hover:text-indigo-300 transition line-clamp-2 leading-snug">
+                          {doc.filename}
+                        </h3>
+                        <p className="text-[11px] text-gray-400 font-medium mt-1 truncate">
+                          Class: <span className="text-indigo-400 font-semibold">{doc.classroom_name}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-800/80 flex items-center justify-between">
+                      <span className="text-[10px] text-gray-500 font-mono">
+                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'Active Note'}
+                      </span>
+                      <Link
+                        to={`/quick-reader?document_id=${doc.id}`}
+                        className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer shadow"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400 group-hover:text-white" />
+                        <span>Read & Ask AI</span>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // 2. SINGLE DOCUMENT MODE: Interactive 2-Column Reader + AI Chat
+  // -------------------------------------------------------------
   if (loadingDoc) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#090d16] text-indigo-400">
+      <div className="h-[calc(100vh-61px)] flex flex-col items-center justify-center bg-[#090d16] text-indigo-400 space-y-3">
         <Loader2 className="w-8 h-8 animate-spin" />
+        <p className="text-xs text-gray-400 font-mono">Loading document...</p>
       </div>
     );
   }
 
   if (!documentInfo) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-[#090d16] text-gray-400">
-        <p>Document not found.</p>
-        <Link to="/dashboard" className="mt-4 text-indigo-400 hover:underline text-xs">Return to Dashboard</Link>
+      <div className="h-[calc(100vh-61px)] flex flex-col items-center justify-center bg-[#090d16] text-gray-400 space-y-3">
+        <p className="text-sm font-semibold text-white">Document not found.</p>
+        <Link to="/quick-reader" className="text-xs text-indigo-400 hover:underline">
+          Return to Document Hub
+        </Link>
       </div>
     );
   }
@@ -183,7 +375,6 @@ export default function QuickPDFReader() {
   const isProcessing = documentInfo.processing_status !== 'ready';
   const filename = documentInfo.filename || '';
   const isDocx = filename.endsWith('.docx') || filename.endsWith('.doc');
-  const isPdf = filename.endsWith('.pdf');
 
   let paperBg = 'bg-[#0f172a] text-gray-100 border-gray-800 shadow-2xl';
   let canvasBg = 'bg-[#090d16]';
@@ -201,9 +392,9 @@ export default function QuickPDFReader() {
       {/* Top Main Navigation Header */}
       <header className="bg-gray-950/95 backdrop-blur-xl border-b border-gray-800/80 px-4 sm:px-6 py-2.5 flex items-center justify-between flex-shrink-0 z-30 shadow-lg">
         <div className="flex items-center space-x-4">
-          <Link to={`/classroom/${documentInfo.classroom_id || ''}`} className="flex items-center space-x-1.5 text-xs text-gray-400 hover:text-white transition">
+          <Link to="/quick-reader" className="flex items-center space-x-1.5 text-xs text-gray-400 hover:text-white transition">
             <ArrowLeft className="w-4 h-4 text-indigo-400" />
-            <span className="hidden sm:inline">Classroom</span>
+            <span className="hidden sm:inline">All Documents</span>
           </Link>
 
           <div className="h-4 w-px bg-gray-800" />
@@ -223,7 +414,7 @@ export default function QuickPDFReader() {
                 {documentInfo.filename}
               </h1>
               <span className="text-[10px] text-gray-400 font-mono hidden sm:inline">
-                {isDocx ? 'Docx Smooth Shower' : 'PDF Viewer'} • {totalPages} Pages
+                {isDocx ? 'Word DOC' : 'PDF Document'} � {totalPages} Pages
               </span>
             </div>
             <span className={`text-[9px] px-2 py-0.5 rounded font-mono border hidden sm:inline ${
@@ -239,7 +430,7 @@ export default function QuickPDFReader() {
         <div className="flex items-center space-x-2 sm:space-x-3">
           <button
             onClick={handleCopyText}
-            className="flex items-center space-x-1.5 bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-700 text-xs px-3 py-1.5 rounded-xl transition"
+            className="flex items-center space-x-1.5 bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-700 text-xs px-3 py-1.5 rounded-xl transition cursor-pointer"
             title="Copy Clean Document Text"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -248,319 +439,215 @@ export default function QuickPDFReader() {
 
           <a
             href={documentInfo.file_url}
-            download={documentInfo.filename}
-            className="flex items-center space-x-1.5 bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-700 text-xs px-3 py-1.5 rounded-xl transition"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center space-x-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs px-3 py-1.5 rounded-xl transition shadow"
             title="Download Original File"
           >
             <Download className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Download</span>
           </a>
-
-          <Link
-            to={`/notebooklm?classroom_id=${documentInfo.classroom_id || ''}`}
-            className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded-xl transition shadow-lg shadow-indigo-600/20"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Studio</span>
-          </Link>
         </div>
       </header>
 
-      {/* Main Split Screen: Left (Document Shower) & Right (Ephemeral AI Doubt Solver) */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-        {/* Document Shower Column */}
-        <div className={`lg:col-span-7 border-r border-gray-800/80 ${canvasBg} h-full overflow-hidden flex flex-col transition-colors duration-300`}>
-          {isPdf ? (
-            <iframe
-              src={documentInfo.file_url}
-              className="w-full h-full border-0 bg-white"
-              title={documentInfo.filename}
-            />
-          ) : (
-            <div className="flex-1 flex flex-col h-full overflow-hidden">
-              {/* Professional Floating Document Toolbar */}
-              <div className="bg-gray-950/90 backdrop-blur-md border-b border-gray-800/80 px-4 py-2 flex items-center justify-between gap-2 z-20 flex-shrink-0 text-xs shadow-sm">
-                {/* Page Navigation & Count */}
-                <div className="flex items-center space-x-1.5">
+      {/* Reader Body: 2 Columns (Document Viewer Left + AI Chat Right) */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* LEFT COLUMN: DOCUMENT VIEWER */}
+        <div className={`flex-1 flex flex-col overflow-hidden border-r border-gray-800/80 ${canvasBg}`}>
+          {/* Viewer Toolbar */}
+          <div className="bg-gray-900/90 border-b border-gray-800/80 px-4 py-2 flex items-center justify-between text-xs text-gray-300 z-20">
+            {/* View Mode & Page Navigation */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setViewMode(viewMode === 'paginated' ? 'continuous' : 'paginated')}
+                className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition"
+                title={`Switch to ${viewMode === 'paginated' ? 'Continuous Scroll' : 'Paginated View'}`}
+              >
+                {viewMode === 'paginated' ? <Columns className="w-3.5 h-3.5" /> : <AlignLeft className="w-3.5 h-3.5" />}
+              </button>
+
+              {viewMode === 'paginated' && (
+                <div className="flex items-center space-x-1 font-mono text-[11px]">
                   <button
                     disabled={currentPage <= 1}
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    className="p-1 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 hover:text-white disabled:opacity-40 transition"
-                    title="Previous Page"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    className="p-1 rounded bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
-                  <span className="px-2 py-0.5 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 font-mono text-[11px]">
-                    Page <span className="font-bold text-indigo-400">{currentPage}</span> / {totalPages}
+                  <span className="px-2">
+                    Page <strong className="text-white">{currentPage}</strong> of {totalPages}
                   </span>
                   <button
                     disabled={currentPage >= totalPages}
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    className="p-1 rounded-lg bg-gray-900 border border-gray-800 text-gray-300 hover:text-white disabled:opacity-40 transition"
-                    title="Next Page"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    className="p-1 rounded bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
                   >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-
-                  <div className="h-4 w-px bg-gray-800 mx-1 hidden sm:block" />
-
-                  {/* View Mode Toggle */}
-                  <div className="hidden sm:flex bg-gray-900 p-0.5 rounded-lg border border-gray-800 text-[10px]">
-                    <button
-                      onClick={() => setViewMode('paginated')}
-                      className={`px-2 py-0.5 rounded font-semibold transition ${
-                        viewMode === 'paginated' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      Single Page
-                    </button>
-                    <button
-                      onClick={() => setViewMode('continuous')}
-                      className={`px-2 py-0.5 rounded font-semibold transition ${
-                        viewMode === 'continuous' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      Continuous
-                    </button>
-                  </div>
-                </div>
-
-                {/* Center / Zoom & Search Controls */}
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center bg-gray-900 border border-gray-800 rounded-lg p-0.5">
-                    <button
-                      onClick={handleZoomOut}
-                      className="p-1 text-gray-400 hover:text-white transition"
-                      title="Zoom Out"
-                    >
-                      <ZoomOut className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="text-[10px] font-mono text-gray-300 px-1.5 font-bold">
-                      {zoomLevel}%
-                    </span>
-                    <button
-                      onClick={handleZoomIn}
-                      className="p-1 text-gray-400 hover:text-white transition"
-                      title="Zoom In"
-                    >
-                      <ZoomIn className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={handleResetZoom}
-                      className="p-1 text-gray-400 hover:text-white border-l border-gray-800 transition"
-                      title="Reset Zoom"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  {/* Font Size Adjust */}
-                  <div className="hidden md:flex items-center bg-gray-900 border border-gray-800 rounded-lg px-2 py-1 space-x-1 text-[10px] text-gray-300">
-                    <span className="text-gray-500">Font:</span>
-                    <button onClick={() => setFontSize(prev => Math.max(prev - 1, 11))} className="hover:text-white px-1">A-</button>
-                    <span className="font-mono text-indigo-300 font-bold">{fontSize}px</span>
-                    <button onClick={() => setFontSize(prev => Math.min(prev + 1, 20))} className="hover:text-white px-1">A+</button>
-                  </div>
-                </div>
-
-                {/* Theme Selector & Fullscreen */}
-                <div className="flex items-center space-x-1.5">
-                  <div className="flex bg-gray-900 p-0.5 rounded-lg border border-gray-800 text-[10px]">
-                    <button
-                      onClick={() => setReaderTheme('dark')}
-                      className={`p-1 rounded ${readerTheme === 'dark' ? 'bg-gray-800 text-indigo-300' : 'text-gray-400'}`}
-                      title="Dark Mode"
-                    >
-                      <Moon className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setReaderTheme('white')}
-                      className={`p-1 rounded ${readerTheme === 'white' ? 'bg-gray-200 text-gray-900' : 'text-gray-400'}`}
-                      title="Paper White"
-                    >
-                      <Sun className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setReaderTheme('sepia')}
-                      className={`p-1 rounded ${readerTheme === 'sepia' ? 'bg-[#e6d5b8] text-[#433422]' : 'text-gray-400'}`}
-                      title="Sepia Warm"
-                    >
-                      <Coffee className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={toggleFullscreen}
-                    className="p-1.5 bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white rounded-lg transition"
-                    title={isFullscreen ? "Exit Fullscreen" : "Fullscreen Reading Mode"}
-                  >
-                    {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
-              </div>
-
-              {/* Document Pages Shower Canvas with Smooth Scrolling */}
-              <div className="flex-1 overflow-y-auto overflow-x-auto p-4 sm:p-8 scroll-smooth flex flex-col items-center space-y-8">
-                {viewMode === 'paginated' ? (
-                  /* Single A4 Page Shower */
-                  <div 
-                    style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center', fontSize: `${fontSize}px` }}
-                    className={`w-full max-w-[800px] min-h-[1050px] p-8 sm:p-14 rounded-2xl border transition-all duration-300 ease-out relative flex flex-col justify-between ${paperBg}`}
-                  >
-                    <div>
-                      {/* Page Header */}
-                      <div className="border-b border-current/10 pb-3 mb-6 flex items-center justify-between text-[11px] font-mono opacity-60">
-                        <span className="truncate max-w-[300px]">{documentInfo.filename}</span>
-                        <span>Page {currentPage} of {totalPages}</span>
-                      </div>
-
-                      {/* Page Content */}
-                      <div className="prose max-w-none leading-relaxed transition-all duration-200">
-                        <MathRenderer content={docPages[currentPage - 1] || 'No content on this page.'} />
-                      </div>
-                    </div>
-
-                    {/* Page Footer */}
-                    <div className="border-t border-current/10 pt-3 mt-10 flex items-center justify-between text-[10px] font-mono opacity-50">
-                      <span>NoteAI Document Shower</span>
-                      <span>— {currentPage} —</span>
-                    </div>
-                  </div>
-                ) : (
-                  /* Continuous Multi-Page Shower */
-                  docPages.map((pageText, idx) => (
-                    <div 
-                      key={idx}
-                      style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: 'top center', fontSize: `${fontSize}px` }}
-                      className={`w-full max-w-[800px] min-h-[1050px] p-8 sm:p-14 rounded-2xl border transition-all duration-300 ease-out relative flex flex-col justify-between mb-8 ${paperBg}`}
-                    >
-                      <div>
-                        {/* Page Header */}
-                        <div className="border-b border-current/10 pb-3 mb-6 flex items-center justify-between text-[11px] font-mono opacity-60">
-                          <span className="truncate max-w-[300px]">{documentInfo.filename}</span>
-                          <span>Page {idx + 1} of {totalPages}</span>
-                        </div>
-
-                        {/* Page Content */}
-                        <div className="prose max-w-none leading-relaxed transition-all duration-200">
-                          <MathRenderer content={pageText} />
-                        </div>
-                      </div>
-
-                      {/* Page Footer */}
-                      <div className="border-t border-current/10 pt-3 mt-10 flex items-center justify-between text-[10px] font-mono opacity-50">
-                        <span>NoteAI Document Shower</span>
-                        <span>— {idx + 1} —</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Side: Ephemeral AI Doubt Solving Chat */}
-        <div className="lg:col-span-5 bg-[#090d16]/95 backdrop-blur-md flex flex-col h-full min-h-0 overflow-hidden">
-          <div className="p-3 border-b border-gray-800/80 bg-gray-950 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center space-x-2">
-              <Bot className="w-4 h-4 text-indigo-400" />
-              <span className="text-xs font-bold text-gray-200">Ephemeral Doubt Solving</span>
+              )}
             </div>
 
+            {/* Theme & Zoom Controls */}
             <div className="flex items-center space-x-2">
-              <span className="text-[10px] text-gray-400 font-mono">Engine:</span>
-              <div className="flex bg-gray-900 p-0.5 rounded-lg border border-gray-800 text-[10px]">
+              <div className="flex items-center bg-gray-800 rounded-lg p-0.5">
                 <button
-                  onClick={() => setAiProvider('groq')}
-                  className={`px-2 py-0.5 rounded font-semibold transition ${
-                    aiProvider === 'groq' ? 'bg-orange-600 text-white shadow' : 'text-gray-400 hover:text-white'
-                  }`}
+                  onClick={() => setReaderTheme('dark')}
+                  className={`p-1 rounded ${readerTheme === 'dark' ? 'bg-gray-700 text-white' : 'text-gray-400'}`}
+                  title="Dark Theme"
                 >
-                  Groq 120B ⚡
+                  <Moon className="w-3 h-3" />
                 </button>
                 <button
-                  onClick={() => setAiProvider('sarvam')}
-                  className={`px-2 py-0.5 rounded font-semibold transition ${
-                    aiProvider === 'sarvam' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
-                  }`}
+                  onClick={() => setReaderTheme('sepia')}
+                  className={`p-1 rounded ${readerTheme === 'sepia' ? 'bg-[#e6d5b8] text-[#433422]' : 'text-gray-400'}`}
+                  title="Sepia Eye-Care Theme"
                 >
-                  Sarvam
+                  <Coffee className="w-3 h-3" />
                 </button>
                 <button
-                  onClick={() => setAiProvider('gemini')}
-                  className={`px-2 py-0.5 rounded font-semibold transition ${
-                    aiProvider === 'gemini' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'
-                  }`}
+                  onClick={() => setReaderTheme('white')}
+                  className={`p-1 rounded ${readerTheme === 'white' ? 'bg-white text-gray-900' : 'text-gray-400'}`}
+                  title="White Paper Theme"
                 >
-                  Gemini
+                  <Sun className="w-3 h-3" />
                 </button>
               </div>
+
+              <div className="flex items-center space-x-1 font-mono text-[11px]">
+                <button onClick={handleZoomOut} className="p-1 rounded bg-gray-800 hover:bg-gray-700" title="Zoom Out">
+                  <ZoomOut className="w-3 h-3" />
+                </button>
+                <span className="w-10 text-center">{zoomLevel}%</span>
+                <button onClick={handleZoomIn} className="p-1 rounded bg-gray-800 hover:bg-gray-700" title="Zoom In">
+                  <ZoomIn className="w-3 h-3" />
+                </button>
+              </div>
+
+              <button
+                onClick={toggleFullscreen}
+                className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition"
+                title="Toggle Fullscreen"
+              >
+                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+              </button>
             </div>
           </div>
 
+          {/* Document Content Canvas */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center custom-scrollbar">
+            <div
+              style={{
+                width: `${zoomLevel}%`,
+                maxWidth: '900px',
+                fontSize: `${fontSize}px`
+              }}
+              className={`p-6 sm:p-10 rounded-2xl transition-all ${paperBg}`}
+            >
+              {viewMode === 'paginated' ? (
+                <div className="space-y-4">
+                  <div className="pb-2 border-b border-gray-700/40 flex items-center justify-between text-[11px] opacity-70 font-mono">
+                    <span>Page {currentPage} of {totalPages}</span>
+                    <span>{documentInfo.filename}</span>
+                  </div>
+                  <div className="leading-relaxed font-serif prose prose-invert max-w-none">
+                    <MathRenderer content={docPages[currentPage - 1] || 'No content on this page.'} />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {docPages.map((p, idx) => (
+                    <div key={idx} className="space-y-3 pb-6 border-b border-gray-700/30 last:border-0">
+                      <span className="text-[10px] font-mono opacity-50 block">--- Page {idx + 1} ---</span>
+                      <div className="leading-relaxed font-serif prose prose-invert max-w-none">
+                        <MathRenderer content={p} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: AI COPILOT DOUBT SOLVER */}
+        <div className="w-full lg:w-96 bg-[#0c101a] flex flex-col justify-between border-t lg:border-t-0 border-gray-800 z-10 flex-shrink-0">
+          {/* AI Header */}
+          <div className="p-3.5 bg-gray-950/80 border-b border-gray-800 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="p-1.5 bg-purple-950/80 text-purple-400 rounded-lg border border-purple-800/60 shadow">
+                <Bot className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-white block">Document AI Assistant</span>
+                <span className="text-[9px] text-emerald-400 font-mono flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live Context Synced
+                </span>
+              </div>
+            </div>
+
+            <select
+              value={aiProvider}
+              onChange={(e) => setAiProvider(e.target.value)}
+              className="bg-gray-900 border border-gray-800 text-[10px] text-gray-300 rounded-lg px-2 py-1 focus:outline-none"
+            >
+              <option value="groq">Groq LLaMA 3.3</option>
+              <option value="gemini">Google Gemini</option>
+              <option value="sarvam">Sarvam AI (Hindi/Regional)</option>
+            </select>
+          </div>
+
           {/* Chat Messages Log */}
-          <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-4 font-sans text-xs scroll-smooth">
-            {messages.map((msg, idx) => (
+          <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar">
+            {messages.map((m, idx) => (
               <div
                 key={idx}
-                className={`flex items-start space-x-2.5 ${
-                  msg.sender === 'user' ? 'justify-end' : 'justify-start'
-                }`}
+                className={`flex items-start space-x-2.5 ${m.sender === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}
               >
-                {msg.sender === 'ai' && (
-                  <div className="p-1.5 bg-indigo-950 rounded-lg text-indigo-400 mt-0.5 border border-indigo-800 flex-shrink-0">
-                    <Bot className="w-3.5 h-3.5" />
-                  </div>
-                )}
-                <div
-                  className={`p-3.5 rounded-2xl max-w-[88%] leading-relaxed shadow-md ${
-                    msg.sender === 'user'
-                      ? 'bg-indigo-600 text-white rounded-tr-none shadow-indigo-600/20 text-xs'
-                      : 'bg-gray-900/90 text-gray-200 border border-gray-800 rounded-tl-none text-xs'
-                  }`}
-                >
-                  {msg.sender === 'user' ? (
-                    <div className="whitespace-pre-wrap">{msg.text}</div>
-                  ) : (
-                    <MathRenderer content={msg.text} />
-                  )}
-                  {msg.provider && (
-                    <span className="block text-[9px] text-gray-400 mt-1.5 font-mono">{msg.provider}</span>
+                <div className={`p-1.5 rounded-lg text-xs flex-shrink-0 ${
+                  m.sender === 'user' ? 'bg-indigo-600 text-white' : 'bg-purple-950 text-purple-400 border border-purple-800/60'
+                }`}>
+                  {m.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+                </div>
+                <div className={`p-3 rounded-2xl text-xs max-w-[85%] leading-relaxed ${
+                  m.sender === 'user'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'bg-gray-900/90 text-gray-200 border border-gray-800/80 shadow-inner'
+                }`}>
+                  <MathRenderer content={m.text} />
+                  {m.provider && (
+                    <span className="block text-[9px] text-gray-500 font-mono mt-1 text-right">
+                      via {m.provider}
+                    </span>
                   )}
                 </div>
-                {msg.sender === 'user' && (
-                  <div className="p-1.5 bg-gray-800 rounded-lg text-gray-300 mt-0.5 border border-gray-700 flex-shrink-0">
-                    <User className="w-3.5 h-3.5" />
-                  </div>
-                )}
               </div>
             ))}
             {sending && (
-              <div className="flex items-center space-x-2 text-indigo-400 text-xs py-2 animate-pulse">
+              <div className="flex items-center space-x-2 text-xs text-indigo-400 p-2 bg-gray-900/60 rounded-xl w-fit">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>Reading document & formulating step-by-step answer...</span>
+                <span className="font-mono text-[10px]">Analyzing document & generating explanation...</span>
               </div>
             )}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Doubt Solver Input Bar */}
-          <form onSubmit={handleSendQuestion} className="p-3 bg-gray-950 border-t border-gray-800/80 flex items-center space-x-2 flex-shrink-0">
+          {/* Message Input Box */}
+          <form onSubmit={handleSendQuestion} className="p-3 bg-gray-950/80 border-t border-gray-800 flex items-center space-x-2">
             <input
               type="text"
-              disabled={isProcessing}
               value={inputQuestion}
               onChange={(e) => setInputQuestion(e.target.value)}
-              placeholder={isProcessing ? "Waiting for text extraction..." : "Ask any doubt directly from this document..."}
-              className="flex-1 glass-input rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 disabled:opacity-50 transition"
+              placeholder="Ask formula derivation, doubt, or summary..."
+              className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
             />
             <button
               type="submit"
-              disabled={sending || !inputQuestion.trim() || isProcessing}
-              className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white p-2.5 rounded-xl transition shadow-lg shadow-indigo-600/20 flex items-center justify-center flex-shrink-0"
+              disabled={sending || !inputQuestion.trim()}
+              className="p-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl shadow-md transition flex-shrink-0 cursor-pointer"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-4 h-4" />
             </button>
           </form>
         </div>
