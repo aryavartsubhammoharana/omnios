@@ -101,8 +101,8 @@ export default function Login() {
           <div className="inline-flex p-3 bg-indigo-950/80 border border-indigo-700/50 rounded-2xl mb-3 shadow-inner">
             <BookOpen className="w-8 h-8 text-indigo-400" />
           </div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Sign In to NoteAI</h1>
-          <p className="text-xs text-gray-400 mt-1">Classroom & DLM Notebook Studio</p>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">Sign In to OmniOS</h1>
+          <p className="text-xs text-gray-400 mt-1">Classroom & OmniAI Studio</p>
         </div>
 
         {error && (

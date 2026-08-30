@@ -13,8 +13,8 @@ def send_verification_otp_email(recipient_email: str, otp_code: str, user_name: 
 
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"{otp_code} is your NoteAI Verification Code"
-        msg["From"] = f"NoteAI <{smtp_user}>"
+        msg["Subject"] = f"{otp_code} is your OmniOS Verification Code"
+        msg["From"] = f"OmniOS <{smtp_user}>"
         msg["To"] = recipient_email
 
         html_content = f"""
@@ -32,16 +32,16 @@ def send_verification_otp_email(recipient_email: str, otp_code: str, user_name: 
         </head>
         <body>
           <div class="card">
-            <div class="logo">NoteAI • Google Classroom & DLM Studio</div>
+            <div class="logo">OmniOS • Classroom & OmniAI Studio</div>
             <p>Hello <strong>{user_name}</strong>,</p>
-            <p>Thank you for registering on NoteAI. Use the 6-digit verification code below to activate your account:</p>
+            <p>Thank you for registering on OmniOS. Use the 6-digit verification code below to activate your account:</p>
             
             <div class="otp-box">{otp_code}</div>
             
             <p style="font-size: 12px; color: #94a3b8;">This code is valid for 10 minutes. If you did not request this code, please ignore this email.</p>
             
             <div class="footer">
-              © 2026 NoteAI Platform. All rights reserved.
+              © 2026 OmniOS Platform. All rights reserved.
             </div>
           </div>
         </body>

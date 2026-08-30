@@ -39,7 +39,7 @@ export default function NotebookLMStudio() {
         id: 'session_1',
         title: 'General Doubt Solving Session',
         messages: [
-          { sender: 'ai', text: 'Welcome to DLM Notebook! Click on "Sources" to manage documents, read them in the built-in reader, or upload new study notes.' }
+          { sender: 'ai', text: 'Welcome to OmniAI! Click on "Sources" to manage documents, read them in the built-in reader, or upload new study notes.' }
         ],
         createdAt: new Date().toISOString()
       }
@@ -183,6 +183,26 @@ export default function NotebookLMStudio() {
       setLoadingDocDetails(false);
     }
   };
+
+  useEffect(() => {
+    if (!readingDoc || docDetails?.processing_status === 'ready') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await API.get(`/api/upload/document/${readingDoc.id}`);
+        if (res.data) {
+          setDocDetails(res.data);
+          if (res.data.processing_status === 'ready') {
+            fetchSources();
+          }
+        }
+      } catch (err) {
+        console.error("Silent document refresh error:", err);
+      }
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [readingDoc, docDetails?.processing_status]);
 
   const handleDeleteDocument = async (docId, e) => {
     if (e) e.stopPropagation();
@@ -435,7 +455,7 @@ export default function NotebookLMStudio() {
             <div className="flex items-center space-x-2">
               <div className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-indigo-950/70 border border-indigo-700/60 text-[10px] text-indigo-300 font-mono shadow-sm">
                 <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
-                <span>DLM Studio AI</span>
+                <span>OmniAI Studio</span>
               </div>
             </div>
           </div>
@@ -700,7 +720,7 @@ export default function NotebookLMStudio() {
                     {readingDoc.filename}
                   </h3>
                   <span className="text-[10px] text-indigo-400 uppercase font-mono">
-                    DLM Studio Document Reader
+                    OmniAI Document Reader
                   </span>
                 </div>
               </div>

@@ -22,8 +22,8 @@ def is_valid_ai_text(text: str) -> bool:
 def _build_squeezed_tutor_prompt(prompt: str, context: str) -> str:
     c_clean = context.strip()[:2500] if context and context.strip() else ""
     if c_clean:
-        return f"Role: NoteAI Academic Tutor.\nTask: Explain accurately based on Context using structured Markdown & LaTeX $...$.\nContext:\n{c_clean}\n\nQuestion: {prompt}"
-    return f"Role: NoteAI Academic Tutor.\nTask: Explain clearly using Markdown and LaTeX $...$.\nQuestion: {prompt}"
+        return f"Role: OmniAI Academic Tutor.\nTask: Explain accurately based on Context using structured Markdown & LaTeX $...$.\nContext:\n{c_clean}\n\nQuestion: {prompt}"
+    return f"Role: OmniAI Academic Tutor.\nTask: Explain clearly using Markdown and LaTeX $...$.\nQuestion: {prompt}"
 
 
 def query_gemini_ai(prompt: str, context: str = "") -> str:
@@ -103,7 +103,7 @@ def query_groq_ai(prompt: str, context: str = "") -> str:
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=[
-                        {"role": "system", "content": "Role: NoteAI Tutor. Format concise Markdown with LaTeX $...$."},
+                        {"role": "system", "content": "Role: OmniAI Tutor. Format concise Markdown with LaTeX $...$."},
                         {"role": "user", "content": squeezed_prompt}
                     ],
                     temperature=0.3,
@@ -117,7 +117,7 @@ def query_groq_ai(prompt: str, context: str = "") -> str:
     except Exception as e:
         print(f"Groq client error: {e}")
 
-    return "NoteAI is ready to assist. Please ask your question."
+    return "OmniAI is ready to assist. Please ask your question."
 
 
 def generate_document_summary(content: str, filename: str = "Document") -> str:

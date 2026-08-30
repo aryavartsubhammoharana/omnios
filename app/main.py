@@ -22,9 +22,9 @@ with engine.connect() as conn:
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
+    title="OmniOS",
     version="1.0.0",
-    description="NoteAI Academic Platform"
+    description="OmniOS Academic & AI Platform"
 )
 
 app.add_middleware(
@@ -63,7 +63,7 @@ app.include_router(student_portal.router)
 @app.get("/api/health")
 def health_check():
     return {
-        "message": "Welcome to NoteAI",
+        "message": "Welcome to OmniOS",
         "status": "online"
     }
 

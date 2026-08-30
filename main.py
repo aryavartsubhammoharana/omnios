@@ -13,7 +13,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         pass
 
 
-def launch_public_tunnel(port: int = 8000, subdomain: str = "noteai-app"):
+def launch_public_tunnel(port: int = 8000, subdomain: str = "omnios-app"):
     import time
     import re
 
@@ -52,12 +52,12 @@ def launch_public_tunnel(port: int = 8000, subdomain: str = "noteai-app"):
         tunnel_url = f"https://{subdomain}.loca.lt"
 
     print("=" * 74)
-    print(f"🚀 NoteAI Local Server:   http://127.0.0.1:{port}")
+    print(f"🚀 OmniOS Local Server:   http://127.0.0.1:{port}")
     print(f"🌐 Public Live Tunnel:    {tunnel_url}")
     print(f"🔑 Tunnel Password (IP):  {ip_pass}")
     print("=" * 74)
 
 
 if __name__ == "__main__":
-    launch_public_tunnel(port=8000, subdomain="noteai-app")
+    launch_public_tunnel(port=8000, subdomain="omnios-app")
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)

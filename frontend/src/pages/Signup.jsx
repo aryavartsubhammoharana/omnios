@@ -180,10 +180,10 @@ export default function Signup() {
             <BookOpen className="w-8 h-8 text-indigo-400" />
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight">
-            {requiresOtp ? "Verify Email OTP" : "Create NoteAI Account"}
+            {requiresOtp ? "Verify Email OTP" : "Create OmniOS Account"}
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            {requiresOtp ? `Enter the 6-digit code sent to ${email}` : "Join Google Classroom & DLM Notebook Studio"}
+            {requiresOtp ? `Enter the 6-digit code sent to ${email}` : "Join Classroom & OmniAI Studio"}
           </p>
         </div>
 

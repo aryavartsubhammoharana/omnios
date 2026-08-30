@@ -166,14 +166,14 @@ export default function Navbar() {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-base sm:text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-indigo-400 tracking-tight whitespace-nowrap">
-                  NoteAI
+                  OmniOS
                 </span>
                 <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
                   PRO
                 </span>
               </div>
               <p className="text-[9px] sm:text-[10px] text-gray-400 font-medium tracking-tight whitespace-nowrap hidden xs:block">
-                DLMNotebook + Classroom
+                OmniAI + Classroom
               </p>
             </div>
           </Link>
@@ -194,7 +194,7 @@ export default function Navbar() {
               className="text-xs px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800/60 font-medium transition flex items-center gap-1.5 whitespace-nowrap"
             >
               <Bot className="w-3.5 h-3.5 text-purple-400" />
-              <span>DLM Notebook</span>
+              <span>OmniAI Studio</span>
             </Link>
             {user.role === 'student' && (
               <Link
@@ -303,7 +303,7 @@ export default function Navbar() {
             className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl bg-gray-900/60 hover:bg-purple-950 text-gray-200 hover:text-white border border-gray-800/80 transition text-xs font-medium"
           >
             <Bot className="w-4 h-4 text-purple-400" />
-            <span>DLM Notebook Studio</span>
+            <span>OmniAI Studio</span>
           </Link>
 
           {user.role === 'student' && (
@@ -352,7 +352,7 @@ export default function Navbar() {
                 <GraduationCap className="w-8 h-8 text-indigo-400" />
               </div>
               <h2 className="text-xl sm:text-2xl font-extrabold text-white">
-                Welcome to NoteAI, {user.full_name}!
+                Welcome to OmniOS, {user.full_name}!
               </h2>
               <p className="text-xs text-gray-300 max-w-md mx-auto leading-relaxed">
                 Please select your permanent role to continue. Once selected and confirmed, your role <strong className="text-indigo-300">cannot be changed</strong>.
@@ -438,7 +438,7 @@ export default function Navbar() {
                 className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition disabled:opacity-50"
               >
                 {savingRole ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-                <span>{savingRole ? 'Saving Role & Initializing Studio...' : 'Confirm Role & Enter NoteAI'}</span>
+                <span>{savingRole ? 'Saving Role & Initializing Studio...' : 'Confirm Role & Enter OmniOS'}</span>
               </button>
             </form>
           </div>
