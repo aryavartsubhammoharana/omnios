@@ -1,48 +1,40 @@
 import sys
-import re
 import logging
 from typing import Dict, Any
 
-class DeduplicatingLogHandler(logging.Handler):
-    def __init__(self, stream=None):
-        super().__init__()
-        self.stream = stream or sys.stdout
-        self.last_key = None
-        self.last_formatted = None
-        self.repeat_count = 1
-        self.in_carriage_return = False
+class QuietPollingFilter(logging.Filter):
+    IGNORED_ENDPOINTS = (
+        "/api/upload/list",
+        "/api/analytics/my-streak",
+        "/api/classroom/list",
+        "/api/classroom/2/posts",
+        "/api/classroom/3/posts",
+        "/api/classroom/2/students",
+        "/api/classroom/3/students",
+        "/api/quiz/list/",
+        "/vite.svg",
+        "/assets/",
+        "/api/health",
+        "/api/auth/me"
+    )
 
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            key = re.sub(r"127\.0\.0\.1:\d+", "127.0.0.1", msg)
-            key = re.sub(r"\[\d+\]", "", key)
-            key_clean = re.sub(r"\x1b\[[0-9;]*m", "", key).strip()
-
-            if key_clean == self.last_key:
-                self.repeat_count += 1
-                out_line = f"\r{self.last_formatted} (x{self.repeat_count})    "
-                self.stream.write(out_line)
-                self.stream.flush()
-                self.in_carriage_return = True
-            else:
-                if self.in_carriage_return:
-                    self.stream.write("\n")
-                    self.in_carriage_return = False
-
-                self.last_key = key_clean
-                self.last_formatted = msg
-                self.repeat_count = 1
-                self.stream.write(f"{msg}\n")
-                self.stream.flush()
-        except Exception:
-            self.handleError(record)
+    def filter(self, record: logging.LogRecord) -> bool:
+        msg = record.getMessage()
+        if "GET " in msg and (" 200 " in msg or " 200 OK" in msg or " 304 " in msg):
+            if any(endpoint in msg for endpoint in self.IGNORED_ENDPOINTS):
+                return False
+        return True
 
 
 def get_smart_log_config() -> Dict[str, Any]:
     return {
         "version": 1,
         "disable_existing_loggers": False,
+        "filters": {
+            "quiet_polling": {
+                "()": "app.utils.smart_logger.QuietPollingFilter",
+            },
+        },
         "formatters": {
             "default": {
                 "()": "uvicorn.logging.DefaultFormatter",
@@ -57,12 +49,15 @@ def get_smart_log_config() -> Dict[str, Any]:
         },
         "handlers": {
             "default": {
-                "()": "app.utils.smart_logger.DeduplicatingLogHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "default",
+                "stream": "ext://sys.stderr",
             },
             "access": {
-                "()": "app.utils.smart_logger.DeduplicatingLogHandler",
+                "class": "logging.StreamHandler",
                 "formatter": "access",
+                "filters": ["quiet_polling"],
+                "stream": "ext://sys.stderr",
             },
         },
         "loggers": {
@@ -74,11 +69,7 @@ def get_smart_log_config() -> Dict[str, Any]:
 
 
 def setup_smart_logging():
-    handler = DeduplicatingLogHandler(sys.stdout)
-    formatter = logging.Formatter("%(levelname)s:     %(message)s")
-    handler.setFormatter(formatter)
-
-    for logger_name in ["uvicorn", "uvicorn.access", "uvicorn.error"]:
-        l = logging.getLogger(logger_name)
-        l.handlers = [handler]
-        l.propagate = False
+    access_logger = logging.getLogger("uvicorn.access")
+    quiet_filter = QuietPollingFilter()
+    if not any(isinstance(f, QuietPollingFilter) for f in access_logger.filters):
+        access_logger.addFilter(quiet_filter)
