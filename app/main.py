@@ -16,8 +16,9 @@ with engine.connect() as conn:
     try:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
         conn.commit()
-    except Exception as e:
-        print(f"Note on pgvector extension: {e}")
+    except Exception:
+        # pgvector is optional; falls back to ChromaDB seamlessly
+        pass
 
 Base.metadata.create_all(bind=engine)
 
