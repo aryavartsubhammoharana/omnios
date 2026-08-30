@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api/client';
+import { AuthContext } from '../context/AuthContext';
 import { 
   Sparkles, CheckCircle2, XCircle, Play, Flame, Award, Clock,
   BookOpen, ChevronRight, AlertTriangle, ArrowRight, Video,
@@ -11,6 +12,7 @@ import { formatISTTime } from '../utils/formatDate';
 
 export default function StudentDailyHub() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [dailyQuiz, setDailyQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userAnswers, setUserAnswers] = useState({});
@@ -19,10 +21,8 @@ export default function StudentDailyHub() {
   const [submissionResult, setSubmissionResult] = useState(null);
   const [streak, setStreak] = useState(1);
 
-  // 3-Field Advanced Academic Search State
   const [searchTopic, setSearchTopic] = useState('');
   const [searchContext, setSearchContext] = useState('Full Chapter One Shot');
-  const [searchClass, setSearchClass] = useState('Class 11 / 12');
   const [searchingVideos, setSearchingVideos] = useState(false);
   const [customSearchResults, setCustomSearchResults] = useState(null);
   const [searchMetadata, setSearchMetadata] = useState(null);
@@ -32,6 +32,12 @@ export default function StudentDailyHub() {
     try {
       const res = await API.get('/api/student/daily-quiz');
       setDailyQuiz(res.data);
+      if (res.data.weak_topics && res.data.weak_topics.length > 0 && !searchTopic) {
+        setSearchTopic(res.data.weak_topics[0]);
+      } else if (res.data.questions && res.data.questions.length > 0 && !searchTopic) {
+        const top = res.data.questions[0].topic || res.data.questions[0].sub_topic;
+        if (top) setSearchTopic(top);
+      }
       if (res.data.is_completed) {
         setSubmissionResult({
           score: res.data.score,
@@ -122,8 +128,7 @@ export default function StudentDailyHub() {
       const res = await API.get('/api/student/search-videos', {
         params: { 
           topic: searchTopic.trim(),
-          context: searchContext,
-          class_level: searchClass
+          context: searchContext
         }
       });
       setCustomSearchResults(res.data.results || []);
@@ -190,21 +195,32 @@ export default function StudentDailyHub() {
           </div>
         </div>
 
-        {/* 3-Field Structured Academic Search Card */}
+        {/* 2-Field AI Structured Academic Search Card */}
         <div className="glass-card p-6 rounded-3xl border border-gray-800/80 shadow-2xl bg-gray-950/90 space-y-4">
-          <div className="flex items-center space-x-2 pb-2 border-b border-gray-800/80">
-            <Search className="w-4 h-4 text-indigo-400" />
-            <h3 className="text-sm font-bold text-white tracking-wide">Targeted Academic Video Search</h3>
-            <span className="text-[10px] text-gray-400 font-mono">Topic • Context • Class</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-gray-800/80">
+            <div className="flex items-center space-x-2">
+              <Search className="w-4 h-4 text-indigo-400" />
+              <h3 className="text-sm font-bold text-white tracking-wide">Targeted Academic Video Search</h3>
+            </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-950/80 border border-indigo-700/60 rounded-lg text-[10px] text-indigo-300 font-mono w-fit">
+              <GraduationCap className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Target Class: {user?.student_class || 'Auto-calibrated from Profile'}</span>
+            </div>
           </div>
 
           <form onSubmit={handleStructuredSearch} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               {/* Field 1: Topic */}
-              <div className="md:col-span-6 space-y-1.5">
-                <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
-                  <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Topic / Concept / Chapter:</span>
+              <div className="md:col-span-7 space-y-1.5">
+                <label className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+                  <span className="flex items-center space-x-1.5">
+                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Topic / Concept / Chapter:</span>
+                  </span>
+                  <span className="text-[10px] text-indigo-400 font-mono flex items-center gap-1">
+                    <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                    <span>AI Decided</span>
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -216,10 +232,10 @@ export default function StudentDailyHub() {
               </div>
 
               {/* Field 2: Context / Goal */}
-              <div className="md:col-span-3 space-y-1.5">
+              <div className="md:col-span-5 space-y-1.5">
                 <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
                   <Compass className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Context / Goal:</span>
+                  <span>Context / Learning Goal:</span>
                 </label>
                 <select
                   value={searchContext}
@@ -231,26 +247,6 @@ export default function StudentDailyHub() {
                   <option value="Numerical & Problem Solving">Numerical & Problem Solving</option>
                   <option value="Animated Masterclass">Animated Masterclass</option>
                   <option value="Quick Revision Crash Course">Quick Revision Crash Course</option>
-                </select>
-              </div>
-
-              {/* Field 3: According to Class */}
-              <div className="md:col-span-3 space-y-1.5">
-                <label className="text-xs font-semibold text-gray-300 flex items-center space-x-1.5">
-                  <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>According to Class:</span>
-                </label>
-                <select
-                  value={searchClass}
-                  onChange={(e) => setSearchClass(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-xs text-gray-200 focus:outline-none focus:border-indigo-500 transition shadow-inner cursor-pointer"
-                >
-                  <option value="Class 11 / 12">Class 11 / 12</option>
-                  <option value="Class 10 Board">Class 10 Board</option>
-                  <option value="Class 9 Foundation">Class 9 Foundation</option>
-                  <option value="JEE / NEET Advanced">JEE / NEET Advanced</option>
-                  <option value="College / Engineering">College / Engineering</option>
-                  <option value="General Science">General Science</option>
                 </select>
               </div>
             </div>

@@ -347,11 +347,7 @@ def search_educational_videos(
         raise HTTPException(status_code=400, detail="Topic is required.")
 
     enrollments = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()
-    class_ids = [e.classroom_id for e in enrollments]
-    enrolled_classes = db.query(Classroom).filter(Classroom.id.in_(class_ids)).all() if class_ids else []
-    class_names = [c.name for c in enrolled_classes]
-    
-    resolved_class = class_level if class_level else (f"Class {' '.join(class_names)}" if class_names else "Academic")
+    resolved_class = current_user.student_class or (f"Class {' '.join(class_names)}" if class_names else (class_level or "High School / College"))
     combined_context = f"{resolved_class} {context or ''}".strip()
 
     results = get_curated_weak_topic_videos(
