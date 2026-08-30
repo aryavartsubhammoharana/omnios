@@ -85,23 +85,19 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
       >
         {/* -- TOP SECTION -- */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Header Row: Logo Button (Replaces Hamburger Menu) */}
+          {/* Header Row: OmniOS Brand Logo (Unclickable / Static branding) */}
           <div className="h-[61px] px-3.5 flex items-center border-b border-gray-800/80 bg-[#090d16] flex-shrink-0">
-            <button
-              onClick={onTogglePin}
-              className="p-1 rounded-xl hover:bg-gray-800 transition cursor-pointer flex-shrink-0 group flex items-center justify-center"
-              title="OmniOS (Click to toggle sidebar)"
-            >
+            <div className="p-1 rounded-xl flex-shrink-0 flex items-center justify-center select-none pointer-events-none">
               <img 
                 src="/logo.png" 
                 alt="OmniOS Logo" 
-                className="w-8 h-8 rounded-xl object-cover border border-indigo-500/40 shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform" 
+                className="w-8 h-8 rounded-xl object-cover border border-indigo-500/40 shadow-lg shadow-indigo-600/30 select-none pointer-events-none" 
               />
-            </button>
+            </div>
 
             {/* App Title (Visible when expanded) */}
-            <div className={`flex items-center space-x-2 ml-2.5 transition-opacity duration-200 overflow-hidden ${
-              isExpanded ? 'opacity-100 flex-1' : 'opacity-0 w-0 pointer-events-none'
+            <div className={`flex items-center space-x-2 ml-2.5 transition-opacity duration-200 overflow-hidden select-none pointer-events-none ${
+              isExpanded ? 'opacity-100 flex-1' : 'opacity-0 w-0'
             }`}>
               <div className="flex items-center gap-1.5 truncate">
                 <span className="text-base font-bold text-white tracking-tight">OmniOS</span>
