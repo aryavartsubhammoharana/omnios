@@ -7,6 +7,7 @@ import {
   RotateCcw, Loader2, Target, RefreshCw, Search, GraduationCap, Compass, Layers
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
+import { formatISTTime } from '../utils/formatDate';
 
 export default function StudentDailyHub() {
   const navigate = useNavigate();
@@ -295,7 +296,7 @@ export default function StudentDailyHub() {
                       <span>Diagnostic Result: {submissionResult.score} / {submissionResult.max_score}</span>
                     </h2>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      Completed on {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • +300 Study Seconds Earned
+                      Completed at {formatISTTime(new Date())} IST • +300 Study Seconds Earned
                     </p>
                   </div>
                 </div>

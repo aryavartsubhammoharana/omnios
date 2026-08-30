@@ -1,6 +1,6 @@
-from datetime import datetime, date
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Date
 from app.database import Base
+from app.utils.time_utils import get_ist_now
 
 class StudentStreak(Base):
     __tablename__ = "student_streaks"
@@ -11,7 +11,7 @@ class StudentStreak(Base):
     longest_streak = Column(Integer, default=0, nullable=False)
     last_active_date = Column(Date, nullable=True)
     total_study_seconds = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_ist_now)
 
 class StudySession(Base):
     __tablename__ = "study_sessions"
@@ -21,7 +21,7 @@ class StudySession(Base):
     document_id = Column(Integer, ForeignKey("document_files.id", ondelete="CASCADE"), nullable=False, index=True)
     classroom_id = Column(Integer, ForeignKey("classrooms.id", ondelete="CASCADE"), nullable=False, index=True)
     time_spent_seconds = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_ist_now)
 
 class VideoFocusSession(Base):
     __tablename__ = "video_focus_sessions"
@@ -32,4 +32,4 @@ class VideoFocusSession(Base):
     video_title = Column(String, nullable=False)
     weak_topic = Column(String, nullable=True)
     watch_seconds = Column(Integer, default=0, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_ist_now)

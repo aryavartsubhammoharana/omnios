@@ -8,6 +8,7 @@ from app.models.analytics import StudentStreak, StudySession
 from app.models.file import DocumentFile
 from app.models.classroom import Enrollment
 from app.utils.deps import get_current_user
+from app.utils.time_utils import get_ist_now
 
 router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 
@@ -35,7 +36,7 @@ def track_document_view(
 
     # Update or create streak
     streak = db.query(StudentStreak).filter(StudentStreak.student_id == current_user.id).first()
-    today = date.today()
+    today = get_ist_now().date()
 
     if not streak:
         streak = StudentStreak(
@@ -87,7 +88,7 @@ def get_my_streak(
         return {"current_streak": 0, "longest_streak": 0, "total_study_seconds": 0}
     
     # Check if streak is still active (last active was yesterday or today)
-    today = date.today()
+    today = get_ist_now().date()
     if streak.last_active_date:
         delta = (today - streak.last_active_date).days
         if delta > 1:

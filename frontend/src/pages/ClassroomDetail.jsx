@@ -12,6 +12,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import MathRenderer from '../components/MathRenderer';
+import { formatISTDateTime, formatISTDate } from '../utils/formatDate';
 
 export default function ClassroomDetail() {
   const { id } = useParams();
@@ -275,7 +276,7 @@ export default function ClassroomDetail() {
 
   // AI Quiz Generation Handlers (Difficulty 1-10 + Document Selection + Competency %)
   const handleOpenAiQuizModal = () => {
-    setAiQuizTitle(`AI Practice Quiz - ${new Date().toLocaleDateString()}`);
+    setAiQuizTitle(`AI Practice Quiz - ${formatISTDate(new Date())}`);
     setAiQuizNumQuestions(5);
     setAiQuizDifficulty(5);
     setAiQuizCompetency(50);
@@ -618,7 +619,7 @@ export default function ClassroomDetail() {
                   <div key={p.id} className="glass-card rounded-2xl border border-gray-800/80 p-5 shadow-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-indigo-300">{p.author_name}</span>
-                      <span className="text-[11px] text-slate-500">{new Date(p.created_at).toLocaleString()}</span>
+                      <span className="text-[11px] text-slate-500">{formatISTDateTime(p.created_at)}</span>
                     </div>
                     <p className="text-sm text-slate-200 whitespace-pre-wrap">{p.content}</p>
                   </div>
@@ -995,7 +996,7 @@ export default function ClassroomDetail() {
                               </span>
                               <span className="flex items-center space-x-1 text-slate-500">
                                 <Clock className="w-3 h-3 text-slate-500" />
-                                <span>{new Date(quiz.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                                <span>{formatISTDateTime(quiz.created_at)}</span>
                               </span>
                             </div>
                           </div>
@@ -1727,7 +1728,7 @@ export default function ClassroomDetail() {
                           {/* Submission Date */}
                           <div className="col-span-3 text-right text-[10px] text-slate-400 font-mono">
                             {sub.completed_at
-                              ? new Date(sub.completed_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })
+                              ? formatISTDateTime(sub.completed_at)
                               : 'Not yet'}
                           </div>
                         </div>

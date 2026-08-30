@@ -1,6 +1,6 @@
-from datetime import datetime
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from app.database import Base
+from app.utils.time_utils import get_ist_now
 
 class DocumentFile(Base):
     __tablename__ = "document_files"
@@ -15,4 +15,4 @@ class DocumentFile(Base):
     content_text = Column(Text, nullable=True)
     processing_status = Column(String, default="ready")
     processing_progress = Column(Integer, default=100)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_ist_now)

@@ -14,6 +14,7 @@ from app.models.analytics import StudentStreak, VideoFocusSession
 from app.routes.auth import get_current_user
 from app.services.ai import query_groq_ai
 from app.services.youtube_service import get_curated_weak_topic_videos, get_video_transcript
+from app.utils.time_utils import get_ist_now
 
 router = APIRouter(prefix="/api/student", tags=["Student AI Portal"])
 
@@ -231,26 +232,26 @@ def submit_daily_quiz(
     quiz.is_completed = True
     quiz.weak_topics = weak_topics_list
     quiz.recommendations_json = recommendations
-    quiz.completed_at = datetime.utcnow()
+    quiz.completed_at = get_ist_now()
     db.commit()
 
+    ist_today = get_ist_now().date()
     streak = db.query(StudentStreak).filter(StudentStreak.student_id == current_user.id).first()
     if not streak:
         streak = StudentStreak(
             student_id=current_user.id,
             current_streak=1,
             longest_streak=1,
-            last_active_date=date.today(),
+            last_active_date=ist_today,
             total_study_seconds=300
         )
         db.add(streak)
     else:
-        today = date.today()
-        if streak.last_active_date != today:
+        if streak.last_active_date != ist_today:
             streak.current_streak += 1
             if streak.current_streak > streak.longest_streak:
                 streak.longest_streak = streak.current_streak
-            streak.last_active_date = today
+            streak.last_active_date = ist_today
         streak.total_study_seconds += 300
     db.commit()
 

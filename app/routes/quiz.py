@@ -14,6 +14,7 @@ from app.schemas.quiz import (
 from app.services.ai import generate_quiz_questions
 from app.services.extractor import extract_text_from_file
 from app.utils.deps import get_current_user
+from app.utils.time_utils import get_ist_now
 
 router = APIRouter(prefix="/api/quiz", tags=["Quiz"])
 
@@ -228,7 +229,7 @@ def submit_quiz_attempt(
         score=score,
         max_score=max_score,
         answers_json=detailed_answers,
-        completed_at=datetime.utcnow()
+        completed_at=get_ist_now()
     )
     db.add(attempt)
     db.commit()

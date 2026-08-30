@@ -1,6 +1,9 @@
-from datetime import datetime, date
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, JSON, Float, Boolean, Date
 from app.database import Base
+from app.utils.time_utils import get_ist_now
+
+def get_ist_today_date():
+    return get_ist_now().date()
 
 class Quiz(Base):
     __tablename__ = "quizzes"
@@ -11,7 +14,7 @@ class Quiz(Base):
     title = Column(String, nullable=False)
     description = Column(Text, nullable=True)
     questions_json = Column(JSON, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_ist_now)
 
 class QuizAttempt(Base):
     __tablename__ = "quiz_attempts"
@@ -22,15 +25,14 @@ class QuizAttempt(Base):
     score = Column(Float, nullable=False)
     max_score = Column(Float, nullable=False)
     answers_json = Column(JSON, nullable=False)
-    completed_at = Column(DateTime, default=datetime.utcnow)
-
+    completed_at = Column(DateTime, default=get_ist_now)
 
 class StudentDailyQuiz(Base):
     __tablename__ = "daily_quizzes"
 
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    quiz_date = Column(Date, default=date.today, nullable=False, index=True)
+    quiz_date = Column(Date, default=get_ist_today_date, nullable=False, index=True)
     title = Column(String, nullable=False)
     questions_json = Column(JSON, nullable=False)
     user_answers_json = Column(JSON, nullable=True)
@@ -40,4 +42,4 @@ class StudentDailyQuiz(Base):
     weak_topics = Column(JSON, nullable=True)
     recommendations_json = Column(JSON, nullable=True)
     completed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_ist_now)

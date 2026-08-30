@@ -1,6 +1,6 @@
-from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from app.database import Base
+from app.utils.time_utils import get_ist_now
 
 class User(Base):
     __tablename__ = "users"
@@ -17,4 +17,4 @@ class User(Base):
     is_role_confirmed = Column(Boolean, default=False, nullable=False)
     verification_otp = Column(String, nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_ist_now)
