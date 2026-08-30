@@ -12,6 +12,32 @@ from app.routes.analytics import record_learning_activity
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
 
+import time
+import hashlib
+
+class MemoryCache:
+    def __init__(self, max_size=1000, ttl=7200): # 2 hours TTL
+        self.cache = {}
+        self.max_size = max_size
+        self.ttl = ttl
+
+    def get(self, key):
+        if key in self.cache:
+            item, timestamp = self.cache[key]
+            if time.time() - timestamp < self.ttl:
+                return item
+            else:
+                del self.cache[key]
+        return None
+
+    def set(self, key, value):
+        if len(self.cache) >= self.max_size:
+            self.cache.pop(next(iter(self.cache)))
+        self.cache[key] = (value, time.time())
+
+# Global cache instance for AI responses
+ai_response_cache = MemoryCache()
+
 
 @router.post("/chat", response_model=AIChatResponse)
 def document_chat(
@@ -105,17 +131,32 @@ def document_chat(
                     source_names.append(fname)
             context = "\n\n---\n\n".join(parts)
 
-    answer = query_sarvam_ai(prompt=data.question, context=context)
+    # Generate unique cache key based on question and context
+    cache_key_string = f"{data.question}---{context}"
+    cache_key = hashlib.md5(cache_key_string.encode('utf-8')).hexdigest()
 
-    if not is_valid_ai_text(answer):
-        answer = query_gemini_ai(prompt=data.question, context=context)
+    cached_answer = ai_response_cache.get(cache_key)
+    
+    if cached_answer:
+        answer = cached_answer
+        provider_used = "DLM Cache (Instant)"
+    else:
+        answer = query_sarvam_ai(prompt=data.question, context=context)
+
+        if not is_valid_ai_text(answer):
+            answer = query_gemini_ai(prompt=data.question, context=context)
+            
+        if is_valid_ai_text(answer):
+            ai_response_cache.set(cache_key, answer)
+            
+        provider_used = "DLM Notebook AI"
 
     # Genuine academic engagement: Update streak with 0-load idempotency
     record_learning_activity(current_user.id, db)
 
     return AIChatResponse(
         answer=answer,
-        provider_used="DLM Notebook AI",
+        provider_used=provider_used,
         sources=source_names,
     )
 
