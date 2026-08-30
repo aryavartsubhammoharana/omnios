@@ -44,10 +44,10 @@ export const ThreadEffectCanvas = () => {
     const colorBuckets = [];
 
     const getPaletteBucketIndex = (r, g, b, a) => {
-      const qr = Math.round(r / 26) * 26;
-      const qg = Math.round(g / 26) * 26;
-      const qb = Math.round(b / 26) * 26;
-      const qa = a < 50 ? 0.3 : Math.min(1, +(a / 255).toFixed(2));
+      const qr = Math.round(r / 24) * 24;
+      const qg = Math.round(g / 24) * 24;
+      const qb = Math.round(b / 24) * 24;
+      const qa = a < 40 ? 0.25 : Math.min(1, +(a / 255).toFixed(2));
       const colorKey = `rgba(${qr},${qg},${qb},${qa})`;
 
       let idx = paletteColors.indexOf(colorKey);
@@ -84,58 +84,44 @@ export const ThreadEffectCanvas = () => {
         // 1. Dark ambient backdrop
         const bgGrad = offCtx.createRadialGradient(
           width * 0.5,
-          height * 0.44,
+          height * 0.5,
           20,
           width * 0.5,
-          height * 0.44,
-          Math.max(width, height) * 0.65
+          height * 0.5,
+          Math.max(width, height) * 0.7
         );
-        bgGrad.addColorStop(0, '#1c1a36');
-        bgGrad.addColorStop(0.45, '#121124');
+        bgGrad.addColorStop(0, '#1a1936');
+        bgGrad.addColorStop(0.5, '#101020');
         bgGrad.addColorStop(1, '#07070a');
         offCtx.fillStyle = bgGrad;
         offCtx.fillRect(0, 0, width, height);
 
-        // 2. Draw OmniOS Logo
+        // 2. Draw Large Centered OmniOS Logo (No text, only big prominent logo)
         if (logoLoaded && logoImg.width > 0) {
-          const logoSize = Math.min(width * 0.54, height * 0.42, 260);
+          // Large scale: 78% of container or up to 480px
+          const logoSize = Math.min(width * 0.82, height * 0.78, 480);
           const logoX = (width - logoSize) * 0.5;
-          const logoY = height * 0.38 - logoSize * 0.5;
+          const logoY = (height - logoSize) * 0.5;
 
-          // Glowing Aura behind logo
+          // Vibrant Glowing Aura behind large logo
           const auraGrad = offCtx.createRadialGradient(
             width * 0.5,
-            height * 0.38,
+            height * 0.5,
             10,
             width * 0.5,
-            height * 0.38,
-            logoSize * 0.95
+            height * 0.5,
+            logoSize * 0.85
           );
-          auraGrad.addColorStop(0, 'rgba(99, 102, 241, 0.45)');
-          auraGrad.addColorStop(0.5, 'rgba(139, 92, 246, 0.22)');
+          auraGrad.addColorStop(0, 'rgba(99, 102, 241, 0.55)');
+          auraGrad.addColorStop(0.45, 'rgba(56, 189, 248, 0.28)');
+          auraGrad.addColorStop(0.7, 'rgba(139, 92, 246, 0.15)');
           auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
           offCtx.fillStyle = auraGrad;
-          offCtx.fillRect(logoX - 50, logoY - 50, logoSize + 100, logoSize + 100);
+          offCtx.fillRect(logoX - 60, logoY - 60, logoSize + 120, logoSize + 120);
 
-          // Draw Logo Image
+          // Draw Logo Image prominently in center
           offCtx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
         }
-
-        // 3. Embroidered Brand Text
-        offCtx.textAlign = 'center';
-        offCtx.textBaseline = 'middle';
-
-        offCtx.font = 'bold 36px sans-serif';
-        offCtx.fillStyle = '#ffffff';
-        offCtx.fillText('OmniOS', width * 0.5, height * 0.66);
-
-        offCtx.font = 'bold 12px sans-serif';
-        offCtx.fillStyle = '#818cf8';
-        offCtx.fillText('ACADEMIC & AI PLATFORM', width * 0.5, height * 0.72);
-
-        offCtx.font = '10px sans-serif';
-        offCtx.fillStyle = '#a1a1aa';
-        offCtx.fillText('Next-Gen Neural Learning Ecosystem', width * 0.5, height * 0.76);
       }
 
       let imgData = null;
@@ -147,8 +133,9 @@ export const ThreadEffectCanvas = () => {
         console.warn('Canvas pixel sample notice:', e);
       }
 
-      const colSpacing = 13;
-      const rowSpacing = 6.2;
+      // High-density stitch spacing for rich, clear logo details
+      const colSpacing = 11.2;
+      const rowSpacing = 5.6;
       const cols = Math.ceil(width / colSpacing) + 2;
       const rows = Math.ceil(height / rowSpacing) + 2;
 
@@ -169,9 +156,9 @@ export const ThreadEffectCanvas = () => {
           const cx = Math.floor(c * colSpacing + (r % 2 === 0 ? 0 : colSpacing * 0.5));
           const cy = Math.floor(r * rowSpacing);
 
-          let rVal = 14;
-          let gVal = 15;
-          let bVal = 22;
+          let rVal = 12;
+          let gVal = 13;
+          let bVal = 18;
           let aVal = 255;
           let isLogo = 0;
 
@@ -182,7 +169,7 @@ export const ThreadEffectCanvas = () => {
             bVal = imgData.data[pIdx + 2];
             aVal = imgData.data[pIdx + 3];
 
-            if (rVal > 45 || gVal > 45 || bVal > 55) {
+            if (rVal > 40 || gVal > 40 || bVal > 50) {
               isLogo = 1;
             }
           }
@@ -194,7 +181,7 @@ export const ThreadEffectCanvas = () => {
           cyArr[idx] = cy;
           angleArr[idx] = 0;
           targetAngleArr[idx] = 0;
-          const baseLen = isLogo ? 13 : 11;
+          const baseLen = isLogo ? 12.8 : 10.2;
           baseLenArr[idx] = baseLen;
           lenArr[idx] = baseLen;
           targetLenArr[idx] = baseLen;
@@ -265,7 +252,7 @@ export const ThreadEffectCanvas = () => {
       const mx = m.x;
       const my = m.y;
       const isMouseActive = m.active;
-      const influenceRadius = 150;
+      const influenceRadius = 160;
       const influenceRadiusSq = influenceRadius * influenceRadius;
 
       ctx.fillStyle = '#08080c';
@@ -301,7 +288,7 @@ export const ThreadEffectCanvas = () => {
         lenArr[i] += (targetLenArr[i] - lenArr[i]) * 0.22;
       }
 
-      ctx.lineWidth = 2.6;
+      ctx.lineWidth = 2.4;
       ctx.lineCap = 'round';
 
       for (let b = 0; b < paletteColors.length; b++) {
@@ -329,12 +316,12 @@ export const ThreadEffectCanvas = () => {
       }
 
       if (isMouseActive && mx > 0 && my > 0) {
-        const halo = ctx.createRadialGradient(mx, my, 0, mx, my, 130);
-        halo.addColorStop(0, 'rgba(129, 140, 248, 0.18)');
-        halo.addColorStop(0.6, 'rgba(168, 85, 247, 0.05)');
+        const halo = ctx.createRadialGradient(mx, my, 0, mx, my, 140);
+        halo.addColorStop(0, 'rgba(129, 140, 248, 0.2)');
+        halo.addColorStop(0.6, 'rgba(168, 85, 247, 0.06)');
         halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = halo;
-        ctx.fillRect(mx - 130, my - 130, 260, 260);
+        ctx.fillRect(mx - 140, my - 140, 280, 280);
       }
 
       animationFrameId = requestAnimationFrame(render);
