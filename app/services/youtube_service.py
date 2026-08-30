@@ -37,11 +37,14 @@ def is_academic_video(title: str, channel: str) -> bool:
 def expand_academic_queries_with_ai(topic: str, grade_context: str = "") -> list[str]:
     from app.services.ai import query_groq_ai
 
+    clean_grade = grade_context.strip() if grade_context else "Class 10 Board"
+
     prompt = (
-        f"Generate 3 highly specific, academic YouTube search queries for a student struggling with the topic: '{topic}'.\n"
-        f"Student Grade/Context: '{grade_context or 'High School / Pre-Medical / Engineering'}'\n"
-        f"Include relevant terms like chapter name, NCERT, one shot, animated explanation, or top educational channels.\n"
-        f"Return ONLY a JSON array of 3 strings. Example: [\"Fluid Mechanics one shot class 11 physics wallah\", \"Transport in Plants biology Khan Academy\", \"Body Fluids and Circulation full lecture\"]\n"
+        f"Generate 3 highly specific, academic YouTube search queries for a student studying in '{clean_grade}' struggling with the topic: '{topic}'.\n"
+        f"CRITICAL: Strictly tailor the concepts, chapter names, and difficulty level to '{clean_grade}' syllabus (e.g. CBSE/NCERT {clean_grade} Science, Maths, Social Science).\n"
+        f"Do NOT recommend higher grade concepts (e.g., do NOT suggest Class 11/12 derivation videos if student is in Class 9 or 10).\n"
+        f"Include relevant terms like chapter name, NCERT, one shot, animated explanation, or top educational channels like Physics Wallah Foundation, Khan Academy, Vedantu, Magnet Brains.\n"
+        f"Return ONLY a JSON array of 3 strings. Example: [\"{topic} {clean_grade} one shot lecture\", \"{topic} {clean_grade} full chapter explanation\", \"{topic} NCERT {clean_grade} animated\"]\n"
         f"No markdown, pure JSON only."
     )
     try:
@@ -190,8 +193,9 @@ def get_curated_weak_topic_videos(weak_topics: list[str], grade_context: str = "
             break
 
     if len(results) < target_count:
+        clean_grade = grade_context.strip() if grade_context else "Class 10"
         for topic in weak_topics:
-            fallback_query = f"{topic} NCERT class 11 12 full lecture one shot physics wallah khan academy"
+            fallback_query = f"{topic} NCERT {clean_grade} full lecture one shot physics wallah khan academy"
             extra = search_youtube_videos_fallback(fallback_query, max_results=target_count - len(results))
             for v in extra:
                 if v["video_id"] not in seen_ids:

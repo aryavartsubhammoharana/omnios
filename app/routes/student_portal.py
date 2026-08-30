@@ -389,7 +389,7 @@ def submit_daily_quiz(
     class_ids = [e.classroom_id for e in enrollments]
     enrolled_classes = db.query(Classroom).filter(Classroom.id.in_(class_ids)).all() if class_ids else []
     class_names = [c.name for c in enrolled_classes]
-    grade_context = f"Class {' '.join(class_names)}" if class_names else "High School / College"
+    grade_context = current_user.student_class or (f"Class {' '.join(class_names)}" if class_names else "Class 10 Board")
 
     recommendations = get_curated_weak_topic_videos(
         weak_topics=weak_topics_list,
@@ -456,8 +456,10 @@ def get_active_recommendations(
             "recommendations": latest_quiz.recommendations_json
         }
 
+    grade_context = current_user.student_class or "Class 10 Board"
     fallback = get_curated_weak_topic_videos(
-        weak_topics=["Problem Solving Technique", "Conceptual Physics & Mathematics"],
+        weak_topics=["Science & Mathematics Foundation", "Problem Solving Technique"],
+        grade_context=grade_context,
         target_count=10
     )
     return {
@@ -483,7 +485,7 @@ def refresh_student_recommendations(
     class_ids = [e.classroom_id for e in enrollments]
     enrolled_classes = db.query(Classroom).filter(Classroom.id.in_(class_ids)).all() if class_ids else []
     class_names = [c.name for c in enrolled_classes]
-    grade_context = f"Class {' '.join(class_names)}" if class_names else "High School / College"
+    grade_context = current_user.student_class or (f"Class {' '.join(class_names)}" if class_names else "Class 10 Board")
 
     import random
     new_offset = random.randint(1, 10)
@@ -510,15 +512,14 @@ def refresh_student_recommendations(
 def search_educational_videos(
     topic: str,
     context: Optional[str] = "Full Concept & Derivation",
-    class_level: Optional[str] = "Class 11 / 12",
+    class_level: Optional[str] = "Class 10 Board",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     if not topic or not topic.strip():
         raise HTTPException(status_code=400, detail="Topic is required.")
 
-    enrollments = db.query(Enrollment).filter(Enrollment.student_id == current_user.id).all()
-    resolved_class = current_user.student_class or (f"Class {' '.join(class_names)}" if class_names else (class_level or "High School / College"))
+    resolved_class = current_user.student_class or class_level or "Class 10 Board"
     combined_context = f"{resolved_class} {context or ''}".strip()
 
     results = get_curated_weak_topic_videos(
