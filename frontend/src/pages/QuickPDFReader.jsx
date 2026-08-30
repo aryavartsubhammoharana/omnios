@@ -15,7 +15,7 @@ export default function QuickPDFReader() {
   const documentId = searchParams.get('document_id');
 
   // Hub States
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'classroom' | 'developer'
+  const [activeTab, setActiveTab] = useState('classroom'); // 'all' | 'classroom' | 'developer'
   const [classroomDocs, setClassroomDocs] = useState([]);
   const [developerDocs, setDeveloperDocs] = useState([]);
   const [loadingHub, setLoadingHub] = useState(false);
@@ -230,14 +230,6 @@ export default function QuickPDFReader() {
             {/* Filter Tabs */}
             <div className="flex items-center bg-gray-900/90 border border-gray-800 p-1 rounded-2xl shadow-inner text-xs font-medium shrink-0">
               <button
-                onClick={() => setActiveTab('all')}
-                className={`px-3.5 py-1.5 rounded-xl transition ${
-                  activeTab === 'all' ? 'bg-indigo-600 text-white font-semibold shadow' : 'text-gray-400 hover:text-white'
-                }`}
-              >
-                All Documents ({classroomDocs.length + developerDocs.length})
-              </button>
-              <button
                 onClick={() => setActiveTab('classroom')}
                 className={`px-3.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 ${
                   activeTab === 'classroom' ? 'bg-indigo-600 text-white font-semibold shadow' : 'text-gray-400 hover:text-white'
@@ -278,7 +270,7 @@ export default function QuickPDFReader() {
           {/* ══════════════════════════════════════════════════════
               SECTION 1: CLASSROOM PDFS & STUDY MATERIALS
               ══════════════════════════════════════════════════════ */}
-          {(activeTab === 'all' || activeTab === 'classroom') && (
+          {activeTab === 'classroom' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
                 <div className="flex items-center space-x-2.5">
@@ -368,7 +360,7 @@ export default function QuickPDFReader() {
           {/* ══════════════════════════════════════════════════════
               SECTION 2: OTHER PDFS & REFERENCE DOCUMENTS BY DEVELOPER
               ══════════════════════════════════════════════════════ */}
-          {(activeTab === 'all' || activeTab === 'developer') && (
+          {activeTab === 'developer' && (
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
                 <div className="flex items-center space-x-2.5">
