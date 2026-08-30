@@ -130,7 +130,7 @@ export default function Dashboard() {
             )}
 
             <Link
-              to="/notebooklm"
+              to="/omniai"
               className="px-4 py-2.5 rounded-xl bg-gray-800/90 hover:bg-gray-700/90 text-indigo-300 border border-indigo-500/30 text-xs font-semibold flex items-center gap-2 transition shadow-md"
             >
               <Sparkles className="w-4 h-4 text-indigo-400" />
@@ -218,7 +218,7 @@ export default function Dashboard() {
                     </Link>
 
                     <Link
-                      to={`/notebooklm?classroom_id=${c.id}`}
+                      to={`/omniai?classroom_id=${c.id}`}
                       title="Open OmniAI workspace for this classroom"
                       className="text-xs text-gray-300 hover:text-white flex items-center gap-1.5 bg-gray-900/90 hover:bg-indigo-950/60 px-3 py-1.5 rounded-xl border border-gray-700/80 hover:border-indigo-500/40 transition shadow-sm"
                     >

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
 
-export default function NotebookLMStudio() {
+export default function OmniAI() {
   const [searchParams] = useSearchParams();
   const initialClassroomId = searchParams.get('classroom_id');
   const { user } = useContext(AuthContext);

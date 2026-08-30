@@ -10,7 +10,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import ClassroomDetail from './pages/ClassroomDetail';
-import NotebookLMStudio from './pages/NotebookLMStudio';
+import OmniAI from './pages/omniai';
 import QuickPDFReader from './pages/QuickPDFReader';
 import QuizAttempt from './pages/QuizAttempt';
 import StudentDailyHub from './pages/StudentDailyHub';
@@ -59,12 +59,16 @@ function AppContent() {
             }
           />
           <Route
-            path="/notebooklm"
+            path="/omniai"
             element={
               <ProtectedRoute>
-                <NotebookLMStudio />
+                <OmniAI />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/notebooklm"
+            element={<Navigate to="/omniai" replace />}
           />
           <Route
             path="/quick-reader"
