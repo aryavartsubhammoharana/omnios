@@ -32,3 +32,6 @@ uploads/
 .idea/
 .DS_Store
 Thumbs.db
+
+dontdelete.json
+gcs_credentials.json
