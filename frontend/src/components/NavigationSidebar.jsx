@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import API from '../api/client';
 import { 
-  Home, Calendar, Sparkles, GraduationCap, 
+  Home, Target, Sparkles, GraduationCap, 
   Archive, Settings, ChevronDown, ChevronUp, 
   Menu, X, BookOpen, LogOut, FileText, Bot
 } from 'lucide-react';
@@ -131,25 +131,27 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
               {isExpanded && <span className="truncate">Home</span>}
             </Link>
 
-            {/* 2. Calendar / Daily AI Practice */}
-            <Link
-              to="/student/daily-hub"
-              title="Calendar & Daily AI Practice"
-              className={`flex items-center rounded-r-full text-sm font-medium transition group ${
-                isExpanded ? 'px-3.5 py-2.5 space-x-3.5' : 'justify-center p-2.5 rounded-2xl mx-auto w-11 h-11'
-              } ${
-                isActive('/student/daily-hub')
-                  ? 'bg-sky-500/20 text-sky-300 font-semibold'
-                  : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
-              }`}
-            >
-              <div className={`flex items-center justify-center flex-shrink-0 ${
-                !isExpanded && isActive('/student/daily-hub') ? 'w-10 h-7 rounded-full bg-sky-500/25 text-sky-300 flex items-center justify-center' : ''
-              }`}>
-                <Calendar className={`w-5 h-5 ${isActive('/student/daily-hub') ? 'text-sky-400' : 'text-gray-400 group-hover:text-white'}`} />
-              </div>
-              {isExpanded && <span className="truncate">Daily AI & Calendar</span>}
-            </Link>
+            {/* 2. Daily AI Practice & Videos */}
+            {user.role === 'student' && (
+              <Link
+                to="/student/daily-hub"
+                title="Daily AI Practice & Focus Videos"
+                className={`flex items-center rounded-r-full text-sm font-medium transition group ${
+                  isExpanded ? 'px-3.5 py-2.5 space-x-3.5' : 'justify-center p-2.5 rounded-2xl mx-auto w-11 h-11'
+                } ${
+                  isActive('/student/daily-hub')
+                    ? 'bg-sky-500/20 text-sky-300 font-semibold'
+                    : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
+                }`}
+              >
+                <div className={`flex items-center justify-center flex-shrink-0 ${
+                  !isExpanded && isActive('/student/daily-hub') ? 'w-10 h-7 rounded-full bg-sky-500/25 text-sky-300 flex items-center justify-center' : ''
+                }`}>
+                  <Target className={`w-5 h-5 ${isActive('/student/daily-hub') ? 'text-sky-400' : 'text-gray-400 group-hover:text-white'}`} />
+                </div>
+                {isExpanded && <span className="truncate">Daily AI Practice & Videos</span>}
+              </Link>
+            )}
 
             {/* 3. Gemini / OmniAI Studio */}
             <Link
