@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import API from '../api/client';
 import { 
   BookOpen, LogOut, Sparkles, Flame, User, Bot, 
-  GraduationCap, Settings, Mail, X, Check, Loader2,
+  GraduationCap, Settings, Mail, X, Check, Loader2, Plus, School, LogIn,
   Camera, Lock, KeyRound, Trash2, AlertTriangle, ArrowRight, ShieldAlert, Award, ShieldCheck, Menu, FileText, ChevronRight
 } from 'lucide-react';
 
@@ -42,6 +42,14 @@ export default function Navbar() {
   // Delete Account State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+
+  // Google Classroom '+' Modal State (Join for Student / Create for Teacher)
+  const [showClassActionModal, setShowClassActionModal] = useState(false);
+  const [className, setClassName] = useState('');
+  const [classDesc, setClassDesc] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [classModalError, setClassModalError] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -166,6 +174,56 @@ export default function Navbar() {
     }
   };
 
+  const handleCreateClass = async (e) => {
+    e.preventDefault();
+    if (!className.trim()) return;
+    setClassModalError('');
+    setActionLoading(true);
+    try {
+      const res = await API.post('/api/classroom/create', { 
+        name: className.trim(), 
+        description: classDesc.trim() 
+      });
+      setClassName('');
+      setClassDesc('');
+      setShowClassActionModal(false);
+      if (res.data?.id) {
+        navigate(`/classroom/${res.data.id}`);
+      } else {
+        navigate('/dashboard');
+        window.location.reload();
+      }
+    } catch (err) {
+      setClassModalError(err.response?.data?.detail || 'Failed to create classroom.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleJoinClass = async (e) => {
+    e.preventDefault();
+    if (!joinCode.trim()) return;
+    setClassModalError('');
+    setActionLoading(true);
+    try {
+      const res = await API.post('/api/classroom/join', { 
+        code: joinCode.trim() 
+      });
+      setJoinCode('');
+      setShowClassActionModal(false);
+      if (res.data?.id) {
+        navigate(`/classroom/${res.data.id}`);
+      } else {
+        navigate('/dashboard');
+        window.location.reload();
+      }
+    } catch (err) {
+      setClassModalError(err.response?.data?.detail || 'Failed to join classroom. Please check class code.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const isRolePending = user && user.is_role_confirmed === false;
 
   return (
@@ -206,10 +264,10 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Right: Streak Counter + Profile Pill + Logout */}
+        {/* Right: Streak Counter + Google Classroom '+' Action Button */}
         <div className="flex items-center space-x-2 sm:space-x-3 flex-shrink-0">
           {user ? (
-            <div className="flex items-center space-x-2 sm:space-x-2.5">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               {/* Gamified Streak Counter */}
               {!isRolePending && (
                 <div 
@@ -222,42 +280,20 @@ export default function Navbar() {
                 </div>
               )}
 
-              {/* Profile Pill & Settings Trigger */}
-              <button
-                onClick={() => !isRolePending && setShowProfileModal(true)}
-                disabled={isRolePending}
-                className="flex items-center space-x-1.5 sm:space-x-2 bg-gray-900/90 hover:bg-gray-800 border border-gray-800 px-2 sm:px-3 py-1.5 rounded-xl text-xs transition group cursor-pointer shadow-inner disabled:opacity-50 flex-shrink-0"
-                title="Edit Student Profile & Class"
-              >
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.full_name} className="w-5 h-5 rounded-full object-cover border border-indigo-500/50 flex-shrink-0" />
-                ) : (
-                  <div className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-[10px] flex-shrink-0">
-                    {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
-                  </div>
-                )}
-                <span className="font-medium text-gray-200 group-hover:text-white max-w-[70px] sm:max-w-[110px] truncate whitespace-nowrap hidden xs:inline">
-                  {user.full_name}
-                </span>
-                {user.student_class && (
-                  <span className="text-[9px] bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded font-mono hidden md:inline whitespace-nowrap">
-                    {user.student_class}
-                  </span>
-                )}
-                <span className="text-[9px] sm:text-[10px] bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded font-bold uppercase whitespace-nowrap">
-                  {user.role}
-                </span>
-                <Settings className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-300 hidden sm:block" />
-              </button>
-
-              {/* Quick Logout Button */}
-              <button
-                onClick={handleLogout}
-                className="hidden sm:flex p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-xl transition text-xs items-center gap-1 flex-shrink-0 cursor-pointer"
-                title="Logout"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+              {/* Google Classroom '+' Action Button (Join class for Student / Create class for Teacher) */}
+              {!isRolePending && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClassModalError('');
+                    setShowClassActionModal(true);
+                  }}
+                  title={user.role === 'teacher' ? 'Create class' : 'Join class'}
+                  className="p-2 sm:p-2.5 rounded-full bg-gray-900/90 hover:bg-gray-800 text-gray-200 hover:text-white border border-gray-800 hover:border-indigo-500/50 shadow-md hover:shadow-indigo-500/20 transition-all transform hover:scale-105 active:scale-95 cursor-pointer flex items-center justify-center group"
+                >
+                  <Plus className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 group-hover:rotate-90 transition-all duration-200" />
+                </button>
+              )}
             </div>
           ) : (
             <div className="flex items-center space-x-2 sm:space-x-2.5">
@@ -694,6 +730,162 @@ export default function Navbar() {
                 <span>{deletingAccount ? 'Deleting...' : 'Yes, Delete My Account'}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── GOOGLE CLASSROOM '+' MODAL (Join for Student / Create for Teacher) ── */}
+      {showClassActionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md select-none animate-in fade-in duration-200">
+          <div className="w-full max-w-lg glass-card p-6 sm:p-8 rounded-3xl border border-indigo-900/80 shadow-2xl space-y-6 animate-in zoom-in-95 duration-200">
+            {/* Header Row */}
+            <div className="flex items-center justify-between pb-3 border-b border-gray-800/80">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 rounded-xl bg-indigo-950/80 border border-indigo-700/50 text-indigo-400">
+                  {user?.role === 'teacher' ? <School className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                    {user?.role === 'teacher' ? 'Create class' : 'Join class'}
+                  </h2>
+                  <p className="text-[11px] text-gray-400 font-medium">
+                    {user?.role === 'teacher' ? 'Set up a new classroom for your students' : 'Enter class code from your teacher'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowClassActionModal(false)}
+                className="p-1.5 rounded-xl hover:bg-gray-800 text-gray-400 hover:text-white transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Account Information Pill (Google Classroom Style) */}
+            <div className="p-3 rounded-2xl bg-gray-900/90 border border-gray-800 flex items-center justify-between text-xs">
+              <div className="flex items-center space-x-2.5 min-w-0">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.full_name} className="w-7 h-7 rounded-full object-cover border border-indigo-500/50 flex-shrink-0" />
+                ) : (
+                  <div className="w-7 h-7 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                    {user?.full_name ? user.full_name[0].toUpperCase() : 'U'}
+                  </div>
+                )}
+                <div className="truncate">
+                  <span className="text-gray-200 font-semibold block truncate">{user?.full_name}</span>
+                  <span className="text-[10px] text-gray-400 font-mono block truncate">{user?.email}</span>
+                </div>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-bold uppercase border border-indigo-500/30 shrink-0">
+                {user?.role}
+              </span>
+            </div>
+
+            {classModalError && (
+              <div className="p-3 bg-red-950/80 border border-red-800 text-red-300 text-xs rounded-xl text-center">
+                {classModalError}
+              </div>
+            )}
+
+            {/* TEACHER: Create Class Form */}
+            {user?.role === 'teacher' ? (
+              <form onSubmit={handleCreateClass} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-300 block mb-1.5">
+                    Class Name (required)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={className}
+                    onChange={(e) => setClassName(e.target.value)}
+                    placeholder="e.g. Class 10 Science & Physics"
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-gray-300 block mb-1.5">
+                    Section / Subject Description
+                  </label>
+                  <input
+                    type="text"
+                    value={classDesc}
+                    onChange={(e) => setClassDesc(e.target.value)}
+                    placeholder="e.g. Board Exam Batch & Chapter Formulas"
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-800/80">
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() => setShowClassActionModal(false)}
+                    className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={actionLoading || !className.trim()}
+                    className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    {actionLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>{actionLoading ? 'Creating...' : 'Create'}</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* STUDENT: Join Class Form */
+              <form onSubmit={handleJoinClass} className="space-y-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-300 block mb-1.5">
+                    Class Code
+                  </label>
+                  <p className="text-[11px] text-gray-400 mb-2 leading-relaxed">
+                    Ask your teacher for the 6-character class code, then enter it here.
+                  </p>
+                  <input
+                    type="text"
+                    required
+                    maxLength={10}
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. ABC123"
+                    className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3.5 py-3 text-sm text-white placeholder-gray-500 font-mono tracking-widest uppercase text-center focus:outline-none focus:border-indigo-500 transition shadow-inner font-bold"
+                  />
+                </div>
+
+                <div className="p-3 bg-indigo-950/40 border border-indigo-900/50 rounded-2xl text-[11px] text-indigo-300 space-y-1">
+                  <span className="font-semibold block">To sign in with a class code:</span>
+                  <ul className="list-disc list-inside text-gray-400 space-y-0.5">
+                    <li>Use an authorized class code with 5-7 letters or numbers</li>
+                    <li>No spaces or special symbols</li>
+                  </ul>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-800/80">
+                  <button
+                    type="button"
+                    disabled={actionLoading}
+                    onClick={() => setShowClassActionModal(false)}
+                    className="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={actionLoading || !joinCode.trim()}
+                    className="px-6 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    {actionLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>{actionLoading ? 'Joining...' : 'Join'}</span>
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
