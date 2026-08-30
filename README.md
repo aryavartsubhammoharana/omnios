@@ -21,13 +21,18 @@
    - [7. Teacher Account Deletion Pipeline (Disk Cleanup vs Knowledge Retention)](#7-teacher-account-deletion-pipeline-disk-cleanup-vs-knowledge-retention)
    - [8. Indian Standard Time (IST - Asia/Kolkata) Project-Wide Sync](#8-indian-standard-time-ist---asiakolkata-project-wide-sync)
    - [9. Google Authentication & Identity Architecture (Zero-Friction Minimal Scopes)](#9-google-authentication--identity-architecture-zero-friction-minimal-scopes)
-2. [Core Feature Breakdown](#-core-feature-breakdown)
+   - [10. Interactive Water Wave Fluid Physics Canvas ("Silent Pond" Physics & Kinetic Damping)](#10-interactive-water-wave-fluid-physics-canvas-silent-pond-physics--kinetic-damping)
+   - [11. Google Classroom-Style Collapsible Navigation Rail & Adaptive Viewport](#11-google-classroom-style-collapsible-navigation-rail--adaptive-viewport)
+   - [12. Interactive Document & PDF Reader Workspace (`/quick-reader`)](#12-interactive-document--pdf-reader-workspace-quick-reader)
+   - [13. Strict Grade-Level Sourcing & Anti-Mismatched Recommendations Fix](#13-strict-grade-level-sourcing--anti-mismatched-recommendations-fix)
+2. [Comprehensive Platform Evolution: Before vs. After Comparison](#-comprehensive-platform-evolution-before-vs-after-comparison)
+3. [Core Feature Breakdown](#-core-feature-breakdown)
    - [Notes Grouping & Multi-Format Extractors (PDF, DOCX, PPTX, TXT)](#-notes-grouping--multi-format-extractors)
    - [Groq AI Assessment & Quiz Generator with KaTeX Math](#-groq-ai-assessment--quiz-generator-with-katex-math)
    - [Distraction-Free YouTube Focus Video Player with Subtitle Jumps](#-distraction-free-youtube-focus-video-player-with-subtitle-jumps)
-3. [Tech Stack & System Components](#-tech-stack--system-components)
-4. [Environment Variables (`.env`) Configuration](#-environment-variables-env-configuration)
-5. [Quick Start & Deployment Guide](#-quick-start--deployment-guide)
+4. [Tech Stack & System Components](#-tech-stack--system-components)
+5. [Environment Variables (`.env`) Configuration](#-environment-variables-env-configuration)
+6. [Quick Start & Deployment Guide](#-quick-start--deployment-guide)
 
 ---
 
@@ -390,6 +395,88 @@ NoteAI strictly enforces **Scope Minimization (`openid email profile`)** for Goo
 - **Daily 24-Hour AI Practice Hub**: Diagnoses weak concepts from daily quizzes and recommends targeted masterclasses.
 
 ---
+
+
+---
+
+## 10. Interactive Water Wave Fluid Physics Canvas ("Silent Pond" Physics & Kinetic Damping)
+
+### 🚩 The Challenge:
+Standard login and registration pages are static and unengaging, lacking modern interactive appeal. Previous particle/thread stitches caused text clutter and visual noise.
+
+### 💡 The Solution (`frontend/src/components/WaterWaveCanvas.jsx`):
+1. **2D Wave Laplacian Engine**: Implements a 2D discrete wave equation simulation across ping-pong `Float32Array` buffers with dynamic optical refraction coordinates (`gradX`, `gradY`).
+2. **"Silent Pond" Fluid Equilibrium**:
+   - **Primal State**: 100% crystal-clear, calm, and glassy surface showing the crisp 1:1 OmniOS Logo.
+   - **On-Demand Ripple Generation**: Water waves are generated **only** when the user moves their cursor across the canvas.
+   - **Natural Viscosity Damping (`DAMPING = 0.968`)**: Kinetic wave energy dissipates smoothly within 1.5 seconds back to absolute zero stillness once the cursor stops.
+3. **Dynamic Glowing Plus (`+`) Cursor Transformation**:
+   - As the cursor hovers within the perimeter of the centered OmniOS Logo, the system automatically morphs the standard pointer into a custom glowing **Electric Cyan Plus Icon (`+`) with Indigo Center Point**.
+   - Moving away from the logo instantly reverts the cursor to default.
+
+---
+
+## 11. Google Classroom-Style Collapsible Navigation Rail & Adaptive Viewport
+
+### 🚩 The Challenge:
+Top horizontal navigation bars quickly become crowded with multiple app links (`Classrooms`, `OmniAI Studio`, `Daily Practice`, `Document Reader`, `Settings`), squishing student header badges on smaller displays.
+
+### 💡 The Solution (`frontend/src/components/NavigationSidebar.jsx`):
+1. **Persistent Mini Icon Rail (Collapsed State `w-[68px]`)**:
+   - Sits neatly on the left margin without obstructing dashboard content (`pl-[68px]`).
+   - Displays clean iconic action anchors: 🏠 **Home**, 🎯 **Daily AI Practice & Videos**, ✨ **OmniAI Studio**, 🎓 **Enrolled Classes (Topi)**, 📄 **Document Reader**, ⚙️ **Settings**, and 👤 **Google Profile Avatar**.
+2. **Dual Opening Mechanism (Auto-Hover & Click-Pin Mode)**:
+   - **Auto-Hover Expand**: Moving the cursor over the left rail smoothly expands the full sidebar (`w-72 / w-80`) with text labels, OmniOS branding, and enrolled subjects. Moving the cursor away collapses it back.
+   - **Click-to-Pin**: Clicking the top-left Hamburger Menu button (`Menu`) pins the sidebar permanently open until clicked again.
+3. **Live "Enrolled Classes" Accordion with Circular Letter Badges**:
+   - Dynamically fetches user classrooms from `/api/classroom/list` and presents them with colored letter badges (e.g. `2`, `B`, `P`, `I`), subject titles, and teacher subtitles.
+4. **Google Profile Avatar Integration**:
+   - When collapsed: Displays user avatar photo at the bottom (clicking opens Profile Modal).
+   - When expanded: Displays full User Profile card with name, email, class badge, and one-click **Logout** button.
+
+---
+
+## 12. Interactive Document & PDF Reader Workspace (`/quick-reader`)
+
+### 🚩 The Challenge:
+Opening `/quick-reader` without a direct URL parameter previously caused an infinite loading loop due to missing document ID checks.
+
+### 💡 The Solution (`frontend/src/pages/QuickPDFReader.jsx`):
+1. **Unified Document Library Hub**:
+   - When visited without a specific document, it automatically aggregates all study notes, PDFs, and `.docx` files across the student's enrolled classrooms.
+   - Features a real-time search filter and instant **"Read & Ask AI"** action cards.
+2. **Distraction-Free 2-Column AI Reader**:
+   - **Left Pane**: Multi-theme reader (Dark, Sepia Eye-Care, White Paper), LaTeX Math KaTeX renderer, and 70%–160% zoom.
+   - **Right Pane**: Embedded AI Copilot with live document context for formula derivations and instant doubt resolution.
+
+---
+
+## 13. Strict Grade-Level Sourcing & Anti-Mismatched Recommendations Fix
+
+### 🚩 The Challenge:
+Generic search queries occasionally defaulted to higher-grade keywords (e.g. recommending Class 12 Kirchhoff's Law lectures to a Class 10 student).
+
+### 💡 The Solution (`app/services/youtube_service.py` & `app/routes/student_portal.py`):
+1. **Strict User Grade Calibration**:
+   - Video queries now prioritize `current_user.student_class` (e.g., `Class 10 Board`) instead of generic high-school fallbacks.
+   - Prompt engineering explicitly enforces: *"Do NOT recommend Class 11/12 derivation videos if student is in Class 9 or 10."*
+2. **Accurate Subject Match**:
+   - Class 10 students receive 100% grade-accurate recommendations (e.g. *Ohm's Law, Light Reflection & Refraction, Chemical Reactions, Electricity, Life Processes*).
+
+---
+
+# 📊 Comprehensive Platform Evolution: Before vs. After Comparison
+
+| Area / Feature | 🔴 Before (Legacy System) | 🟢 After (Modern OmniOS Platform) |
+| :--- | :--- | :--- |
+| **Authentication UI & Aesthetic** | Standard generic login form with top navbar distraction and cluttered particles. | **100vh Full-Viewport Auth** with `#111113` matte finish, 3D Google Spectrum Aura, and zero-scroll layout. |
+| **Canvas Interactive Physics** | Static canvas or distracting thread stitch animations with text noise. | **"Silent Pond" 2D Fluid Wave Simulation** with optical refraction, specular gleams, and dynamic **Plus (`+`) cursor** on logo hover. |
+| **Navigation System** | Crowded horizontal top navbar with multi-button pill squishing header stats. | **Google Classroom Style Sidebar**: Persistent 68px Mini Icon Rail + Auto-Hover Expand & Click-Pin Drawer with Enrolled Letter Badges. |
+| **User Profile & Logout UX** | Standalone logout button occupying prominent top bar space. | **Bottom Profile Avatar**: Shows Google avatar on rail; displays user card with name, email, and Logout when extended. |
+| **Document Reader (`/quick-reader`)** | Infinite loading spinner when accessed directly from sidebar without URL parameters. | **Document Library Hub**: Aggregates all classroom notes with search filter and 1-click **LaTeX + AI Copilot Doubt Solver**. |
+| **Video Recommendations** | Hardcoded `class 11 12` queries occasionally recommending Class 12 topics to Class 10 students. | **Strict Grade Calibration**: Aligned directly with `user.student_class` (Class 10 Board), ensuring 100% accurate syllabus lectures. |
+| **Navbar Route Intelligence** | Navbar rendered everywhere, cutting into auth page canvas. | **Conditional Route Suppression**: Hidden on `/login` and `/signup`; displays cleanly on internal workspace routes. |
+
 
 # 🛠️ Tech Stack & System Components
 
