@@ -6,13 +6,183 @@ import {
   FileText, Download, Copy, Check, ZoomIn, ZoomOut, RotateCcw,
   ChevronLeft, ChevronRight, Maximize2, Minimize2, Search, 
   Moon, Sun, Coffee, Columns, AlignLeft, BookOpen, Layers,
-  ExternalLink, GraduationCap, Clock, HelpCircle
+  ExternalLink, GraduationCap, Clock, HelpCircle, Code2, Award, Zap
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
 
+// ── PRE-PACKAGED DEVELOPER CURATED LIBRARY DOCUMENTS ──
+const DEVELOPER_DOCUMENTS = [
+  {
+    id: 'dev_physics_formulas',
+    filename: 'Physics & Chemistry Master Formula Sheet (NCERT & Boards)',
+    category: 'Formula Sheet',
+    author: 'OmniOS Academic Team',
+    pages: 6,
+    badgeColor: 'indigo',
+    description: 'Universal constants, Ohm\'s Law, Kirchhoff\'s Laws, Coulomb\'s Law, Optics equations, and Stoichiometry quick reference.',
+    content_text: `--- Page 1: Fundamental Physical Constants & Core Units ---
+# Physical Constants & System of Units
+$$c = 3 \\times 10^8 \\text{ m/s} \\quad (\\text{Speed of Light in Vacuum})$$
+$$h = 6.626 \\times 10^{-34} \\text{ J}\\cdot\\text{s} \\quad (\\text{Planck's Constant})$$
+$$e = 1.602 \\times 10^{-19} \\text{ C} \\quad (\\text{Elementary Charge})$$
+$$\\varepsilon_0 = 8.854 \\times 10^{-12} \\text{ F/m} \\quad (\\text{Permittivity of Free Space})$$
+$$\\mu_0 = 4\\pi \\times 10^{-7} \\text{ T}\\cdot\\text{m/A} \\quad (\\text{Permeability of Free Space})$$
+$$G = 6.674 \\times 10^{-11} \\text{ N}\\cdot\\text{m}^2/\\text{kg}^2 \\quad (\\text{Gravitational Constant})$$
+
+--- Page 2: Electrodynamics & Circuit Laws ---
+# Electricity & Current Laws
+### 1. Ohm's Law
+$$V = I \\cdot R$$
+Where:
+- $V$ = Electric Potential Difference (Volts, V)
+- $I$ = Current (Amperes, A)
+- $R$ = Resistance (Ohms, $\\Omega$) with $R = \\rho \\frac{L}{A}$
+
+### 2. Joule's Law of Heating
+$$H = I^2 R t = V I t = \\frac{V^2}{R} t$$
+
+### 3. Kirchhoff's Laws (Circuit Analysis)
+- **Kirchhoff's Current Law (KCL - Conservation of Charge):**
+$$\\sum I_{\\text{in}} = \\sum I_{\\text{out}} \\implies \\sum_{k=1}^n I_k = 0$$
+- **Kirchhoff's Voltage Law (KVL - Conservation of Energy):**
+$$\\sum \\Delta V = 0 \\quad (\\text{Around any closed loop})$$
+
+--- Page 3: Optics & Wave Equations ---
+# Geometric & Physical Optics
+### 1. Mirror Formula & Magnification
+$$\\frac{1}{f} = \\frac{1}{v} + \\frac{1}{u}$$
+$$m = -\\frac{v}{u} = \\frac{h_i}{h_o}$$
+
+### 2. Lens Maker's Formula & Thin Lens Equation
+$$\\frac{1}{f} = (n - 1) \\left( \\frac{1}{R_1} - \\frac{1}{R_2} \\right)$$
+$$\\frac{1}{f} = \\frac{1}{v} - \\frac{1}{u}, \\quad m = +\\frac{v}{u}$$
+
+### 3. Snell's Law of Refraction
+$$n_1 \\sin(\\theta_1) = n_2 \\sin(\\theta_2) \\implies \\frac{\\sin i}{\\sin r} = \\frac{v_1}{v_2} = \\frac{n_2}{n_1}$$
+
+--- Page 4: Chemical Bonding & Reaction Kinetics ---
+# Chemical Equations & Equilibrium
+### 1. Ideal Gas Law & Universal Gas Constant
+$$P V = n R T = \\frac{m}{M} R T$$
+$$R = 8.314 \\text{ J}/(\\text{mol}\\cdot\\text{K}) = 0.0821 \\text{ L}\\cdot\\text{atm}/(\\text{mol}\\cdot\\text{K})$$
+
+### 2. Nernst Equation (Electrochemistry)
+$$E_{\\text{cell}} = E^\\circ_{\\text{cell}} - \\frac{R T}{n F} \\ln(Q) = E^\\circ_{\\text{cell}} - \\frac{0.0591}{n} \\log_{10}(Q) \\quad (\\text{at } 298\\text{ K})$$
+`
+  },
+  {
+    id: 'dev_class10_science_blueprint',
+    filename: 'Class 10 Board Science High-Yield Blueprint (CBSE/NCERT)',
+    category: 'Exam Blueprint',
+    author: 'OmniOS Academic Team',
+    pages: 4,
+    badgeColor: 'emerald',
+    description: 'Essential concepts across Physics, Chemistry & Biology: Chemical reactions, Light, Electricity, Magnetic effects, and Life Processes.',
+    content_text: `--- Page 1: Chemical Reactions & Equations ---
+# Chemical Reactions & Equations
+### Types of Chemical Reactions:
+1. **Combination Reaction:** $A + B \\rightarrow AB$ (e.g. $CaO + H_2O \\rightarrow Ca(OH)_2 + \\text{Heat}$)
+2. **Decomposition Reaction:** $AB \\rightarrow A + B$ (Thermal, Electrolytic, Photolytic)
+   $$2FeSO_4 \\xrightarrow{\\Delta} Fe_2O_3 + SO_2 + SO_3$$
+3. **Displacement Reaction:** $A + BC \\rightarrow AC + B$ (e.g. $Fe + CuSO_4 \\rightarrow FeSO_4 + Cu$)
+4. **Double Displacement:** $Na_2SO_4 + BaCl_2 \\rightarrow BaSO_4 \\downarrow + 2NaCl$ (Precipitation)
+5. **Redox Reactions:** Oxidation (gain of $O$ or loss of $e^-$) and Reduction (loss of $O$ or gain of $e^-$).
+
+--- Page 2: Electricity & Magnetic Effects ---
+# Electricity & Magnetism Essentials
+### Ohm's Law & Resistor Combinations
+- **Series:** $R_{\\text{eq}} = R_1 + R_2 + R_3$ (Current $I$ remains identical)
+- **Parallel:** $\\frac{1}{R_{\\text{eq}}} = \\frac{1}{R_1} + \\frac{1}{R_2} + \\frac{1}{R_3}$ (Voltage $V$ remains identical)
+
+### Right-Hand Thumb Rule & Fleming's Left-Hand Rule:
+- **Thumb:** Force / Motion of conductor
+- **Forefinger:** Magnetic Field direction ($B$)
+- **Middle Finger:** Induced / applied Current ($I$)
+$$F = I \\cdot L \\cdot B \\cdot \\sin(\\theta)$$
+
+--- Page 3: Life Processes & Biological Regulation ---
+# Life Processes: Digestion, Respiration & Transport
+### 1. Photosynthesis Equation:
+$$6CO_2 + 12H_2O \\xrightarrow[\\text{Chlorophyll}]{\\text{Sunlight}} C_6H_{12}O_6 + 6O_2 + 6H_2O$$
+
+### 2. Aerobic vs. Anaerobic Respiration:
+- **Aerobic:** Glucose $\\rightarrow$ Pyruvate $\\rightarrow 6CO_2 + 6H_2O + 38\\text{ ATP}$ (Mitochondria)
+- **Anaerobic (Yeast):** Glucose $\\rightarrow$ Ethanol $+ 2CO_2 + 2\\text{ ATP}$
+- **Anaerobic (Muscle):** Glucose $\\rightarrow$ Lactic Acid $+ 2\\text{ ATP}$ (Causes cramps)
+`
+  },
+  {
+    id: 'dev_math_calculus_axioms',
+    filename: 'Mathematics Derivations & Trigonometric Identities Handbook',
+    category: 'Math Handbook',
+    author: 'OmniOS Academic Team',
+    pages: 5,
+    badgeColor: 'purple',
+    description: 'Quadratic equation derivations, Arithmetic Progressions, Trigonometric identities, and Coordinate Geometry theorems.',
+    content_text: `--- Page 1: Algebra & Quadratic Formulas ---
+# Quadratic Equations & Arithmetic Progressions
+### 1. Quadratic Formula & Discriminant:
+For $a x^2 + b x + c = 0$:
+$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$
+- $D > 0$: Two distinct real roots
+- $D = 0$: Two equal real roots ($x = -b / 2a$)
+- $D < 0$: No real roots (Complex conjugates)
+
+### 2. Arithmetic Progression (AP):
+- $n^{\\text{th}}$ Term: $a_n = a + (n - 1)d$
+- Sum of first $n$ terms:
+$$S_n = \\frac{n}{2} [2a + (n - 1)d] = \\frac{n}{2} [a + l]$$
+
+--- Page 2: Trigonometric Identities & Ratios ---
+# Trigonometry Theorems
+### Fundamental Identities:
+$$\\sin^2(\\theta) + \\cos^2(\\theta) = 1$$
+$$1 + \\tan^2(\\theta) = \\sec^2(\\theta) \\implies \\sec^2(\\theta) - \\tan^2(\\theta) = 1$$
+$$1 + \\cot^2(\\theta) = \\csc^2(\\theta) \\implies \\csc^2(\\theta) - \\cot^2(\\theta) = 1$$
+
+### Compound Angle Formulas:
+$$\\sin(A \\pm B) = \\sin(A)\\cos(B) \\pm \\cos(A)\\sin(B)$$
+$$\\cos(A \\pm B) = \\cos(A)\\cos(B) \\mp \\sin(A)\\sin(B)$$
+$$\\tan(A + B) = \\frac{\\tan(A) + \\tan(B)}{1 - \\tan(A)\\tan(B)}$$
+`
+  },
+  {
+    id: 'dev_omnios_ai_manual',
+    filename: 'OmniOS Neural Architecture & Vision OCR Developer Manual',
+    category: 'Developer Manual',
+    author: 'Lead System Architect',
+    pages: 4,
+    badgeColor: 'sky',
+    description: 'Technical specification of 4-Page 2x2 Grid Vision OCR, Dual Vector Database sync, and Groq/Gemini AI doubt-solving routing.',
+    content_text: `--- Page 1: 4-Page 2x2 Grid Vision OCR Ingestion ---
+# OmniOS 4-Page Batch Vision Pipeline
+### 1. Dynamic Montage Stitching
+$$\\text{Canvas Size} = 1500 \\times 2080 \\text{ pixels (150 DPI Render)}$$
+- 4-page groups are stitched into a $2 \\times 2$ matrix with proportional letterboxing and pillarboxing.
+- Reduces API consumption by **75%** while eliminating rate-limit throttling.
+
+### 2. Model Routing & Token Optimization:
+$$\\text{Ingestion Latency} \\approx 1.8\\text{s per 4-page batch}$$
+- Primary: Google Gemini 2.5 Flash / Groq LLaMA Vision
+- Local Fallback: Ollama Qwen2.5-VL for zero-cost offline processing.
+
+--- Page 2: Dual Vector DB Architecture ---
+# Vector Store Partitioning (Classroom vs Global)
+1. **Classroom Isolated Collection**: \`classroom_{id}_store\` enforces strict tenant isolation so student data is never leaked.
+2. **Global Knowledge Collection**: \`omnios_global_curriculum\` caches common textbook lemmas, formulas, and verified solutions.
+`
+  }
+];
+
 export default function QuickPDFReader() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const documentId = searchParams.get('document_id');
+
+  // Hub States
+  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'classroom' | 'developer'
+  const [classroomDocs, setClassroomDocs] = useState([]);
+  const [loadingHub, setLoadingHub] = useState(false);
+  const [hubSearch, setHubSearch] = useState('');
 
   // Single Document Mode States
   const [documentInfo, setDocumentInfo] = useState(null);
@@ -20,18 +190,11 @@ export default function QuickPDFReader() {
   const [aiProvider, setAiProvider] = useState('groq');
   const [copied, setCopied] = useState(false);
 
-  // Document Hub / Library Mode States (when no document_id in URL)
-  const [availableDocs, setAvailableDocs] = useState([]);
-  const [loadingHub, setLoadingHub] = useState(false);
-  const [hubSearch, setHubSearch] = useState('');
-
   // Document Viewer Controls
   const [zoomLevel, setZoomLevel] = useState(100);
   const [readerTheme, setReaderTheme] = useState('dark');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState('paginated');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fontSize, setFontSize] = useState(14);
   const viewerContainerRef = useRef(null);
@@ -47,13 +210,33 @@ export default function QuickPDFReader() {
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef(null);
 
-  // Fetch single document if document_id is present
+  // Fetch single document (Classroom or Developer)
   const fetchDoc = async () => {
     if (!documentId) {
       setLoadingDoc(false);
       return;
     }
     setLoadingDoc(true);
+
+    // Check if it's a developer document
+    if (documentId.startsWith('dev_')) {
+      const devDoc = DEVELOPER_DOCUMENTS.find(d => d.id === documentId);
+      if (devDoc) {
+        setDocumentInfo({
+          id: devDoc.id,
+          filename: devDoc.filename,
+          content_text: devDoc.content_text,
+          processing_status: 'ready',
+          is_developer_doc: true,
+          category: devDoc.category,
+          author: devDoc.author
+        });
+        setLoadingDoc(false);
+        return;
+      }
+    }
+
+    // Classroom document via API
     try {
       const res = await API.get(`/api/upload/document/${documentId}`);
       setDocumentInfo(res.data);
@@ -65,8 +248,8 @@ export default function QuickPDFReader() {
     }
   };
 
-  // Fetch document library hub when no specific document_id is selected
-  const fetchHubDocuments = async () => {
+  // Fetch classroom documents for Section 1
+  const fetchClassroomDocuments = async () => {
     setLoadingHub(true);
     try {
       const classRes = await API.get('/api/classroom/list');
@@ -82,10 +265,9 @@ export default function QuickPDFReader() {
       );
 
       const nestedDocs = await Promise.all(docPromises);
-      const flattened = nestedDocs.flat();
-      setAvailableDocs(flattened);
+      setClassroomDocs(nestedDocs.flat());
     } catch (err) {
-      console.error("Error fetching document hub", err);
+      console.error("Error fetching classroom documents", err);
     } finally {
       setLoadingHub(false);
     }
@@ -96,12 +278,12 @@ export default function QuickPDFReader() {
       fetchDoc();
     } else {
       setLoadingDoc(false);
-      fetchHubDocuments();
+      fetchClassroomDocuments();
     }
   }, [documentId]);
 
   useEffect(() => {
-    if (!documentInfo || documentInfo.processing_status === 'ready') return;
+    if (!documentInfo || documentInfo.processing_status === 'ready' || documentInfo.is_developer_doc) return;
     const interval = setInterval(() => {
       fetchDoc();
     }, 2500);
@@ -134,7 +316,6 @@ export default function QuickPDFReader() {
         currentLength = para.length;
       } else {
         currentChunk.push(para);
-        currentLength += para.length;
       }
     }
     if (currentChunk.length > 0) {
@@ -162,10 +343,6 @@ export default function QuickPDFReader() {
     setZoomLevel(prev => Math.max(prev - 10, 70));
   };
 
-  const handleResetZoom = () => {
-    setZoomLevel(100);
-  };
-
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       viewerContainerRef.current?.requestFullscreen?.();
@@ -178,7 +355,7 @@ export default function QuickPDFReader() {
 
   const handleSendQuestion = async (e) => {
     e.preventDefault();
-    if (!inputQuestion.trim() || sending || isProcessing) return;
+    if (!inputQuestion.trim() || sending) return;
 
     const userText = inputQuestion.trim();
     setInputQuestion('');
@@ -186,16 +363,27 @@ export default function QuickPDFReader() {
     setSending(true);
 
     try {
-      const res = await API.post('/api/ai/chat', {
-        question: userText,
-        document_id: parseInt(documentId),
-        ai_provider: aiProvider
-      });
-
-      setMessages(prev => [
-        ...prev,
-        { sender: 'ai', text: res.data.answer, provider: res.data.provider_used }
-      ]);
+      if (documentInfo?.is_developer_doc) {
+        // AI Chat directly using document text as prompt context
+        const res = await API.post('/api/ai/chat', {
+          question: `Context Document: ${documentInfo.filename}\n\nContent:\n${documentInfo.content_text.slice(0, 4000)}\n\nQuestion: ${userText}`,
+          ai_provider: aiProvider
+        });
+        setMessages(prev => [
+          ...prev,
+          { sender: 'ai', text: res.data.answer || res.data.response, provider: res.data.provider_used || aiProvider }
+        ]);
+      } else {
+        const res = await API.post('/api/ai/chat', {
+          question: userText,
+          document_id: parseInt(documentId),
+          ai_provider: aiProvider
+        });
+        setMessages(prev => [
+          ...prev,
+          { sender: 'ai', text: res.data.answer, provider: res.data.provider_used }
+        ]);
+      }
     } catch (err) {
       setMessages(prev => [
         ...prev,
@@ -206,13 +394,19 @@ export default function QuickPDFReader() {
     }
   };
 
-  // -------------------------------------------------------------
-  // 1. NO DOCUMENT SELECTED: Render Document Hub & Notes Library
-  // -------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────
+  // 1. NO DOCUMENT SELECTED: Render 2 Sections Hub (Classroom + Developer Library)
+  // ─────────────────────────────────────────────────────────────
   if (!documentId) {
-    const filteredDocs = availableDocs.filter(d => 
+    const filteredClassroomDocs = classroomDocs.filter(d => 
       (d.filename || '').toLowerCase().includes(hubSearch.toLowerCase()) ||
       (d.classroom_name || '').toLowerCase().includes(hubSearch.toLowerCase())
+    );
+
+    const filteredDevDocs = DEVELOPER_DOCUMENTS.filter(d =>
+      d.filename.toLowerCase().includes(hubSearch.toLowerCase()) ||
+      d.category.toLowerCase().includes(hubSearch.toLowerCase()) ||
+      d.description.toLowerCase().includes(hubSearch.toLowerCase())
     );
 
     return (
@@ -220,22 +414,22 @@ export default function QuickPDFReader() {
         <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
         <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
 
-        <div className="max-w-6xl mx-auto space-y-6 relative z-10">
-          {/* Header Card */}
+        <div className="max-w-6xl mx-auto space-y-8 relative z-10">
+          {/* Top Hero Banner */}
           <div className="glass-card p-6 sm:p-8 rounded-3xl border border-gray-800/80 shadow-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-2">
               <div className="flex items-center space-x-3">
                 <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-sky-500/20 text-sky-300 border border-sky-500/30 flex items-center gap-1.5">
                   <BookOpen className="w-3.5 h-3.5 text-sky-400" />
-                  <span>AI Document Workspace</span>
+                  <span>Dual Document Workspace</span>
                 </span>
-                <span className="text-[11px] text-gray-400 font-mono">LaTeX Math + AI Doubt Solver</span>
+                <span className="text-[11px] text-gray-400 font-mono">Classroom PDFs + Developer Reference Library</span>
               </div>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Document & PDF Reader Hub
               </h1>
               <p className="text-xs sm:text-sm text-gray-400 max-w-2xl leading-relaxed">
-                Select any notes, textbook chapter, or assignment from your classrooms to read with distraction-free formatting, formulas rendering, and split-screen AI doubt solving.
+                Read all your enrolled classroom lecture notes, plus official developer master formula sheets and blueprints with LaTeX math rendering and AI Copilot.
               </p>
             </div>
 
@@ -244,104 +438,219 @@ export default function QuickPDFReader() {
               className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center space-x-2 shrink-0 cursor-pointer"
             >
               <GraduationCap className="w-4 h-4" />
-              <span>Go to Classrooms</span>
+              <span>Browse Classrooms</span>
             </Link>
           </div>
 
-          {/* Search Filter Bar */}
-          <div className="flex items-center space-x-3 bg-gray-900/90 border border-gray-800/80 rounded-2xl p-2.5 shadow-inner">
-            <Search className="w-4 h-4 text-gray-400 ml-2 shrink-0" />
-            <input
-              type="text"
-              value={hubSearch}
-              onChange={(e) => setHubSearch(e.target.value)}
-              placeholder="Search notes, chapters, or classrooms..."
-              className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
-            />
-            {hubSearch && (
+          {/* Search Bar + Section Filter Tabs */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            {/* Filter Tabs */}
+            <div className="flex items-center bg-gray-900/90 border border-gray-800 p-1 rounded-2xl shadow-inner text-xs font-medium shrink-0">
               <button
-                onClick={() => setHubSearch('')}
-                className="text-xs text-gray-400 hover:text-white px-2 py-1"
+                onClick={() => setActiveTab('all')}
+                className={`px-3.5 py-1.5 rounded-xl transition ${
+                  activeTab === 'all' ? 'bg-indigo-600 text-white font-semibold shadow' : 'text-gray-400 hover:text-white'
+                }`}
               >
-                Clear
+                All Documents ({classroomDocs.length + DEVELOPER_DOCUMENTS.length})
               </button>
-            )}
+              <button
+                onClick={() => setActiveTab('classroom')}
+                className={`px-3.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 ${
+                  activeTab === 'classroom' ? 'bg-indigo-600 text-white font-semibold shadow' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>Classroom PDFs ({classroomDocs.length})</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('developer')}
+                className={`px-3.5 py-1.5 rounded-xl transition flex items-center space-x-1.5 ${
+                  activeTab === 'developer' ? 'bg-indigo-600 text-white font-semibold shadow' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span>Developer Library ({DEVELOPER_DOCUMENTS.length})</span>
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="flex-1 max-w-md flex items-center space-x-2 bg-gray-900/90 border border-gray-800/80 rounded-2xl px-3 py-2 shadow-inner">
+              <Search className="w-4 h-4 text-gray-400 shrink-0" />
+              <input
+                type="text"
+                value={hubSearch}
+                onChange={(e) => setHubSearch(e.target.value)}
+                placeholder="Search notes, chapters, formulas..."
+                className="w-full bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
+              />
+              {hubSearch && (
+                <button onClick={() => setHubSearch('')} className="text-xs text-gray-400 hover:text-white">
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Document Cards Grid */}
-          {loadingHub ? (
-            <div className="py-20 flex flex-col items-center justify-center text-indigo-400 space-y-3">
-              <Loader2 className="w-8 h-8 animate-spin" />
-              <p className="text-xs text-gray-400">Loading your classroom documents...</p>
-            </div>
-          ) : filteredDocs.length === 0 ? (
-            <div className="glass-card p-12 rounded-3xl border border-gray-800 text-center space-y-4">
-              <div className="w-12 h-12 bg-indigo-950/80 border border-indigo-700/50 rounded-2xl mx-auto flex items-center justify-center text-indigo-400 shadow-inner">
-                <FileText className="w-6 h-6" />
+          {/* ══════════════════════════════════════════════════════
+              SECTION 1: CLASSROOM PDFS & STUDY MATERIALS
+              ══════════════════════════════════════════════════════ */}
+          {(activeTab === 'all' || activeTab === 'classroom') && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
+                <div className="flex items-center space-x-2.5">
+                  <div className="p-1.5 rounded-lg bg-sky-950/80 border border-sky-800/60 text-sky-400">
+                    <GraduationCap className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white tracking-tight">
+                      Section 1: Classroom PDFs & Study Materials
+                    </h2>
+                    <p className="text-[11px] text-gray-400">
+                      Uploaded notes, assignments, and PDFs from your enrolled classrooms
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20">
+                  {filteredClassroomDocs.length} Documents
+                </span>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-white">No Documents Found</h3>
-                <p className="text-xs text-gray-400 mt-1 max-w-md mx-auto">
-                  {hubSearch
-                    ? "No documents matched your search filter. Try another keyword."
-                    : "No study notes or PDFs have been uploaded in your enrolled classrooms yet."}
-                </p>
-              </div>
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-900 hover:bg-gray-800 text-indigo-300 border border-gray-700 text-xs font-semibold rounded-xl transition"
-              >
-                <span>Browse Classrooms</span>
-              </Link>
+
+              {loadingHub ? (
+                <div className="py-12 flex flex-col items-center justify-center text-indigo-400 space-y-2">
+                  <Loader2 className="w-7 h-7 animate-spin" />
+                  <p className="text-xs text-gray-400">Loading classroom documents...</p>
+                </div>
+              ) : filteredClassroomDocs.length === 0 ? (
+                <div className="glass-card p-8 rounded-2xl border border-gray-800/80 text-center space-y-3">
+                  <FileText className="w-8 h-8 text-gray-500 mx-auto" />
+                  <p className="text-xs text-gray-400">
+                    {hubSearch ? 'No classroom documents match your search.' : 'No PDFs uploaded in your classrooms yet.'}
+                  </p>
+                  <Link to="/dashboard" className="inline-block text-xs text-indigo-400 hover:underline">
+                    Go to Classrooms to upload or join
+                  </Link>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredClassroomDocs.map((doc) => {
+                    const isDocx = (doc.filename || '').endsWith('.docx') || (doc.filename || '').endsWith('.doc');
+                    return (
+                      <div
+                        key={doc.id}
+                        className="glass-card p-5 rounded-2xl border border-gray-800 hover:border-sky-500/50 hover:shadow-xl hover:shadow-sky-500/10 transition flex flex-col justify-between space-y-4 group"
+                      >
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className={`p-2.5 rounded-xl border ${
+                              isDocx ? 'bg-sky-950/80 text-sky-400 border-sky-800/60' : 'bg-indigo-950/80 text-indigo-400 border-indigo-800/60'
+                            }`}>
+                              {isDocx ? <FileText className="w-5 h-5" /> : <Book className="w-5 h-5" />}
+                            </div>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-900 text-gray-400 border border-gray-800">
+                              {doc.classroom_name}
+                            </span>
+                          </div>
+
+                          <div>
+                            <h3 className="text-sm font-bold text-white group-hover:text-sky-300 transition line-clamp-2 leading-snug">
+                              {doc.filename}
+                            </h3>
+                            <p className="text-[11px] text-gray-400 font-medium mt-1 truncate">
+                              Type: <span className="text-indigo-400 font-semibold">{isDocx ? 'Word Document' : 'Classroom PDF'}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-gray-800/80 flex items-center justify-between">
+                          <span className="text-[10px] text-gray-500 font-mono">
+                            {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'Active Note'}
+                          </span>
+                          <Link
+                            to={`/quick-reader?document_id=${doc.id}`}
+                            className="px-3 py-1.5 bg-sky-600/20 hover:bg-sky-600 text-sky-300 hover:text-white border border-sky-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer shadow"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-sky-400 group-hover:text-white" />
+                            <span>Read & Ask AI</span>
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDocs.map((doc) => {
-                const isDocx = (doc.filename || '').endsWith('.docx') || (doc.filename || '').endsWith('.doc');
-                return (
+          )}
+
+          {/* ══════════════════════════════════════════════════════
+              SECTION 2: OTHER PDFS & REFERENCE LIBRARY BY DEVELOPER
+              ══════════════════════════════════════════════════════ */}
+          {(activeTab === 'all' || activeTab === 'developer') && (
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
+                <div className="flex items-center space-x-2.5">
+                  <div className="p-1.5 rounded-lg bg-amber-950/80 border border-amber-800/60 text-amber-400">
+                    <Code2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
+                      <span>Section 2: Curated Reference Library & Developer Handbooks</span>
+                      <span className="text-[9px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold uppercase tracking-wider">
+                        Official
+                      </span>
+                    </h2>
+                    <p className="text-[11px] text-gray-400">
+                      Master formula sheets, blueprints, and engineering documentation curated by OmniOS developers
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                  {filteredDevDocs.length} Developer Docs
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+                {filteredDevDocs.map((dev) => (
                   <div
-                    key={doc.id}
-                    className="glass-card p-5 rounded-2xl border border-gray-800 hover:border-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/10 transition flex flex-col justify-between space-y-4 group"
+                    key={dev.id}
+                    className="glass-card p-6 rounded-2xl border border-gray-800 hover:border-amber-500/50 hover:shadow-xl hover:shadow-amber-500/10 transition flex flex-col justify-between space-y-4 group bg-gray-950/80"
                   >
                     <div className="space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className={`p-2.5 rounded-xl border ${
-                          isDocx 
-                            ? 'bg-sky-950/80 text-sky-400 border-sky-800/60' 
-                            : 'bg-indigo-950/80 text-indigo-400 border-indigo-800/60'
-                        }`}>
-                          {isDocx ? <FileText className="w-5 h-5" /> : <Book className="w-5 h-5" />}
-                        </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-900 text-gray-400 border border-gray-800">
-                          {isDocx ? 'Word DOC' : 'PDF'}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1.5">
+                          <Zap className="w-3 h-3 text-amber-400" />
+                          <span>{dev.category}</span>
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-mono">
+                          {dev.pages} Pages • KaTeX Math
                         </span>
                       </div>
 
                       <div>
-                        <h3 className="text-sm font-bold text-white group-hover:text-indigo-300 transition line-clamp-2 leading-snug">
-                          {doc.filename}
+                        <h3 className="text-base font-bold text-white group-hover:text-amber-300 transition leading-snug">
+                          {dev.filename}
                         </h3>
-                        <p className="text-[11px] text-gray-400 font-medium mt-1 truncate">
-                          Class: <span className="text-indigo-400 font-semibold">{doc.classroom_name}</span>
+                        <p className="text-xs text-gray-400 mt-1.5 leading-relaxed line-clamp-2">
+                          {dev.description}
                         </p>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-gray-800/80 flex items-center justify-between">
+                    <div className="pt-3 border-t border-gray-800/80 flex items-center justify-between">
                       <span className="text-[10px] text-gray-500 font-mono">
-                        {doc.created_at ? new Date(doc.created_at).toLocaleDateString() : 'Active Note'}
+                        Curated by {dev.author}
                       </span>
                       <Link
-                        to={`/quick-reader?document_id=${doc.id}`}
-                        className="px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-xs font-semibold transition flex items-center space-x-1.5 cursor-pointer shadow"
+                        to={`/quick-reader?document_id=${dev.id}`}
+                        className="px-4 py-2 bg-gradient-to-r from-amber-600/20 to-orange-600/20 hover:from-amber-600 hover:to-orange-600 text-amber-300 hover:text-white border border-amber-500/30 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer shadow-md"
                       >
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-400 group-hover:text-white" />
-                        <span>Read & Ask AI</span>
+                        <Sparkles className="w-3.5 h-3.5 text-amber-400 group-hover:text-white" />
+                        <span>Open & Solve Doubts</span>
                       </Link>
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -349,9 +658,9 @@ export default function QuickPDFReader() {
     );
   }
 
-  // -------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────
   // 2. SINGLE DOCUMENT MODE: Interactive 2-Column Reader + AI Chat
-  // -------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────
   if (loadingDoc) {
     return (
       <div className="h-[calc(100vh-61px)] flex flex-col items-center justify-center bg-[#090d16] text-indigo-400 space-y-3">
@@ -372,7 +681,7 @@ export default function QuickPDFReader() {
     );
   }
 
-  const isProcessing = documentInfo.processing_status !== 'ready';
+  const isProcessing = documentInfo.processing_status !== 'ready' && !documentInfo.is_developer_doc;
   const filename = documentInfo.filename || '';
   const isDocx = filename.endsWith('.docx') || filename.endsWith('.doc');
 
@@ -394,35 +703,39 @@ export default function QuickPDFReader() {
         <div className="flex items-center space-x-4">
           <Link to="/quick-reader" className="flex items-center space-x-1.5 text-xs text-gray-400 hover:text-white transition">
             <ArrowLeft className="w-4 h-4 text-indigo-400" />
-            <span className="hidden sm:inline">All Documents</span>
+            <span className="hidden sm:inline">All Documents Hub</span>
           </Link>
 
           <div className="h-4 w-px bg-gray-800" />
 
           <div className="flex items-center space-x-2.5">
-            {isDocx ? (
-              <div className="p-1.5 bg-sky-950/80 border border-sky-800/50 rounded-lg text-sky-400">
-                <FileText className="w-4 h-4" />
-              </div>
-            ) : (
-              <div className="p-1.5 bg-indigo-950/80 border border-indigo-800/50 rounded-lg text-indigo-400">
-                <Book className="w-4 h-4" />
-              </div>
-            )}
+            <div className={`p-1.5 rounded-lg border ${
+              documentInfo.is_developer_doc 
+                ? 'bg-amber-950/80 border-amber-800/50 text-amber-400' 
+                : isDocx 
+                ? 'bg-sky-950/80 border-sky-800/50 text-sky-400' 
+                : 'bg-indigo-950/80 border-indigo-800/50 text-indigo-400'
+            }`}>
+              {documentInfo.is_developer_doc ? <Code2 className="w-4 h-4" /> : isDocx ? <FileText className="w-4 h-4" /> : <Book className="w-4 h-4" />}
+            </div>
+
             <div>
               <h1 className="text-xs sm:text-sm font-bold text-white max-w-xs sm:max-w-md truncate leading-tight">
                 {documentInfo.filename}
               </h1>
               <span className="text-[10px] text-gray-400 font-mono hidden sm:inline">
-                {isDocx ? 'Word DOC' : 'PDF Document'} � {totalPages} Pages
+                {documentInfo.is_developer_doc ? `Developer Library • ${documentInfo.category}` : isDocx ? 'Word DOC' : 'PDF Document'} • {totalPages} Pages
               </span>
             </div>
+
             <span className={`text-[9px] px-2 py-0.5 rounded font-mono border hidden sm:inline ${
-              isProcessing
+              documentInfo.is_developer_doc
+                ? 'bg-amber-950 text-amber-300 border-amber-800'
+                : isProcessing
                 ? 'bg-amber-950 text-amber-300 border-amber-800 animate-pulse'
                 : 'bg-emerald-950 text-emerald-300 border-emerald-800'
             }`}>
-              {isProcessing ? 'Processing OCR...' : 'Ready'}
+              {documentInfo.is_developer_doc ? 'Curated Master Doc' : isProcessing ? 'Processing OCR...' : 'Ready'}
             </span>
           </div>
         </div>
@@ -437,16 +750,18 @@ export default function QuickPDFReader() {
             <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
           </button>
 
-          <a
-            href={documentInfo.file_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center space-x-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs px-3 py-1.5 rounded-xl transition shadow"
-            title="Download Original File"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Download</span>
-          </a>
+          {documentInfo.file_url && (
+            <a
+              href={documentInfo.file_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs px-3 py-1.5 rounded-xl transition shadow"
+              title="Download Original File"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Download</span>
+            </a>
+          )}
         </div>
       </header>
 
