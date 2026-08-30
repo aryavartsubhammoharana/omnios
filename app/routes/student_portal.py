@@ -12,7 +12,7 @@ from app.models.file import DocumentFile
 from app.models.quiz import StudentDailyQuiz
 from app.models.analytics import StudentStreak, VideoFocusSession
 from app.routes.auth import get_current_user
-from app.services.ai import query_groq_ai
+from app.services.ai import query_groq_ai, query_sarvam_ai, query_gemini_ai, is_valid_ai_text
 from app.services.youtube_service import get_curated_weak_topic_videos, get_video_transcript
 from app.utils.time_utils import get_ist_now
 
@@ -29,6 +29,132 @@ class VideoFocusTrackRequest(BaseModel):
     watch_seconds: int = 30
 
 
+def get_daily_subject_schedule(class_name: str, ist_date) -> dict:
+    weekday = ist_date.weekday()
+    clean_class = (class_name or "").lower()
+
+    if "11" in clean_class or "12" in clean_class:
+        schedule = {
+            0: {
+                "subject": "Physics",
+                "focus": "Core Laws, Mechanics, Electromagnetism & Derivations",
+                "q_count": 8,
+                "lang": "en",
+                "keywords": ["physics", "mechanics", "optics", "thermodynamics"],
+                "instruction": "Generate 8 rigorous conceptual and derivation-based Physics multiple choice questions."
+            },
+            1: {
+                "subject": "Chemistry",
+                "focus": "Organic Reaction Mechanisms, Chemical Bonding & Equilibrium",
+                "q_count": 8,
+                "lang": "en",
+                "keywords": ["chemistry", "organic", "inorganic", "bonding", "equilibrium"],
+                "instruction": "Generate 8 conceptual and numerical Chemistry MCQs testing reactions and concepts."
+            },
+            2: {
+                "subject": "Mathematics / Biology",
+                "focus": "Calculus, Vectors, Genetics & Cell Physiology",
+                "q_count": 8,
+                "lang": "en",
+                "keywords": ["math", "mathematics", "calculus", "biology", "genetics"],
+                "instruction": "Generate 8 problem-solving MCQs with LaTeX equations ($...$) and step-by-step mathematical reasoning."
+            },
+            3: {
+                "subject": "English Core",
+                "focus": "Advanced Reading Comprehension, Literary Devices & Applied Grammar",
+                "q_count": 10,
+                "lang": "en",
+                "keywords": ["english", "grammar", "comprehension", "literature"],
+                "instruction": "Provide a short 150-word Unseen Passage followed by 5 Reading Comprehension MCQs and 5 English Applied Grammar MCQs."
+            },
+            4: {
+                "subject": "Computer Science / Elective",
+                "focus": "Algorithms, Python Data Structures, Networks or Applied Electives",
+                "q_count": 8,
+                "lang": "en",
+                "keywords": ["computer", "python", "code", "cs", "algorithm"],
+                "instruction": "Generate 8 algorithmic, coding, and conceptual MCQs."
+            },
+            5: {
+                "subject": "JEE / NEET Mixed Diagnostic",
+                "focus": "High-Yield Multi-Concept Practice Problems",
+                "q_count": 10,
+                "lang": "en",
+                "keywords": ["physics", "chemistry", "math", "biology"],
+                "instruction": "Generate 10 high-yield multi-disciplinary diagnostic MCQs for entrance revision."
+            },
+            6: {
+                "subject": "Weekly Comprehensive Mock Assessment",
+                "focus": "Full Syllabus Cross-Topic Revision",
+                "q_count": 10,
+                "lang": "en",
+                "keywords": [],
+                "instruction": "Generate 10 balanced cross-subject diagnostic MCQs covering this week's topics."
+            }
+        }
+    else:
+        schedule = {
+            0: {
+                "subject": "Science",
+                "focus": "Physics, Chemistry & Biology (Light, Electricity, Life Processes, Chemical Reactions, Acid-Bases)",
+                "q_count": 8,
+                "lang": "en",
+                "keywords": ["science", "physics", "chemistry", "biology", "life processes", "light", "electricity"],
+                "instruction": "Generate 8 high-quality conceptual and experimental Science MCQs with clear explanations."
+            },
+            1: {
+                "subject": "Social Science (SST)",
+                "focus": "History (Nationalism), Geography (Resources), Civics (Power Sharing) & Economics (Development)",
+                "q_count": 8,
+                "lang": "en",
+                "keywords": ["sst", "social science", "history", "geography", "civics", "economics"],
+                "instruction": "Generate 8 analytical Social Science (SST) MCQs testing conceptual understanding, historical context, and economics."
+            },
+            2: {
+                "subject": "Mathematics (Numerical)",
+                "focus": "Step-by-step Numericals, Quadratic Equations, Trigonometry, Geometry, Surface Areas & Arithmetic Progressions",
+                "q_count": 8,
+                "lang": "en",
+                "keywords": ["math", "mathematics", "trigonometry", "algebra", "geometry", "equations"],
+                "instruction": "Generate 8 numerical problem-solving Math questions with LaTeX formatting ($...$) and detailed calculation steps in explanations."
+            },
+            3: {
+                "subject": "English",
+                "focus": "Unseen Reading Comprehension Passage + Grammar & Vocabulary",
+                "q_count": 10,
+                "lang": "en",
+                "keywords": ["english", "grammar", "comprehension", "literature"],
+                "instruction": "Include a short 120-150 word Unseen Passage at the start, followed by 5 Reading Comprehension MCQs and 5 English Grammar MCQs (Tenses, Active/Passive, Modals, Subject-Verb Agreement)."
+            },
+            4: {
+                "subject": "Hindi (हिंदी)",
+                "focus": "अपठित गद्यांश (Unseen Passage) + हिंदी व्याकरण (समास, संधि, पद-परिचय, मुहावरे, वाक्य शोधन)",
+                "q_count": 10,
+                "lang": "hi",
+                "keywords": ["hindi", "हिंदी", "व्याकरण", "गद्यांश"],
+                "instruction": "CRITICAL: The entire output MUST be strictly in Hindi (Devanagari script हिंदी). Provide a 120-word रोचक अपठित गद्यांश, followed by 5 गद्यांश आधारित MCQs और 5 हिंदी व्याकरण MCQs (समास, संधि, पद परिचय, मुहावरे)."
+            },
+            5: {
+                "subject": "Math & Science Revision",
+                "focus": "STEM Conceptual & Numerical Problem Solving",
+                "q_count": 8,
+                "lang": "en",
+                "keywords": ["science", "math"],
+                "instruction": "Generate 8 mixed STEM numerical and conceptual questions reviewing this week's key topics."
+            },
+            6: {
+                "subject": "Weekly Comprehensive Mock Assessment",
+                "focus": "All-Round Subject Assessment (Science, SST, Math, English, Hindi)",
+                "q_count": 10,
+                "lang": "en",
+                "keywords": [],
+                "instruction": "Generate a balanced 10-question comprehensive diagnostic test covering Science, SST, Math, English, and Hindi."
+            }
+        }
+
+    return schedule.get(weekday, schedule[0])
+
+
 @router.get("/daily-quiz")
 def get_or_generate_daily_quiz(
     current_user: User = Depends(get_current_user),
@@ -40,7 +166,7 @@ def get_or_generate_daily_quiz(
             detail="Daily autonomous diagnostic quizzes are exclusive to students."
         )
 
-    today = date.today()
+    today = get_ist_now().date()
     existing_quiz = db.query(StudentDailyQuiz).filter(
         StudentDailyQuiz.student_id == current_user.id,
         StudentDailyQuiz.quiz_date == today
@@ -67,39 +193,60 @@ def get_or_generate_daily_quiz(
 
     enrolled_classes = db.query(Classroom).filter(Classroom.id.in_(class_ids)).all() if class_ids else []
     class_names = [c.name for c in enrolled_classes]
-    class_context = ", ".join(class_names) if class_names else "General Academic Studies"
+    student_class = current_user.student_class or (class_names[0] if class_names else "Class 10")
+    class_context = ", ".join(class_names) if class_names else student_class
 
-    docs = db.query(DocumentFile).filter(
-        DocumentFile.classroom_id.in_(class_ids)
-    ).order_by(DocumentFile.created_at.desc()).limit(8).all() if class_ids else []
+    sched = get_daily_subject_schedule(student_class, today)
+
+    docs = []
+    if class_ids:
+        docs = db.query(DocumentFile).filter(
+            DocumentFile.classroom_id.in_(class_ids)
+        ).order_by(DocumentFile.created_at.desc()).limit(12).all()
 
     notes_text = ""
     for d in docs:
         if d.content_text:
-            notes_text += f"\n--- Material from {d.filename} ---\n{d.content_text[:2000]}\n"
+            fname_lower = d.filename.lower()
+            if any(k in fname_lower for k in sched.get("keywords", [])):
+                notes_text += f"\n--- Material from {d.filename} ---\n{d.content_text[:3000]}\n"
 
     if not notes_text.strip():
-        notes_text = f"Curriculum and core concepts for enrolled subjects: {class_context}."
+        for d in docs[:4]:
+            if d.content_text:
+                notes_text += f"\n--- Material from {d.filename} ---\n{d.content_text[:2000]}\n"
+
+    if not notes_text.strip():
+        notes_text = f"Curriculum and core concepts for {student_class} Subject: {sched['subject']} ({sched['focus']})."
 
     prompt = (
-        f"You are an AI diagnostic assessment engine for student {current_user.full_name or 'Student'}.\n"
-        f"Enrolled Courses: {class_context}\n\n"
-        f"Generate exactly 6 diagnostic multiple-choice questions testing core concepts from these study notes:\n"
-        f"{notes_text[:4000]}\n\n"
+        f"You are an expert curriculum test creator for {student_class}.\n"
+        f"Today's Scheduled Subject: {sched['subject']} ({today.strftime('%A')})\n"
+        f"Core Focus: {sched['focus']}\n"
+        f"Instruction: {sched['instruction']}\n\n"
+        f"Study Material Context:\n{notes_text[:4000]}\n\n"
         f"CRITICAL REQUIREMENTS:\n"
-        f"1. Each question must test a specific conceptual topic.\n"
+        f"1. Generate exactly {sched['q_count']} multiple-choice questions.\n"
         f"2. Return ONLY a valid JSON array of objects with keys:\n"
-        f'   - "id": number (1 to 6)\n'
+        f'   - "id": number (1 to {sched["q_count"]})\n'
         f'   - "question": string\n'
         f'   - "options": array of 4 distinct string choices\n'
         f'   - "correct_index": integer (0, 1, 2, or 3)\n'
-        f'   - "topic": concise 2-4 word topic tag (e.g. "Thermodynamics Carnot Cycle", "Newton Second Law", "Calculus Integration")\n'
+        f'   - "topic": concise 2-4 word topic tag\n'
         f'   - "explanation": brief explanation of why the correct answer is right.\n'
         f"Output pure JSON only, no markdown ticks, no commentary."
     )
 
-    ai_response = query_groq_ai(prompt=prompt)
-    
+    ai_response = ""
+    if sched.get("lang") == "hi":
+        ai_response = query_sarvam_ai(prompt=prompt)
+        if not is_valid_ai_text(ai_response):
+            ai_response = query_gemini_ai(prompt=prompt)
+    else:
+        ai_response = query_groq_ai(prompt=prompt)
+        if not is_valid_ai_text(ai_response):
+            ai_response = query_gemini_ai(prompt=prompt)
+
     questions = []
     try:
         clean_json = re.sub(r"^```json\s*", "", ai_response.strip(), flags=re.MULTILINE)
@@ -112,40 +259,53 @@ def get_or_generate_daily_quiz(
         if isinstance(parsed, list) and len(parsed) > 0:
             questions = parsed
     except Exception as e:
-        print(f"Error parsing AI diagnostic questions: {e}")
+        print(f"Error parsing AI daily subject quiz questions: {e}")
 
     if not questions:
-        questions = [
-            {
-                "id": 1,
-                "question": f"Which fundamental principle is central to {class_names[0] if class_names else 'General Science'}?",
-                "options": ["Conservation of Energy", "Static Equilibrium Only", "Linear Decay", "Random Fluctuations"],
-                "correct_index": 0,
-                "topic": "Fundamental Conservation Laws",
-                "explanation": "Conservation of Energy applies universally across physical sciences."
-            },
-            {
-                "id": 2,
-                "question": "What is the primary method for validating mathematical models?",
-                "options": ["Intuition only", "Empirical testing and deductive proof", "Arbitrary consensus", "Ignoring boundary conditions"],
-                "correct_index": 1,
-                "topic": "Mathematical Verification",
-                "explanation": "Deductive proofs and empirical testing validate mathematical formulations."
-            },
-            {
-                "id": 3,
-                "question": "In scientific problem solving, why are boundary conditions evaluated?",
-                "options": ["To eliminate all variables", "To test model behavior at extremes", "To avoid calculating constants", "They have no effect"],
-                "correct_index": 1,
-                "topic": "Boundary Condition Analysis",
-                "explanation": "Evaluating boundary conditions ensures equations behave realistically at extreme values."
-            }
-        ]
+        if sched.get("lang") == "hi":
+            questions = [
+                {
+                    "id": 1,
+                    "question": "संधि के मुख्य रूप से कितने भेद होते हैं?",
+                    "options": ["तीन (3)", "चार (4)", "दो (2)", "पाँच (5)"],
+                    "correct_index": 0,
+                    "topic": "हिंदी व्याकरण - संधि",
+                    "explanation": "संधि के मुख्य रूप से 3 भेद होते हैं: स्वर संधि, व्यंजन संधि, और विसर्ग संधि।"
+                },
+                {
+                    "id": 2,
+                    "question": "'दशानन' शब्द में कौन सा समास है?",
+                    "options": ["बहुव्रीहि समास", "द्विगु समास", "तत्पुरुष समास", "कर्मधारय समास"],
+                    "correct_index": 0,
+                    "topic": "हिंदी व्याकरण - समास",
+                    "explanation": "दशानन (दस हैं आनन जिसके अर्थात रावण) में तीसरा पद प्रधान होने से बहुव्रीहि समास है।"
+                }
+            ]
+        else:
+            questions = [
+                {
+                    "id": 1,
+                    "question": f"Which core principle is fundamental to {sched['subject']}?",
+                    "options": ["Conservation and equilibrium laws", "Random uncontrolled processes", "Arbitrary decay", "None of these"],
+                    "correct_index": 0,
+                    "topic": f"{sched['subject']} Core Principle",
+                    "explanation": "Fundamental laws of conservation and balance underpin core science and mathematics."
+                },
+                {
+                    "id": 2,
+                    "question": f"How are problems solved systematically in {sched['subject']}?",
+                    "options": ["By rigorous formulation and empirical proof", "By assumption without verification", "By ignoring constraints", "None"],
+                    "correct_index": 0,
+                    "topic": f"{sched['subject']} Methodology",
+                    "explanation": "Systematic verification and deductive reasoning yield reproducible results."
+                }
+            ]
 
+    quiz_title = f"Daily Practice: {sched['subject']} — {today.strftime('%d %b %Y (%A)')}"
     daily_quiz = StudentDailyQuiz(
         student_id=current_user.id,
         quiz_date=today,
-        title=f"Daily AI Diagnostic Practice — {today.strftime('%d %b %Y')}",
+        title=quiz_title,
         questions_json=questions,
         is_completed=False,
     )
