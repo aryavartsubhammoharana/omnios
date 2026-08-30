@@ -155,7 +155,7 @@ export default function Signup() {
         {/* Floating branding pill on the canvas */}
         <div className="absolute bottom-8 left-8 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs text-zinc-300 pointer-events-none shadow-lg">
           <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="font-medium tracking-tight">OmniOS — Academic AI Ecosystem</span>
+          <span className="font-medium tracking-tight">OmniOS Â— Academic AI Ecosystem</span>
         </div>
       </div>
 
@@ -212,7 +212,7 @@ export default function Signup() {
                   autoFocus
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="••••••"
+                  placeholder="Â•Â•Â•Â•Â•Â•"
                   className="w-full bg-[#111113] border border-zinc-800 rounded-xl py-2.5 text-center text-2xl font-mono tracking-[0.4em] text-indigo-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-inner"
                 />
               </div>
@@ -322,7 +322,7 @@ export default function Signup() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
+                        placeholder="Â•Â•Â•Â•Â•Â•Â•Â•"
                         className="w-full bg-[#111113] border border-zinc-800 rounded-xl pl-8 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-inner"
                       />
                       <button
@@ -346,7 +346,7 @@ export default function Signup() {
                         required
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="••••••••"
+                        placeholder="Â•Â•Â•Â•Â•Â•Â•Â•"
                         className="w-full bg-[#111113] border border-zinc-800 rounded-xl pl-8 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-inner"
                       />
                       <button

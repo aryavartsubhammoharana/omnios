@@ -17,7 +17,10 @@ export const ThreadEffectCanvas = () => {
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
     if (!ctx) return;
 
-    let animationFrameId;
+    let animationFrameId = null;
+    let isRunning = true;
+    let isTabVisible = !document.hidden;
+
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -29,15 +32,15 @@ export const ThreadEffectCanvas = () => {
 
     // Stitch data structures
     let numStitches = 0;
-    let cxArr;
-    let cyArr;
-    let angleArr;
-    let targetAngleArr;
-    let lenArr;
-    let targetLenArr;
-    let baseLenArr;
-    let colorBucketIndices;
-    let isLogoArr;
+    let cxArr = null;
+    let cyArr = null;
+    let angleArr = null;
+    let targetAngleArr = null;
+    let lenArr = null;
+    let targetLenArr = null;
+    let baseLenArr = null;
+    let colorBucketIndices = null;
+    let isLogoArr = null;
 
     // Distinct quantized color palette for batch rendering
     const paletteColors = [];
@@ -60,50 +63,35 @@ export const ThreadEffectCanvas = () => {
     };
 
     const initStitches = () => {
-      if (!canvas.parentElement) return;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const parent = canvas.parentElement;
+      if (!parent) return;
 
-      width = rect.width;
-      height = rect.height;
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
+      dpr = 1;
+      width = parent.clientWidth * dpr;
+      height = parent.clientHeight * dpr;
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (width <= 0 || height <= 0) return;
+
+      canvas.width = width;
+      canvas.height = height;
 
       paletteColors.length = 0;
       colorBuckets.length = 0;
 
-      // Offscreen canvas for logo sampling
-      const offCanvas = document.createElement('canvas');
-      offCanvas.width = width;
-      offCanvas.height = height;
-      const offCtx = offCanvas.getContext('2d');
+      const offscreen = document.createElement('canvas');
+      offscreen.width = width;
+      offscreen.height = height;
+      const offCtx = offscreen.getContext('2d', { alpha: true });
 
       if (offCtx) {
-        // 1. Dark ambient backdrop
-        const bgGrad = offCtx.createRadialGradient(
-          width * 0.5,
-          height * 0.5,
-          20,
-          width * 0.5,
-          height * 0.5,
-          Math.max(width, height) * 0.7
-        );
-        bgGrad.addColorStop(0, '#1a1936');
-        bgGrad.addColorStop(0.5, '#101020');
-        bgGrad.addColorStop(1, '#07070a');
-        offCtx.fillStyle = bgGrad;
+        offCtx.fillStyle = '#08080c';
         offCtx.fillRect(0, 0, width, height);
 
-        // 2. Draw Large Centered OmniOS Logo (No text, only big prominent logo)
         if (logoLoaded && logoImg.width > 0) {
-          // Large scale: 78% of container or up to 480px
           const logoSize = Math.min(width * 0.82, height * 0.78, 480);
           const logoX = (width - logoSize) * 0.5;
           const logoY = (height - logoSize) * 0.5;
 
-          // Vibrant Glowing Aura behind large logo
           const auraGrad = offCtx.createRadialGradient(
             width * 0.5,
             height * 0.5,
@@ -119,7 +107,6 @@ export const ThreadEffectCanvas = () => {
           offCtx.fillStyle = auraGrad;
           offCtx.fillRect(logoX - 60, logoY - 60, logoSize + 120, logoSize + 120);
 
-          // Draw Logo Image prominently in center
           offCtx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
         }
       }
@@ -133,9 +120,8 @@ export const ThreadEffectCanvas = () => {
         console.warn('Canvas pixel sample notice:', e);
       }
 
-      // High-density stitch spacing for rich, clear logo details
-      const colSpacing = 11.2;
-      const rowSpacing = 5.6;
+      const colSpacing = 12.0;
+      const rowSpacing = 6.0;
       const cols = Math.ceil(width / colSpacing) + 2;
       const rows = Math.ceil(height / rowSpacing) + 2;
 
@@ -203,8 +189,7 @@ export const ThreadEffectCanvas = () => {
     const handleResize = () => {
       initStitches();
     };
-
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', handleResize, { passive: true });
 
     const handleMouseEnter = (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -239,8 +224,28 @@ export const ThreadEffectCanvas = () => {
     canvas.addEventListener('mousemove', handleMouseMove, { passive: true });
     canvas.addEventListener('mouseleave', handleMouseLeave, { passive: true });
 
+    // Tab visibility handling
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isTabVisible = false;
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+      } else {
+        isTabVisible = true;
+        mouseRef.current.active = false;
+        if (isRunning && !animationFrameId) {
+          animationFrameId = requestAnimationFrame(render);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     let time = 0;
     const render = () => {
+      if (!isRunning || !isTabVisible) return;
+
       time += 0.02;
 
       const m = mouseRef.current;
@@ -258,83 +263,102 @@ export const ThreadEffectCanvas = () => {
       ctx.fillStyle = '#08080c';
       ctx.fillRect(0, 0, width, height);
 
-      for (let i = 0; i < numStitches; i++) {
-        const cx = cxArr[i];
-        const cy = cyArr[i];
-
-        if (isMouseActive) {
-          const dx = cx - mx;
-          const dy = cy - my;
-          const distSq = dx * dx + dy * dy;
-
-          if (distSq < influenceRadiusSq) {
-            const dist = Math.sqrt(distSq);
-            const linearT = 1 - dist / influenceRadius;
-            const t = linearT * linearT * (3 - 2 * linearT);
-
-            const radialAngle = Math.atan2(dy, dx);
-            targetAngleArr[i] = t * radialAngle;
-            targetLenArr[i] = baseLenArr[i] * (1 + t * 0.45);
-          } else {
-            targetAngleArr[i] = 0;
-            targetLenArr[i] = baseLenArr[i];
-          }
-        } else {
-          targetAngleArr[i] = Math.sin(time + cx * 0.015 + cy * 0.02) * 0.05;
-          targetLenArr[i] = baseLenArr[i];
-        }
-
-        angleArr[i] += (targetAngleArr[i] - angleArr[i]) * 0.22;
-        lenArr[i] += (targetLenArr[i] - lenArr[i]) * 0.22;
-      }
-
-      ctx.lineWidth = 2.4;
-      ctx.lineCap = 'round';
-
-      for (let b = 0; b < paletteColors.length; b++) {
-        const indices = colorBuckets[b];
-        if (indices.length === 0) continue;
-
-        ctx.strokeStyle = paletteColors[b];
-        ctx.beginPath();
-
-        for (let j = 0; j < indices.length; j++) {
-          const i = indices[j];
+      if (cxArr && angleArr && lenArr) {
+        for (let i = 0; i < numStitches; i++) {
           const cx = cxArr[i];
           const cy = cyArr[i];
-          const halfLen = lenArr[i] * 0.5;
-          const ang = angleArr[i];
 
-          const cosA = Math.cos(ang);
-          const sinA = Math.sin(ang);
+          if (isMouseActive) {
+            const dx = cx - mx;
+            const dy = cy - my;
+            const distSq = dx * dx + dy * dy;
 
-          ctx.moveTo(cx - cosA * halfLen, cy - sinA * halfLen);
-          ctx.lineTo(cx + cosA * halfLen, cy + sinA * halfLen);
+            if (distSq < influenceRadiusSq) {
+              const dist = Math.sqrt(distSq);
+              const linearT = 1 - dist / influenceRadius;
+              const t = linearT * linearT * (3 - 2 * linearT);
+
+              const radialAngle = Math.atan2(dy, dx);
+              targetAngleArr[i] = t * radialAngle;
+              targetLenArr[i] = baseLenArr[i] * (1 + t * 0.45);
+            } else {
+              targetAngleArr[i] = 0;
+              targetLenArr[i] = baseLenArr[i];
+            }
+          } else {
+            targetAngleArr[i] = Math.sin(time + cx * 0.015 + cy * 0.02) * 0.05;
+            targetLenArr[i] = baseLenArr[i];
+          }
+
+          angleArr[i] += (targetAngleArr[i] - angleArr[i]) * 0.22;
+          lenArr[i] += (targetLenArr[i] - lenArr[i]) * 0.22;
         }
 
-        ctx.stroke();
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = 'round';
+
+        for (let b = 0; b < paletteColors.length; b++) {
+          const indices = colorBuckets[b];
+          if (!indices || indices.length === 0) continue;
+
+          ctx.strokeStyle = paletteColors[b];
+          ctx.beginPath();
+
+          for (let j = 0; j < indices.length; j++) {
+            const i = indices[j];
+            const cx = cxArr[i];
+            const cy = cyArr[i];
+            const halfLen = lenArr[i] * 0.5;
+            const ang = angleArr[i];
+
+            const cosA = Math.cos(ang);
+            const sinA = Math.sin(ang);
+
+            ctx.moveTo(cx - cosA * halfLen, cy - sinA * halfLen);
+            ctx.lineTo(cx + cosA * halfLen, cy + sinA * halfLen);
+          }
+
+          ctx.stroke();
+        }
+
+        if (isMouseActive && mx > 0 && my > 0) {
+          const halo = ctx.createRadialGradient(mx, my, 0, mx, my, 140);
+          halo.addColorStop(0, 'rgba(129, 140, 248, 0.2)');
+          halo.addColorStop(0.6, 'rgba(168, 85, 247, 0.06)');
+          halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = halo;
+          ctx.fillRect(mx - 140, my - 140, 280, 280);
+        }
       }
 
-      if (isMouseActive && mx > 0 && my > 0) {
-        const halo = ctx.createRadialGradient(mx, my, 0, mx, my, 140);
-        halo.addColorStop(0, 'rgba(129, 140, 248, 0.2)');
-        halo.addColorStop(0.6, 'rgba(168, 85, 247, 0.06)');
-        halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = halo;
-        ctx.fillRect(mx - 140, my - 140, 280, 280);
+      if (isRunning && isTabVisible) {
+        animationFrameId = requestAnimationFrame(render);
       }
-
-      animationFrameId = requestAnimationFrame(render);
     };
 
-    render();
+    animationFrameId = requestAnimationFrame(render);
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      isRunning = false;
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
       window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('mouseleave', handleMouseLeave);
       canvas.removeEventListener('mouseenter', handleMouseEnter);
+
+      cxArr = null;
+      cyArr = null;
+      angleArr = null;
+      targetAngleArr = null;
+      lenArr = null;
+      targetLenArr = null;
+      baseLenArr = null;
+      colorBucketIndices = null;
+      isLogoArr = null;
     };
   }, []);
 

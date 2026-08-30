@@ -7,18 +7,14 @@ export default function ThreadFabricCanvas({ containerRef }) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    let animationFrameId;
+    if (!ctx) return;
+
+    let animationFrameId = null;
+    let isRunning = true;
+    let isTabVisible = !document.hidden;
 
     let width = (canvas.width = canvas.parentElement?.clientWidth || 600);
     let height = (canvas.height = canvas.parentElement?.clientHeight || 800);
-
-    const resize = () => {
-      if (!canvas.parentElement) return;
-      width = canvas.width = canvas.parentElement.clientWidth;
-      height = canvas.height = canvas.parentElement.clientHeight;
-      initThreads();
-    };
-    window.addEventListener('resize', resize);
 
     // Mouse physics tracker with velocity
     const mouse = {
@@ -33,8 +29,8 @@ export default function ThreadFabricCanvas({ containerRef }) {
     };
 
     // Thread & Fabric nodes structure
-    const NUM_THREADS = 28;
-    const POINTS_PER_THREAD = 32;
+    const NUM_THREADS = 24;
+    const POINTS_PER_THREAD = 28;
     let threads = [];
 
     const initThreads = () => {
@@ -72,6 +68,14 @@ export default function ThreadFabricCanvas({ containerRef }) {
 
     initThreads();
 
+    const resize = () => {
+      if (!canvas.parentElement) return;
+      width = canvas.width = canvas.parentElement.clientWidth;
+      height = canvas.height = canvas.parentElement.clientHeight;
+      initThreads();
+    };
+    window.addEventListener('resize', resize, { passive: true });
+
     const handleMouseMove = (e) => {
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
@@ -94,12 +98,34 @@ export default function ThreadFabricCanvas({ containerRef }) {
     };
 
     const targetElem = containerRef?.current || canvas;
-    targetElem.addEventListener('mousemove', handleMouseMove);
-    targetElem.addEventListener('mouseleave', handleMouseLeave);
+    targetElem.addEventListener('mousemove', handleMouseMove, { passive: true });
+    targetElem.addEventListener('mouseleave', handleMouseLeave, { passive: true });
+
+    // Tab visibility handling
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isTabVisible = false;
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+      } else {
+        isTabVisible = true;
+        mouse.active = false;
+        mouse.vx = 0;
+        mouse.vy = 0;
+        if (isRunning && !animationFrameId) {
+          animationFrameId = requestAnimationFrame(render);
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     let time = 0;
 
     const render = () => {
+      if (!isRunning || !isTabVisible) return;
+
       time += 1;
       ctx.clearRect(0, 0, width, height);
 
@@ -146,7 +172,7 @@ export default function ThreadFabricCanvas({ containerRef }) {
           p.y += p.vy;
         }
 
-        // Draw smooth Catmull-Rom or Quadratic Bézier elastic silk curve
+        // Draw smooth Quadratic Bezier elastic silk curve
         ctx.beginPath();
         ctx.moveTo(pts[0].x, pts[0].y);
 
@@ -171,7 +197,7 @@ export default function ThreadFabricCanvas({ containerRef }) {
       }
 
       // Draw subtle vertical cross-stitch threads for authentic fabric weave look
-      const crossStrandCount = 14;
+      const crossStrandCount = 12;
       const crossSpacing = width / (crossStrandCount + 1);
 
       ctx.save();
@@ -194,16 +220,24 @@ export default function ThreadFabricCanvas({ containerRef }) {
       }
       ctx.restore();
 
-      animationFrameId = requestAnimationFrame(render);
+      if (isRunning && isTabVisible) {
+        animationFrameId = requestAnimationFrame(render);
+      }
     };
 
-    render();
+    animationFrameId = requestAnimationFrame(render);
 
     return () => {
+      isRunning = false;
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
       window.removeEventListener('resize', resize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       targetElem.removeEventListener('mousemove', handleMouseMove);
       targetElem.removeEventListener('mouseleave', handleMouseLeave);
-      cancelAnimationFrame(animationFrameId);
+      threads = [];
     };
   }, [containerRef]);
 
