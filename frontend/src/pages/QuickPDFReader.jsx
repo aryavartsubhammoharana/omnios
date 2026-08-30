@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import API from '../api/client';
 import { 
   ArrowLeft, Sparkles, Send, Bot, User, Book, Loader2, 
-  FileText, Download, Copy, Check, ZoomIn, ZoomOut,
-  ChevronLeft, ChevronRight, Maximize2, Minimize2, Search, 
-  Moon, Sun, Coffee, Columns, AlignLeft,
-  GraduationCap, Code2, Zap, FolderOpen
+  FileText, Download, Copy, Check, Search, 
+  Columns, AlignLeft, GraduationCap, Code2, Zap, FolderOpen,
+  Maximize2, Minimize2, ExternalLink
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
 
@@ -24,23 +23,17 @@ export default function QuickPDFReader() {
   // Single Document Mode States
   const [documentInfo, setDocumentInfo] = useState(null);
   const [loadingDoc, setLoadingDoc] = useState(true);
+  const [viewMode, setViewMode] = useState('pdf'); // 'pdf' (Real PDF default) | 'text' (Extracted AI Text)
   const [aiProvider, setAiProvider] = useState('groq');
   const [copied, setCopied] = useState(false);
-
-  // Document Viewer Controls
-  const [zoomLevel, setZoomLevel] = useState(100);
-  const [readerTheme, setReaderTheme] = useState('dark');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState('paginated');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [fontSize, setFontSize] = useState(14);
   const viewerContainerRef = useRef(null);
 
   // AI Chat Assistant States
   const [messages, setMessages] = useState([
     {
       sender: 'ai',
-      text: 'Hello! I am your Document AI Assistant. Ask me any doubt, formula derivation, or conceptual question directly from this document.'
+      text: 'Hello! I am your Classroom AI Assistant. Ask me any doubt, formula derivation, or question directly from this PDF.'
     }
   ]);
   const [inputQuestion, setInputQuestion] = useState('');
@@ -111,53 +104,12 @@ export default function QuickPDFReader() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const docPages = useMemo(() => {
-    if (!documentInfo?.content_text) return [];
-    const text = documentInfo.content_text;
-    
-    if (text.includes('--- Page ')) {
-      const parts = text.split(/(?=--- Page \d+)/i).filter(p => p.trim());
-      if (parts.length > 0) return parts;
-    }
-
-    const paragraphs = text.split(/\n\s*\n/);
-    const pages = [];
-    let currentChunk = [];
-    let currentLength = 0;
-    const TARGET_PAGE_LENGTH = 1800;
-
-    for (const para of paragraphs) {
-      if (currentLength + para.length > TARGET_PAGE_LENGTH && currentChunk.length > 0) {
-        pages.push(currentChunk.join('\n\n'));
-        currentChunk = [para];
-        currentLength = para.length;
-      } else {
-        currentChunk.push(para);
-      }
-    }
-    if (currentChunk.length > 0) {
-      pages.push(currentChunk.join('\n\n'));
-    }
-
-    return pages.length > 0 ? pages : [text];
-  }, [documentInfo?.content_text]);
-
-  const totalPages = docPages.length || 1;
-
   const handleCopyText = () => {
     if (documentInfo?.content_text) {
       navigator.clipboard.writeText(documentInfo.content_text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
-  };
-
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 10, 160));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 10, 70));
   };
 
   const toggleFullscreen = () => {
@@ -200,7 +152,7 @@ export default function QuickPDFReader() {
   };
 
   // ─────────────────────────────────────────────────────────────
-  // 1. NO DOCUMENT SELECTED: Render 2 Sections Hub (Classroom + Developer Library)
+  // 1. NO DOCUMENT SELECTED: Render Classroom PDFs & Developer Library Hub
   // ─────────────────────────────────────────────────────────────
   if (!documentId) {
     const filteredClassroomDocs = classroomDocs.filter(d => 
@@ -432,13 +384,13 @@ export default function QuickPDFReader() {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 2. SINGLE DOCUMENT MODE: Interactive 2-Column Reader + AI Chat
+  // 2. SINGLE DOCUMENT MODE: Real PDF Embed Reader + AI Copilot
   // ─────────────────────────────────────────────────────────────
   if (loadingDoc) {
     return (
       <div className="h-[calc(100vh-61px)] flex flex-col items-center justify-center bg-[#090d16] text-indigo-400 space-y-3">
         <Loader2 className="w-8 h-8 animate-spin" />
-        <p className="text-xs text-gray-400 font-mono">Loading document...</p>
+        <p className="text-xs text-gray-400 font-mono">Loading PDF document...</p>
       </div>
     );
   }
@@ -446,7 +398,7 @@ export default function QuickPDFReader() {
   if (!documentInfo) {
     return (
       <div className="h-[calc(100vh-61px)] flex flex-col items-center justify-center bg-[#090d16] text-gray-400 space-y-3">
-        <p className="text-sm font-semibold text-white">Document not found.</p>
+        <p className="text-sm font-semibold text-white">PDF Document not found.</p>
         <Link to="/quick-reader" className="text-xs text-indigo-400 hover:underline">
           Return to Document Hub
         </Link>
@@ -455,18 +407,9 @@ export default function QuickPDFReader() {
   }
 
   const isProcessing = documentInfo.processing_status !== 'ready';
-  const filename = documentInfo.filename || '';
-
-  let paperBg = 'bg-[#0f172a] text-gray-100 border-gray-800 shadow-2xl';
-  let canvasBg = 'bg-[#090d16]';
-
-  if (readerTheme === 'white') {
-    paperBg = 'bg-[#ffffff] text-gray-900 border-gray-300 shadow-2xl';
-    canvasBg = 'bg-[#e2e8f0]';
-  } else if (readerTheme === 'sepia') {
-    paperBg = 'bg-[#fbf0d9] text-[#433422] border-[#e6d5b8] shadow-2xl';
-    canvasBg = 'bg-[#ede0c8]';
-  }
+  const pdfUrl = documentInfo.file_url 
+    ? `${documentInfo.file_url}#toolbar=1&navpanes=1&scrollbar=1` 
+    : `/api/upload/raw/${documentInfo.id}#toolbar=1&navpanes=1&scrollbar=1`;
 
   return (
     <div ref={viewerContainerRef} className="h-[calc(100vh-61px)] bg-[#090d16] text-gray-100 flex flex-col overflow-hidden relative select-text">
@@ -489,8 +432,8 @@ export default function QuickPDFReader() {
               <h1 className="text-xs sm:text-sm font-bold text-white max-w-xs sm:max-w-md truncate leading-tight">
                 {documentInfo.filename}
               </h1>
-              <span className="text-[10px] text-gray-400 font-mono hidden sm:inline">
-                PDF Document • {totalPages} Pages
+              <span className="text-[10px] text-indigo-400 font-mono hidden sm:inline">
+                Actual PDF Document Viewer
               </span>
             </div>
 
@@ -499,19 +442,39 @@ export default function QuickPDFReader() {
                 ? 'bg-amber-950 text-amber-300 border-amber-800 animate-pulse'
                 : 'bg-emerald-950 text-emerald-300 border-emerald-800'
             }`}>
-              {isProcessing ? 'Processing OCR...' : 'Ready'}
+              {isProcessing ? 'AI Syncing...' : 'AI Ready'}
             </span>
           </div>
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-3">
+          {/* View Mode Toggle (Real PDF vs AI Extracted Text) */}
+          <div className="flex bg-gray-900 p-0.5 rounded-xl border border-gray-800">
+            <button
+              onClick={() => setViewMode('pdf')}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
+                viewMode === 'pdf' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'
+              }`}
+            >
+              Real PDF
+            </button>
+            <button
+              onClick={() => setViewMode('text')}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg transition ${
+                viewMode === 'text' ? 'bg-indigo-600 text-white shadow' : 'text-gray-400 hover:text-white'
+              }`}
+              title="View OCR Extracted Text for AI"
+            >
+              Extracted Text
+            </button>
+          </div>
+
           <button
-            onClick={handleCopyText}
-            className="flex items-center space-x-1.5 bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-700 text-xs px-3 py-1.5 rounded-xl transition cursor-pointer"
-            title="Copy Clean Document Text"
+            onClick={toggleFullscreen}
+            className="p-1.5 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-400 hover:text-white transition"
+            title="Toggle Fullscreen"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
 
           {documentInfo.file_url && (
@@ -520,7 +483,7 @@ export default function QuickPDFReader() {
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center space-x-1.5 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-xs px-3 py-1.5 rounded-xl transition shadow"
-              title="Download Original File"
+              title="Download Original PDF"
             >
               <Download className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Download</span>
@@ -529,125 +492,37 @@ export default function QuickPDFReader() {
         </div>
       </header>
 
-      {/* Reader Body: 2 Columns (Document Viewer Left + AI Chat Right) */}
+      {/* Reader Body: 2 Columns (Actual Embedded PDF Left + AI Copilot Right) */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* LEFT COLUMN: DOCUMENT VIEWER */}
-        <div className={`flex-1 flex flex-col overflow-hidden border-r border-gray-800/80 ${canvasBg}`}>
-          {/* Viewer Toolbar */}
-          <div className="bg-gray-900/90 border-b border-gray-800/80 px-4 py-2 flex items-center justify-between text-xs text-gray-300 z-20">
-            {/* View Mode & Page Navigation */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setViewMode(viewMode === 'paginated' ? 'continuous' : 'paginated')}
-                className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition"
-                title={`Switch to ${viewMode === 'paginated' ? 'Continuous Scroll' : 'Paginated View'}`}
-              >
-                {viewMode === 'paginated' ? <Columns className="w-3.5 h-3.5" /> : <AlignLeft className="w-3.5 h-3.5" />}
-              </button>
-
-              {viewMode === 'paginated' && (
-                <div className="flex items-center space-x-1 font-mono text-[11px]">
+        {/* LEFT COLUMN: ACTUAL EMBEDDED PDF VIEWER */}
+        <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-800/80 bg-[#090d16]">
+          {viewMode === 'pdf' ? (
+            <div className="w-full h-full p-2 bg-[#090d16] flex flex-col">
+              <iframe
+                src={pdfUrl}
+                className="w-full h-full border-0 rounded-2xl bg-slate-900 shadow-2xl"
+                title={documentInfo.filename}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 overflow-y-auto p-6 sm:p-10 font-sans leading-relaxed text-gray-200 custom-scrollbar">
+              <div className="max-w-4xl mx-auto space-y-4">
+                <div className="p-4 bg-indigo-950/30 border border-indigo-900/50 rounded-2xl text-xs text-indigo-300 flex items-center justify-between">
+                  <span>📄 This is the OCR-extracted text index used behind the scenes by OmniOS AI Copilot.</span>
                   <button
-                    disabled={currentPage <= 1}
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    className="p-1 rounded bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    onClick={handleCopyText}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-600 text-white font-semibold text-[10px] flex items-center gap-1"
                   >
-                    <ChevronLeft className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="px-2">
-                    Page <strong className="text-white">{currentPage}</strong> of {totalPages}
-                  </span>
-                  <button
-                    disabled={currentPage >= totalPages}
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    className="p-1 rounded bg-gray-800 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                  >
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    <span>{copied ? 'Copied' : 'Copy Text'}</span>
                   </button>
                 </div>
-              )}
-            </div>
-
-            {/* Theme & Zoom Controls */}
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center bg-gray-800 rounded-lg p-0.5">
-                <button
-                  onClick={() => setReaderTheme('dark')}
-                  className={`p-1 rounded ${readerTheme === 'dark' ? 'bg-gray-700 text-white' : 'text-gray-400'}`}
-                  title="Dark Theme"
-                >
-                  <Moon className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={() => setReaderTheme('sepia')}
-                  className={`p-1 rounded ${readerTheme === 'sepia' ? 'bg-[#e6d5b8] text-[#433422]' : 'text-gray-400'}`}
-                  title="Sepia Eye-Care Theme"
-                >
-                  <Coffee className="w-3 h-3" />
-                </button>
-                <button
-                  onClick={() => setReaderTheme('white')}
-                  className={`p-1 rounded ${readerTheme === 'white' ? 'bg-white text-gray-900' : 'text-gray-400'}`}
-                  title="White Paper Theme"
-                >
-                  <Sun className="w-3 h-3" />
-                </button>
-              </div>
-
-              <div className="flex items-center space-x-1 font-mono text-[11px]">
-                <button onClick={handleZoomOut} className="p-1 rounded bg-gray-800 hover:bg-gray-700" title="Zoom Out">
-                  <ZoomOut className="w-3 h-3" />
-                </button>
-                <span className="w-10 text-center">{zoomLevel}%</span>
-                <button onClick={handleZoomIn} className="p-1 rounded bg-gray-800 hover:bg-gray-700" title="Zoom In">
-                  <ZoomIn className="w-3 h-3" />
-                </button>
-              </div>
-
-              <button
-                onClick={toggleFullscreen}
-                className="p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 transition"
-                title="Toggle Fullscreen"
-              >
-                {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Document Content Canvas */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex justify-center custom-scrollbar">
-            <div
-              style={{
-                width: `${zoomLevel}%`,
-                maxWidth: '900px',
-                fontSize: `${fontSize}px`
-              }}
-              className={`p-6 sm:p-10 rounded-2xl transition-all ${paperBg}`}
-            >
-              {viewMode === 'paginated' ? (
-                <div className="space-y-4">
-                  <div className="pb-2 border-b border-gray-700/40 flex items-center justify-between text-[11px] opacity-70 font-mono">
-                    <span>Page {currentPage} of {totalPages}</span>
-                    <span>{documentInfo.filename}</span>
-                  </div>
-                  <div className="leading-relaxed font-serif prose prose-invert max-w-none">
-                    <MathRenderer content={docPages[currentPage - 1] || 'No content on this page.'} />
-                  </div>
+                <div className="bg-gray-900/90 p-8 rounded-2xl border border-gray-800 shadow-inner max-w-none text-sm">
+                  <MathRenderer content={documentInfo.content_text || 'No text extracted yet.'} />
                 </div>
-              ) : (
-                <div className="space-y-8">
-                  {docPages.map((p, idx) => (
-                    <div key={idx} className="space-y-3 pb-6 border-b border-gray-700/30 last:border-0">
-                      <span className="text-[10px] font-mono opacity-50 block">--- Page {idx + 1} ---</span>
-                      <div className="leading-relaxed font-serif prose prose-invert max-w-none">
-                        <MathRenderer content={p} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN: AI COPILOT DOUBT SOLVER */}
@@ -661,7 +536,7 @@ export default function QuickPDFReader() {
               <div>
                 <span className="text-xs font-bold text-white block">Document AI Assistant</span>
                 <span className="text-[9px] text-emerald-400 font-mono flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live Context Synced
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> Live PDF Context
                 </span>
               </div>
             </div>
@@ -706,7 +581,7 @@ export default function QuickPDFReader() {
             {sending && (
               <div className="flex items-center space-x-2 text-xs text-indigo-400 p-2 bg-gray-900/60 rounded-xl w-fit">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span className="font-mono text-[10px]">Analyzing document & generating explanation...</span>
+                <span className="font-mono text-[10px]">Analyzing PDF & answering question...</span>
               </div>
             )}
             <div ref={chatEndRef} />
@@ -718,7 +593,7 @@ export default function QuickPDFReader() {
               type="text"
               value={inputQuestion}
               onChange={(e) => setInputQuestion(e.target.value)}
-              placeholder="Ask formula derivation, doubt, or summary..."
+              placeholder="Ask formula derivation, doubt, or summary from PDF..."
               className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition shadow-inner"
             />
             <button

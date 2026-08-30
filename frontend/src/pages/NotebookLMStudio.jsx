@@ -28,7 +28,7 @@ export default function NotebookLMStudio() {
   const [readingDoc, setReadingDoc] = useState(null);
   const [docDetails, setDocDetails] = useState(null);
   const [loadingDocDetails, setLoadingDocDetails] = useState(false);
-  const [readerViewMode, setReaderViewMode] = useState('text');
+  const [readerViewMode, setReaderViewMode] = useState('pdf');
   const [readerFontSize, setReaderFontSize] = useState(14);
   const [isReaderFullscreen, setIsReaderFullscreen] = useState(false);
 
@@ -801,9 +801,9 @@ export default function NotebookLMStudio() {
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <span className="text-xs font-mono">Loading document content...</span>
                 </div>
-              ) : readerViewMode === 'pdf' && readingDoc.file_path ? (
+              ) : readerViewMode === 'pdf' && (readingDoc.file_url || readingDoc.file_path) ? (
                 <iframe
-                  src={`/${readingDoc.file_path.replace(/\\/g, '/')}`}
+                  src={readingDoc.file_url || `/${readingDoc.file_path.replace(/\\/g, '/')}`}
                   title="Document Preview"
                   className="w-full h-full border-none bg-slate-900"
                 />

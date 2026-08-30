@@ -4,6 +4,7 @@ import secrets
 from typing import Optional, List
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status, BackgroundTasks
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from app.database import get_db, SessionLocal
 from app.models.user import User
@@ -348,3 +349,19 @@ def get_document_details(
         "uploaded_by_id": doc.uploaded_by_id,
         "created_at": doc.created_at,
     }
+
+
+@router.get("/raw/{doc_id}")
+def get_raw_pdf_file(
+    doc_id: int,
+    db: Session = Depends(get_db),
+):
+    doc = db.query(DocumentFile).filter(DocumentFile.id == doc_id).first()
+    if not doc or not doc.file_path or not os.path.exists(doc.file_path):
+        raise HTTPException(status_code=404, detail="Physical PDF file not found on server")
+    
+    return FileResponse(
+        path=doc.file_path,
+        media_type="application/pdf",
+        filename=doc.filename
+    )
