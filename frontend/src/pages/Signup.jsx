@@ -5,7 +5,7 @@ import {
   Mail, Lock, Eye, EyeOff, User, GraduationCap, 
   Loader2, ShieldCheck, ArrowRight, CheckCircle2 
 } from 'lucide-react';
-import { ThreadEffectCanvas } from '../components/ThreadEffectCanvas';
+import { WaterWaveCanvas } from '../components/WaterWaveCanvas';
 import { GoogleLoginButton } from '../components/GoogleLoginButton';
 
 export default function Signup() {
@@ -143,10 +143,10 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen w-screen bg-[#111113] text-zinc-100 flex flex-col md:flex-row overflow-hidden font-sans select-none">
-      {/* -- Left Side: Interactive Thread / Tapestry Fabric Canvas -- */}
-      <div className="hidden md:flex md:w-1/2 relative bg-[#080d09] overflow-hidden items-center justify-center">
-        {/* Real-time Interactive Thread / Stitches Canvas */}
-        <ThreadEffectCanvas />
+      {/* -- Left Side: Interactive Water Wave & Ripple Fluid Physics Canvas -- */}
+      <div className="hidden md:flex md:w-1/2 relative bg-[#05070c] overflow-hidden items-center justify-center">
+        {/* Real-time Interactive Liquid Water Wave Canvas */}
+        <WaterWaveCanvas />
         
         {/* Vignette overlays */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#111113] pointer-events-none" />
@@ -154,7 +154,7 @@ export default function Signup() {
 
         {/* Floating branding pill on the canvas */}
         <div className="absolute bottom-8 left-8 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs text-zinc-300 pointer-events-none shadow-lg">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
           <span className="font-medium tracking-tight">OmniOS — Academic AI Ecosystem</span>
         </div>
       </div>
