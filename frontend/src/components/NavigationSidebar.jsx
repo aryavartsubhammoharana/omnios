@@ -85,21 +85,24 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
       >
         {/* -- TOP SECTION -- */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Header Row: Hamburger Button + Logo */}
+          {/* Header Row: Logo Button (Replaces Hamburger Menu) */}
           <div className="h-[61px] px-3.5 flex items-center border-b border-gray-800/80 bg-[#090d16] flex-shrink-0">
             <button
               onClick={onTogglePin}
-              className="p-2 rounded-xl hover:bg-gray-800 text-gray-300 hover:text-white transition cursor-pointer flex-shrink-0 group"
-              title="Main menu (Click to toggle pin)"
+              className="p-1 rounded-xl hover:bg-gray-800 transition cursor-pointer flex-shrink-0 group flex items-center justify-center"
+              title="OmniOS (Click to toggle sidebar)"
             >
-              <Menu className="w-5 h-5 text-gray-300 group-hover:scale-110 transition-transform" />
+              <img 
+                src="/logo.png" 
+                alt="OmniOS Logo" 
+                className="w-8 h-8 rounded-xl object-cover border border-indigo-500/40 shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform" 
+              />
             </button>
 
-            {/* Logo and App Title (Visible when expanded) */}
-            <div className={`flex items-center space-x-2.5 ml-3 transition-opacity duration-200 overflow-hidden ${
+            {/* App Title (Visible when expanded) */}
+            <div className={`flex items-center space-x-2 ml-2.5 transition-opacity duration-200 overflow-hidden ${
               isExpanded ? 'opacity-100 flex-1' : 'opacity-0 w-0 pointer-events-none'
             }`}>
-              <img src="/logo.png" alt="Logo" className="w-7 h-7 rounded-lg object-cover border border-indigo-500/40 shadow-sm flex-shrink-0" />
               <div className="flex items-center gap-1.5 truncate">
                 <span className="text-base font-bold text-white tracking-tight">OmniOS</span>
                 <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">

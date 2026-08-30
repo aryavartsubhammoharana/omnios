@@ -224,12 +224,7 @@ export default function Navbar() {
             </button>
           )}
 
-          <Link to="/dashboard" className="flex items-center space-x-2.5 group">
-            <img 
-              src="/logo.png" 
-              alt="OmniOS Logo" 
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover shadow-lg shadow-indigo-600/30 border border-indigo-500/30 group-hover:scale-105 transition flex-shrink-0" 
-            />
+          <Link to="/dashboard" className="flex items-center space-x-2 group">
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-base sm:text-lg font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-indigo-400 tracking-tight whitespace-nowrap">
