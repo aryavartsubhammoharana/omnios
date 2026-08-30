@@ -190,8 +190,8 @@ export default function QuickPDFReader() {
                   activeTab === 'developer' ? 'bg-indigo-600 text-white font-semibold shadow' : 'text-gray-400 hover:text-white'
                 }`}
               >
-                <Code2 className="w-3.5 h-3.5 text-amber-400" />
-                <span>Developer Library ({developerDocs.length})</span>
+                <Book className="w-3.5 h-3.5 text-amber-400" />
+                <span>Library ({developerDocs.length})</span>
               </button>
             </div>
 
@@ -306,17 +306,17 @@ export default function QuickPDFReader() {
               <div className="flex items-center justify-between pb-2 border-b border-gray-800/80">
                 <div className="flex items-center space-x-2.5">
                   <div className="p-1.5 rounded-lg bg-amber-950/80 border border-amber-800/60 text-amber-400">
-                    <Code2 className="w-4 h-4" />
+                    <Book className="w-4 h-4" />
                   </div>
                   <div>
                     <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-                      <span>Section 2: Other PDFs by Developer</span>
+                      <span>Section 2: Library</span>
                       <span className="text-[9px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold uppercase tracking-wider">
-                        Developer Library
+                        Library
                       </span>
                     </h2>
                     <p className="text-[11px] text-gray-400">
-                      Official reference documents, guides, and handbooks published by the developer
+                      Curated reference books, formulas, and general library PDFs
                     </p>
                   </div>
                 </div>
@@ -328,14 +328,14 @@ export default function QuickPDFReader() {
               {loadingHub ? (
                 <div className="py-12 flex flex-col items-center justify-center text-amber-400 space-y-2">
                   <Loader2 className="w-7 h-7 animate-spin" />
-                  <p className="text-xs text-gray-400">Loading developer documents...</p>
+                  <p className="text-xs text-gray-400">Loading library documents...</p>
                 </div>
               ) : filteredDevDocs.length === 0 ? (
                 <div className="glass-card p-8 rounded-2xl border border-gray-800/80 text-center space-y-3 bg-gray-950/60">
                   <FolderOpen className="w-8 h-8 text-amber-500/40 mx-auto" />
-                  <h3 className="text-xs font-bold text-gray-300">No Developer PDFs Uploaded Yet</h3>
+                  <h3 className="text-xs font-bold text-gray-300">No Library PDFs Uploaded Yet</h3>
                   <p className="text-[11px] text-gray-500 max-w-md mx-auto leading-relaxed">
-                    Official reference handbooks, formula sheets, and PDF documentation published by the system developer will appear here dynamically.
+                    Official reference handbooks, formula sheets, and PDF library materials will appear here dynamically.
                   </p>
                 </div>
               ) : (
