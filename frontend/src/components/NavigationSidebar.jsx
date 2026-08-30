@@ -303,39 +303,54 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
             {isExpanded && <span className="truncate">Settings</span>}
           </button>
 
-          {/* User Profile & Logout (when expanded) */}
+          {/* User Profile & Logout (when expanded) vs Mini Profile Avatar (when collapsed) */}
           {isExpanded ? (
             <div className="mt-2 pt-2 border-t border-gray-800/60 flex items-center justify-between px-2">
-              <div className="flex items-center space-x-2.5 truncate">
+              <div 
+                onClick={onOpenSettings}
+                className="flex items-center space-x-2.5 truncate cursor-pointer hover:opacity-90 transition group"
+                title="Open Profile & Settings"
+              >
                 {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.full_name} className="w-7 h-7 rounded-full object-cover border border-indigo-500/40 flex-shrink-0" />
+                  <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full object-cover border border-indigo-500/40 group-hover:border-indigo-400 flex-shrink-0" />
                 ) : (
-                  <div className="w-7 h-7 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow border border-indigo-400/40">
                     {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
                   </div>
                 )}
                 <div className="truncate min-w-0">
-                  <span className="text-xs font-semibold text-white block truncate">{user.full_name}</span>
+                  <span className="text-xs font-semibold text-white block truncate group-hover:text-indigo-300 transition">{user.full_name}</span>
                   <span className="text-[9px] text-gray-400 block truncate font-mono">{user.email}</span>
                 </div>
               </div>
 
               <button
                 onClick={logout}
-                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition flex-shrink-0"
+                className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition flex-shrink-0 cursor-pointer"
                 title="Logout"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            /* Mini Logout Button when collapsed */
+            /* Mini User Profile Avatar when collapsed (Click opens Settings/Profile) */
             <button
-              onClick={logout}
-              title="Logout"
-              className="w-11 h-11 rounded-2xl mx-auto flex items-center justify-center text-gray-400 hover:text-red-400 hover:bg-gray-800/70 transition cursor-pointer mt-1"
+              type="button"
+              onClick={onOpenSettings}
+              title={`${user.full_name} (${user.email}) - Settings`}
+              className="w-11 h-11 rounded-2xl mx-auto flex items-center justify-center hover:bg-gray-800/70 transition cursor-pointer mt-1 group"
             >
-              <LogOut className="w-4 h-4" />
+              {user.avatar_url ? (
+                <img
+                  src={user.avatar_url}
+                  alt={user.full_name}
+                  className="w-8 h-8 rounded-full object-cover border-2 border-indigo-500/50 group-hover:border-indigo-400 shadow-sm transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-sm border border-indigo-400/40 group-hover:scale-105 transition">
+                  {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
+                </div>
+              )}
             </button>
           )}
         </div>
