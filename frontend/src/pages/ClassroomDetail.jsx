@@ -574,10 +574,12 @@ export default function ClassroomDetail() {
                   </p>
                 </div>
 
-                <div className="w-full sm:w-auto bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-center shadow-inner flex justify-between sm:flex-col items-center gap-1 sm:gap-0 flex-shrink-0">
-                  <span className="text-[9px] text-gray-400 uppercase font-mono tracking-wider">Class Join Code</span>
-                  <span className="text-base font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
-                </div>
+                {isTeacher && (
+                  <div className="w-full sm:w-auto bg-gray-900/90 px-3.5 py-1.5 rounded-xl border border-gray-800 text-center shadow-inner flex justify-between sm:flex-col items-center gap-1 sm:gap-0 flex-shrink-0">
+                    <span className="text-[9px] text-gray-400 uppercase font-mono tracking-wider">Class Join Code</span>
+                    <span className="text-base font-mono font-bold text-indigo-400 tracking-widest">{classroom.code}</span>
+                  </div>
+                )}
               </div>
             </div>
 
