@@ -171,7 +171,8 @@ export default function NotebookLMStudio() {
     try {
       const res = await API.get(`/api/upload/document/${doc.id}`);
       setDocDetails(res.data);
-      if (doc.filename.toLowerCase().endsWith('.pdf')) {
+      const hasPhysicalFile = res.data?.file_url && res.data.file_url !== '/' && !res.data.file_url.endsWith('/None');
+      if (doc.filename.toLowerCase().endsWith('.pdf') && hasPhysicalFile) {
         setReaderViewMode('pdf');
       } else {
         setReaderViewMode('text');
@@ -710,7 +711,7 @@ export default function NotebookLMStudio() {
               </div>
 
               <div className="flex items-center space-x-2">
-                {readingDoc.filename.toLowerCase().endsWith('.pdf') && (
+                {readingDoc.filename.toLowerCase().endsWith('.pdf') && (docDetails?.file_url && docDetails.file_url !== '/' && !docDetails.file_url.endsWith('/None')) && (
                   <div className="flex bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-[10px]">
                     <button
                       onClick={() => setReaderViewMode('pdf')}
