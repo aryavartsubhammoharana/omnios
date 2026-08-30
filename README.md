@@ -253,13 +253,17 @@ Free-tier LLM providers (especially Groq) enforce strict **TPM (Tokens Per Minut
 
 ---
 
-## 7. Teacher Account Deletion Pipeline (Disk Cleanup vs Knowledge Retention)
+## 7. Ephemeral DLM Ingestion vs. Permanent Classroom Disk Storage
 
-When a teacher initiates account deletion (`DELETE /api/auth/delete-account`):
-1. **Physical Disk Cleanup**: Every physical file (`.pdf`, `.docx`, `.pptx`, `.png`) uploaded by this teacher is **permanently deleted from disk** (`os.remove(file_path)`).
-2. **Classroom Database Cleanup**: Associated `Classroom`, `DocumentFile`, `Post`, `Quiz`, `QuizAttempt`, and `Enrollment` records are cascaded and deleted from PostgreSQL.
-3. **Classroom Vector Collection Purged**: The isolated ChromaDB collection `classroom_{code}` is deleted.
-4. **Global Knowledge Base Preserved**: The anonymous vector embeddings in `global_knowledge_base` remain intact to sustain AI learning without any user trace.
+NoteAI implements an intelligent storage tiering strategy to prevent server disk overflow:
+1. **Classroom Uploads (`classroom_id is not None`)**:
+   - Files uploaded inside a classroom are **stored permanently** in `uploads/documents/` on the server disk.
+   - Enables enrolled students to download original PDFs/DOCX files and view authentic PDF layouts in the document viewer.
+2. **DLM Notebook Personal Uploads (`classroom_id is None`)**:
+   - Files uploaded for personal doubt solving in DLM Notebook Studio are **ephemeral (temporary)** on disk.
+   - Text is extracted via PyMuPDF / 2x2 Grid Vision OCR and indexed into the single `"ournotes"` vector collection.
+   - As soon as vector chunk indexing completes, the physical file on disk is **automatically deleted** (`os.remove(file_path)`).
+   - The Studio Document Reader seamlessly displays the extracted text and mathematical derivations via `MathRenderer` in Text View, saving gigabytes of server storage while retaining 100% of the AI intelligence!
 
 ---
 
