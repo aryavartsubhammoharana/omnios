@@ -522,15 +522,15 @@ export default function NotebookLMStudio() {
                 placeholder={
                   selectedDocIds.length > 0
                     ? `Ask anything from your ${selectedDocIds.length} active document(s)...`
-                    : "Select at least 1 document source to query..."
+                    : "Ask anything, solve derivations, ask doubts, or query study notes..."
                 }
-                disabled={selectedDocIds.length === 0 || sending}
+                disabled={sending}
                 className="flex-1 glass-input rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
               />
               <button
                 type="submit"
-                disabled={!inputQuestion.trim() || selectedDocIds.length === 0 || sending}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-3 rounded-xl transition font-semibold text-xs flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20"
+                disabled={!inputQuestion.trim() || sending}
+                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-3 rounded-xl transition font-semibold text-xs flex items-center space-x-1.5 shadow-lg shadow-indigo-600/20 cursor-pointer"
               >
                 <span>Ask</span>
                 <Send className="w-3.5 h-3.5" />
