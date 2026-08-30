@@ -1,7 +1,11 @@
-# 🎓 NoteAI — Next-Gen AI Classroom & DLM Notebook Studio
+# 🎓 OmniOS / NoteAI — Next-Gen AI Classroom & OmniAI Studio
 
 <p align="center">
-  <strong>An autonomous AI-powered academic learning ecosystem featuring 4-Page 2x2 Grid Vision OCR with Auto-Letterboxing, 78% Token Squeezing, Dual Vector Database Architecture, Multi-Tenant Security Isolation, DLM Notebook Studio (Sarvam AI), 24-Hour Diagnostic Practice with Grade-Level Calibration, Advanced 3-Field YouTube Focus Engine with Anti-Shorts Guard, and seamless Google authentication.</strong>
+  <img src="./logo.png" alt="OmniOS Logo" width="160" height="160" style="border-radius: 24px;" />
+</p>
+
+<p align="center">
+  <strong>An autonomous AI-powered academic learning ecosystem featuring 4-Page 2x2 Grid Vision OCR with Auto-Letterboxing, 78% Token Squeezing, Dual Vector Database Architecture, Multi-Tenant Security Isolation, OmniAI Studio, 24-Hour Diagnostic Practice with Grade-Level Calibration, Advanced 3-Field YouTube Focus Engine with Anti-Shorts Guard, and seamless Google authentication.</strong>
 </p>
 
 ---

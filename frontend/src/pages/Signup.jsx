@@ -176,8 +176,8 @@ export default function Signup() {
 
       <div className="w-full max-w-md glass-card p-8 rounded-3xl border border-gray-800/80 shadow-2xl relative z-10">
         <div className="text-center mb-6">
-          <div className="inline-flex p-3 bg-indigo-950/80 border border-indigo-700/50 rounded-2xl mb-3 shadow-inner">
-            <BookOpen className="w-8 h-8 text-indigo-400" />
+          <div className="inline-flex p-1 bg-indigo-950/80 border border-indigo-500/40 rounded-2xl mb-3 shadow-lg shadow-indigo-600/20">
+            <img src="/logo.png" alt="OmniOS Logo" className="w-12 h-12 rounded-xl object-cover" />
           </div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight">
             {requiresOtp ? "Verify Email OTP" : "Create OmniOS Account"}
