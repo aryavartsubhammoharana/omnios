@@ -1,7 +1,7 @@
 # 🎓 NoteAI — Next-Gen AI Classroom & DLM Notebook Studio
 
 <p align="center">
-  <strong>An autonomous AI-powered academic learning ecosystem featuring 4-Page 2x2 Grid Vision OCR with Auto-Letterboxing, 78% Token Squeezing, Dual Vector Database Architecture, Multi-Tenant Security Isolation, DLM Notebook Studio (Sarvam AI), 24-hour diagnostic practice, distraction-free YouTube focus masterclasses, and seamless Google authentication.</strong>
+  <strong>An autonomous AI-powered academic learning ecosystem featuring 4-Page 2x2 Grid Vision OCR with Auto-Letterboxing, 78% Token Squeezing, Dual Vector Database Architecture, Multi-Tenant Security Isolation, DLM Notebook Studio (Sarvam AI), 24-Hour Diagnostic Practice with Grade-Level Calibration, Advanced 3-Field YouTube Focus Engine with Anti-Shorts Guard, and seamless Google authentication.</strong>
 </p>
 
 ---
@@ -11,13 +11,15 @@
    - [1. 4-Page (2x2 Grid) Vision Batch OCR & Dynamic Dimension Handling](#1-4-page-2x2-grid-vision-batch-ocr--dynamic-dimension-handling)
    - [2. Multi-Tenant Document Security & Privacy Fix in DLM Notebook](#2-multi-tenant-document-security--privacy-fix-in-dlm-notebook)
    - [3. Dual Vector Database Architecture (Classroom vs Global Vector DB)](#3-dual-vector-database-architecture-classroom-vs-global-vector-db)
-   - [4. 78% Token Squeezing & TPM Rate-Limit Optimizer](#4-78-token-squeezing--tpm-rate-limit-optimizer)
-   - [5. Teacher Account Deletion Pipeline (Disk Cleanup vs Knowledge Retention)](#5-teacher-account-deletion-pipeline-disk-cleanup-vs-knowledge-retention)
-   - [6. Indian Standard Time (IST - Asia/Kolkata) Project-Wide Sync](#6-indian-standard-time-ist---asiakolkata-project-wide-sync)
+   - [4. Advanced YouTube Academic Curation & Anti-Distraction Engine](#4-advanced-youtube-academic-curation--anti-distraction-engine)
+   - [5. 24-Hour Diagnostic AI Quiz Engine & Grade-Level Data Sourcing](#5-24-hour-diagnostic-ai-quiz-engine--grade-level-data-sourcing)
+   - [6. 78% Token Squeezing & TPM Rate-Limit Optimizer](#6-78-token-squeezing--tpm-rate-limit-optimizer)
+   - [7. Teacher Account Deletion Pipeline (Disk Cleanup vs Knowledge Retention)](#7-teacher-account-deletion-pipeline-disk-cleanup-vs-knowledge-retention)
+   - [8. Indian Standard Time (IST - Asia/Kolkata) Project-Wide Sync](#8-indian-standard-time-ist---asiakolkata-project-wide-sync)
 2. [Core Feature Breakdown](#-core-feature-breakdown)
    - [Notes Grouping & Multi-Format Extractors (PDF, DOCX, PPTX, TXT)](#-notes-grouping--multi-format-extractors)
    - [Groq AI Assessment & Quiz Generator with KaTeX Math](#-groq-ai-assessment--quiz-generator-with-katex-math)
-   - [Distraction-Free YouTube Focus Video Player](#-distraction-free-youtube-focus-video-player)
+   - [Distraction-Free YouTube Focus Video Player with Subtitle Jumps](#-distraction-free-youtube-focus-video-player-with-subtitle-jumps)
 3. [Tech Stack & System Components](#-tech-stack--system-components)
 4. [Environment Variables (`.env`) Configuration](#-environment-variables-env-configuration)
 5. [Quick Start & Deployment Guide](#-quick-start--deployment-guide)
@@ -134,7 +136,87 @@ NoteAI employs a dual-layer ChromaDB Vector Store architecture designed to balan
 
 ---
 
-## 4. 78% Token Squeezing & TPM Rate-Limit Optimizer
+## 4. Advanced YouTube Academic Curation & Anti-Distraction Engine
+
+### 🚩 The Problem with Standard YouTube Search:
+When students search for educational topics on YouTube:
+1. **Generic Irrelevance**: Querying *"Thermodynamics"* brings up clickbait, comedy reactions, entertainment reels, gaming videos, and Shorts.
+2. **Grade-Level Mismatch**: A Class 10 student often gets 3-hour university graduate lectures, while a JEE Advanced aspirant gets 5th-grade introductory cartoons.
+3. **No Learning Goal Alignment**: YouTube does not distinguish between a student needing a *Full One-Shot Chapter*, *Mathematical Derivations*, or *Quick Numerical Problem Solving*.
+
+### 💡 The Multi-Stage Academic Curation Engine (`app/services/youtube_service.py`):
+
+```
+[Student Weak Concept / Search Query]
+                   │
+                   ▼
+  [Stage 1: AI Query Expansion via Groq]
+  - Injects Student Grade (e.g. "Class 11 Science", "JEE Advanced")
+  - Injects Pedagogical Goals (e.g. "One Shot", "Derivation", "NCERT Numericals")
+  - Synthesizes 3 Targeted Search Strings
+                   │
+                   ▼
+  [Stage 2: YouTube API Search with Academic Flags]
+  - Duration constraint: `videoDuration="medium"` (4–20 minutes)
+  - Strict SafeSearch & Embeddability flags
+                   │
+                   ▼
+  [Stage 3: Anti-Shorts & Anti-Clickbait Junk Blacklist Filter]
+  - Scans titles & channels against `JUNK_KEYWORDS`:
+    `#shorts`, `status`, `reel`, `funny`, `memes`, `gaming`, `reaction`, `vlog`, `edit`
+                   │
+                   ▼
+  [Stage 4: Trusted Academic Channel Whitelist Priority]
+  - Prioritizes top-tier institutions & verified educators:
+    *Khan Academy, Physics Wallah, Unacademy, Vedantu, MIT OpenCourseWare, NPTEL, 3Blue1Brown, Amoeba Sisters, CrashCourse, Organic Chemistry Tutor*
+                   │
+                   ▼
+  [Stage 5: Subtitle Sync & Interactive Transcript Player]
+  - Fetches timestamped subtitles via `youtube-transcript-api`
+  - Clicking any transcript line seeks player to that exact explanation!
+```
+
+### 🔎 Precision 3-Field Search Engine (`GET /api/student/search-videos`):
+Students can customize their video search across 3 targeted parameters:
+1. **Academic Topic**: Free-form concept name (e.g. *Bernoulli Equation, Transcription in Eukaryotes*).
+2. **Context / Learning Goal (Dropdown)**:
+   - 🎬 *Full Chapter One Shot*
+   - 📐 *Concept & Derivations*
+   - 🧮 *Numerical & Problems*
+   - 🎨 *Animated Masterclass*
+   - ⚡ *Quick Revision & Summary*
+3. **Class / Year Standard (Dropdown)**:
+   - 🏫 *Class 9 Foundation*
+   - 🎓 *Class 10 Board Prep*
+   - 🔬 *Class 11 Science (Physics/Chem/Math/Bio)*
+   - 🚀 *Class 12 Board & Competitive*
+   - 🏆 *JEE / NEET Advanced Target*
+   - 🏛️ *College / Engineering / University*
+
+---
+
+## 5. 24-Hour Diagnostic AI Quiz Engine & Grade-Level Data Sourcing
+
+### 📊 Where Does the Quiz Data Come From?
+The autonomous diagnostic quiz engine does not generate random trivia. Instead, it extracts and synthesizes assessment material from **two synchronized data streams**:
+1. **Enrolled Classroom Lecture Notes**: The system retrieves recent text chunks from the student's active classrooms in PostgreSQL & ChromaDB.
+2. **Historical Diagnostic Gap Analysis**: The engine reviews past `StudentDailyQuiz` records to identify recurring weak concepts and reinforce them with variant questions.
+
+### 🎯 How Questions Are Calibrated to Student Standards:
+1. **Targeted Difficulty & Competency Scaling**:
+   - Prompts pass the student's configured grade level (*Class 9 to College*), adjusting vocabulary, problem complexity, and distractors.
+   - **Difficulty Scale (1-10)**: Moves from basic recall definitions to multi-step analytical reasoning.
+   - **Competency Percentage (0-100%)**: Forces real-world applied scenario questions over rote memorization.
+2. **Strict KaTeX LaTeX Mathematical Derivations**:
+   - Every formula, equation, fraction ($\frac{a}{b}$), and variable ($E_k = \frac{1}{2}mv^2$) is strictly wrapped in `$ ... $` (inline) and `$$ ... $$` (display).
+   - Explanations provide a complete 4-step mathematical derivation: *(1) Given Values, (2) Formula, (3) Substitution, (4) Final Answer with Units*.
+3. **Automated Diagnostic Remediation Loop**:
+   - When a student submits a quiz, wrong answers are analyzed to extract **Weak Topic Keywords**.
+   - These keywords are immediately passed to `get_curated_weak_topic_videos()`, which populates the student's dashboard with targeted YouTube masterclasses to bridge their conceptual gap.
+
+---
+
+## 6. 78% Token Squeezing & TPM Rate-Limit Optimizer
 
 ### 🚩 The Problem (6,000–8,000 TPM Quota Exhaustion):
 Free-tier LLM providers (especially Groq) enforce strict **TPM (Tokens Per Minute = 6,000–8,000)** limits. Sending full 10,000-character documents with verbose system instructions consumed ~5,250 tokens per request, exhausting the quota after a single test.
@@ -143,12 +225,19 @@ Free-tier LLM providers (especially Groq) enforce strict **TPM (Tokens Per Minut
 1. **System Prompt Compression**: Reduced verbose conversational prompts from ~450 tokens down to **~50 tokens**.
 2. **Semantic Context Pruning**: RAG retrieval slices context to the top 2-3 most dense paragraphs (1,500–2,500 chars) instead of dumping entire documents.
 3. **Ultra-Compact JSON Schema (`q, o, a, e`)**:
-   - Instead of large dictionary keys, the LLM outputs concise single-letter keys:
-     - `q`: Question text
-     - `o`: Array of 4 options
-     - `a`: Correct option letter (`"A"`, `"B"`, `"C"`, `"D"`)
-     - `e`: 1-line mathematical derivation with LaTeX formulas
-   - The Python backend automatically expands these compact keys into full database columns.
+   ```json
+   {
+     "questions": [
+       {
+         "q": "What is the First Law of Thermodynamics?",
+         "o": ["Energy is conserved", "Energy decays", "Heat is zero", "None"],
+         "a": "A",
+         "e": "Energy cannot be created or destroyed: $\\Delta U = Q - W$"
+       }
+     ]
+   }
+   ```
+   *(The Python backend automatically expands these compact keys into full database columns).*
 4. **Cascade Model Rotation on 429 TPM**:
    `openai/gpt-oss-120b` ➔ `qwen/qwen3.8-27b` ➔ `gemini-2.5-flash` ➔ `sarvam-105b-conversations` ➔ `Local Heuristic Generator`.
 
@@ -161,7 +250,7 @@ Free-tier LLM providers (especially Groq) enforce strict **TPM (Tokens Per Minut
 
 ---
 
-## 5. Teacher Account Deletion Pipeline (Disk Cleanup vs Knowledge Retention)
+## 7. Teacher Account Deletion Pipeline (Disk Cleanup vs Knowledge Retention)
 
 When a teacher initiates account deletion (`DELETE /api/auth/delete-account`):
 1. **Physical Disk Cleanup**: Every physical file (`.pdf`, `.docx`, `.pptx`, `.png`) uploaded by this teacher is **permanently deleted from disk** (`os.remove(file_path)`).
@@ -171,7 +260,7 @@ When a teacher initiates account deletion (`DELETE /api/auth/delete-account`):
 
 ---
 
-## 6. Indian Standard Time (IST - Asia/Kolkata) Project-Wide Sync
+## 8. Indian Standard Time (IST - Asia/Kolkata) Project-Wide Sync
 
 - **Backend Time Utility (`app/utils/time_utils.py`)**:
   - `get_ist_now()` returns precise Indian Standard Time (`UTC+5:30`, `Asia/Kolkata`).
@@ -205,7 +294,7 @@ When a teacher initiates account deletion (`DELETE /api/auth/delete-account`):
 - **Silent High-Performance Fallback**: Automatically falls back to Gemini 2.5 Flash if Sarvam times out.
 - **Brand Protection & Hidden Models**: Displays unified **`✨ DLM Studio AI`** badge, completely concealing internal model names.
 
-### 📺 Distraction-Free YouTube Focus Video Player
+### 📺 Distraction-Free YouTube Focus Video Player with Subtitle Jumps
 - **Academic Duration Filter**: Selects 4–20 minute educational videos, blacklisting shorts and clickbait.
 - **Interactive Timestamped Subtitles**: Sidebar transcript allows jumping directly to specific concepts.
 - **Daily 24-Hour AI Practice Hub**: Diagnoses weak concepts from daily quizzes and recommends targeted masterclasses.
