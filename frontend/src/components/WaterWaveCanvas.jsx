@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 /**
  * WaterWaveCanvas Component - Ultra Low RAM & CPU Optimized
  * Features:
+ * - 10-Second Auto Normal Stage: Smoothly decays back to pristine crystal resting state within 10s of inactivity
  * - Zero Garbage Collection (Pre-allocated buffers on resize, 0 allocations per frame)
  * - Tab Visibility lifecycle: Automatically pauses when tab is hidden, smoothly resumes without stutter on return
  * - Complete resource disposal on unmount: 100% memory reclaimed when navigating to other pages
@@ -41,8 +42,9 @@ const WaterWaveCanvas = () => {
     let outData32 = null;
     let srcData32 = null;
 
-    const DAMPING = 0.974; // Silky fluid viscosity
+    const BASE_DAMPING = 0.968; // Base viscosity
     const EPSILON = 0.003; // Smooth zero-energy threshold for silent pond
+    let lastInteractionTime = Date.now();
 
     const mouse = {
       x: -1,
@@ -240,15 +242,16 @@ const WaterWaveCanvas = () => {
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
 
+      lastInteractionTime = Date.now();
       updateCursorState(currentX, currentY);
 
       if (mouse.active && mouse.prevX >= 0 && mouse.prevY >= 0) {
         const speed = Math.hypot(currentX - mouse.prevX, currentY - mouse.prevY);
-        const strength = Math.min(220, 35 + speed * 2.8);
-        const radius = Math.min(28, 14 + speed * 0.3);
+        const strength = Math.min(200, 30 + speed * 2.5);
+        const radius = Math.min(26, 14 + speed * 0.25);
         addDropLine(mouse.prevX, mouse.prevY, currentX, currentY, radius, strength);
       } else {
-        addDrop(currentX, currentY, 18, 65);
+        addDrop(currentX, currentY, 18, 60);
       }
 
       mouse.prevX = currentX;
@@ -262,19 +265,21 @@ const WaterWaveCanvas = () => {
       const rect = canvas.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
+      lastInteractionTime = Date.now();
       updateCursorState(currentX, currentY);
       mouse.prevX = currentX;
       mouse.prevY = currentY;
       mouse.x = currentX;
       mouse.y = currentY;
       mouse.active = true;
-      addDrop(currentX, currentY, 20, 75);
+      addDrop(currentX, currentY, 20, 65);
     };
 
     const handleMouseLeave = () => {
       mouse.active = false;
       mouse.prevX = -1;
       mouse.prevY = -1;
+      lastInteractionTime = Date.now();
       canvas.style.cursor = 'default';
     };
 
@@ -319,6 +324,7 @@ const WaterWaveCanvas = () => {
         mouse.active = false;
         mouse.prevX = -1;
         mouse.prevY = -1;
+        lastInteractionTime = Date.now();
         if (isRunning && !animationFrameId) {
           animationFrameId = requestAnimationFrame(render);
         }
@@ -335,6 +341,20 @@ const WaterWaveCanvas = () => {
       }
 
       let maxEnergy = 0;
+      const timeSinceInteraction = (Date.now() - lastInteractionTime) / 1000;
+
+      // ── Smooth 10-Second Decay to Normal Stage ──
+      // From 1.5s to 9.5s of inactivity, gracefully increase damping so at ~10s it returns 100% to calm normal state
+      let activeDamping = BASE_DAMPING;
+      if (!mouse.active || timeSinceInteraction > 1.5) {
+        const decayProgress = Math.min(1.0, Math.max(0, (timeSinceInteraction - 1.5) / 8.0));
+        activeDamping = BASE_DAMPING - decayProgress * 0.055; // smoothly decays to ~0.913
+      }
+
+      // If inactive for >= 10s and energy is very low, snap completely to pristine resting normal stage
+      if (timeSinceInteraction >= 9.8) {
+        activeDamping = 0.88;
+      }
 
       // -- 1. Discrete 2D Wave Propagation Step --
       for (let y = 1; y < simHeight - 1; y++) {
@@ -352,9 +372,9 @@ const WaterWaveCanvas = () => {
               0.5) -
             nextBuffer[idx];
 
-          waveHeight *= DAMPING;
+          waveHeight *= activeDamping;
 
-          if (Math.abs(waveHeight) < EPSILON) {
+          if (Math.abs(waveHeight) < EPSILON || timeSinceInteraction >= 10.2) {
             waveHeight = 0;
           } else {
             const absH = Math.abs(waveHeight);
@@ -370,12 +390,18 @@ const WaterWaveCanvas = () => {
       currentBuffer = nextBuffer;
       nextBuffer = temp;
 
+      // If at normal resting stage (10s passed or 0 energy), clear buffers to pristine clean state
+      if (timeSinceInteraction >= 10.2 && maxEnergy === 0) {
+        currentBuffer.fill(0);
+        nextBuffer.fill(0);
+      }
+
       // -- 2. Refraction & Specular Caustics Render --
       const srcW = width;
       const srcH = height;
 
       if (maxEnergy === 0) {
-        // Pristine resting crystal pond
+        // Pristine resting normal stage
         outData32.set(srcData32);
       } else {
         for (let y = 0; y < height; y++) {
