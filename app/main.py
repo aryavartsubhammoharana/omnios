@@ -8,6 +8,9 @@ from app.config import settings
 from app.database import engine, Base
 from app.models import *
 from app.routes import auth, classroom, upload, ai, quiz, analytics, student_portal
+from app.utils.smart_logger import setup_smart_logging
+
+setup_smart_logging()
 
 with engine.connect() as conn:
     try:
