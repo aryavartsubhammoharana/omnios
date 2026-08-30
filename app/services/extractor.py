@@ -225,6 +225,95 @@ def extract_scanned_pdf_via_2x2_grid(file_path: str, total_pages: int, on_page_p
     return format_extracted_text(full_text) if full_text else f"Scanned Study Material: '{filename}'"
 
 
+def extract_and_analyze_embedded_diagrams(file_path: str, max_diagrams: int = 16) -> str:
+    import hashlib
+    import time
+    filename = os.path.basename(file_path)
+    diagram_items = []
+    seen_hashes = set()
+
+    try:
+        doc = fitz.open(file_path)
+        for page_idx in range(len(doc)):
+            page_num = page_idx + 1
+            image_list = doc[page_idx].get_images(full=True)
+
+            diag_count_on_page = 0
+            for img_info in image_list:
+                xref = img_info[0]
+                try:
+                    base_image = doc.extract_image(xref)
+                    image_bytes = base_image["image"]
+                    width = base_image["width"]
+                    height = base_image["height"]
+
+                    if width < 120 or height < 120:
+                        continue
+
+                    img_hash = hashlib.md5(image_bytes).hexdigest()
+                    if img_hash in seen_hashes:
+                        continue
+                    seen_hashes.add(img_hash)
+
+                    diag_count_on_page += 1
+                    img = Image.open(BytesIO(image_bytes)).convert("RGB")
+                    diagram_items.append({
+                        "image": img,
+                        "page_num": page_num,
+                        "diag_num": diag_count_on_page,
+                        "label": f"Diagram {diag_count_on_page} (Page {page_num})"
+                    })
+
+                    if len(diagram_items) >= max_diagrams:
+                        break
+                except Exception:
+                    continue
+            if len(diagram_items) >= max_diagrams:
+                break
+        doc.close()
+    except Exception as e:
+        print(f"Error inspecting embedded diagrams: {e}")
+        return ""
+
+    if not diagram_items:
+        return ""
+
+    total_diags = len(diagram_items)
+    batch_size = 4
+    num_batches = math.ceil(total_diags / batch_size)
+    analyses = []
+
+    for b_idx in range(num_batches):
+        start_idx = b_idx * batch_size
+        end_idx = min(start_idx + batch_size, total_diags)
+        batch_slice = diagram_items[start_idx:end_idx]
+
+        page_images = [item["image"] for item in batch_slice]
+        page_numbers = [item["page_num"] for item in batch_slice]
+        diagram_labels = [f"Diagram {item['diag_num']} (Page {item['page_num']})" for item in batch_slice]
+
+        grid_filename = f"diagram_grid_{os.path.splitext(filename)[0]}_batch_{b_idx + 1}.jpg"
+        grid_path = os.path.join(TEMP_GRID_DIR, grid_filename)
+
+        stitch_pages_to_2x2_grid(page_images, page_numbers, grid_path)
+
+        batch_analysis = scan_grid_image_with_vision(grid_path, page_numbers)
+        if batch_analysis:
+            analyses.append(batch_analysis)
+
+        try:
+            if os.path.exists(grid_path):
+                os.remove(grid_path)
+        except Exception:
+            pass
+
+        time.sleep(1.0)
+
+    if analyses:
+        return "\n\n---\n\n## 📊 Embedded Diagram & Visual Figure Analyses\n\n" + "\n\n".join(analyses)
+    return ""
+
+
 def extract_pdf_clean(file_path: str, on_page_progress=None) -> str:
     filename = os.path.basename(file_path)
     extracted_pages = []
@@ -255,6 +344,9 @@ def extract_pdf_clean(file_path: str, on_page_progress=None) -> str:
 
     if has_digital_text and extracted_pages:
         full_text = "\n\n".join(extracted_pages).strip()
+        diagram_analysis_text = extract_and_analyze_embedded_diagrams(file_path)
+        if diagram_analysis_text:
+            full_text += f"\n\n{diagram_analysis_text}"
         return format_extracted_text(full_text)
 
     return extract_scanned_pdf_via_2x2_grid(file_path, total_pages=max(1, total_pages), on_page_progress=on_page_progress)
