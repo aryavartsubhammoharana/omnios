@@ -252,11 +252,12 @@ export default function Signup() {
           ) : (
             /* Zero-Scroll Compact Sign-Up Form */
             <div className="space-y-3">
-              {/* Google Sign-In with Spectrum Spotlight Card */}
+              {/* Google Sign-Up with Spectrum Spotlight Card */}
               <div className="w-full flex justify-center">
                 <GoogleLoginButton
                   onCredentialReceived={handleGoogleCredential}
                   buttonText="Sign up with Google"
+                  textType="signup_with"
                   className="w-full"
                 />
               </div>

@@ -2,7 +2,12 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '208360710553-s8ccnmol8g9klrljcumtoda23gqsokl3.apps.googleusercontent.com';
 
-export const GoogleLoginButton = ({ onCredentialReceived, buttonText = 'Continue with Google', className = '' }) => {
+export const GoogleLoginButton = ({ 
+  onCredentialReceived, 
+  buttonText = 'Continue with Google', 
+  textType = 'signin_with', // 'signin_with' | 'signup_with' | 'continue_with'
+  className = '' 
+}) => {
   const buttonRef = useRef(null);
   const containerRef = useRef(null);
   const [sdkLoaded, setSdkLoaded] = useState(false);
@@ -68,18 +73,21 @@ export const GoogleLoginButton = ({ onCredentialReceived, buttonText = 'Continue
         itp_support: true,
       });
 
+      // Clear container before re-rendering
+      buttonRef.current.innerHTML = '';
+
       window.google.accounts.id.renderButton(buttonRef.current, {
         theme: 'filled_black',
         size: 'large',
         shape: 'pill',
-        text: 'signin_with',
+        text: textType, // Dynamically 'signup_with' or 'signin_with'
         width: 320,
         logo_alignment: 'left',
       });
     } catch (err) {
       console.warn('Google GSI initialization notice:', err);
     }
-  }, [sdkLoaded, onCredentialReceived]);
+  }, [sdkLoaded, onCredentialReceived, textType]);
 
   const handleCustomClick = () => {
     if (window.google?.accounts?.id) {
