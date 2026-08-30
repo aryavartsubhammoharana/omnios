@@ -301,32 +301,9 @@ export default function NotebookLMStudio() {
             </div>
 
             <div className="flex items-center space-x-2">
-              <span className="text-[10px] text-slate-400 font-mono">Engine:</span>
-              <div className="flex bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-[10px]">
-                <button
-                  onClick={() => setAiProvider('sarvam')}
-                  className={`px-2.5 py-0.5 rounded font-semibold transition ${
-                    aiProvider === 'sarvam' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  Sarvam AI 🇮🇳
-                </button>
-                <button
-                  onClick={() => setAiProvider('groq')}
-                  className={`px-2 py-0.5 rounded font-semibold transition ${
-                    aiProvider === 'groq' ? 'bg-orange-600 text-white' : 'text-slate-400'
-                  }`}
-                >
-                  Groq
-                </button>
-                <button
-                  onClick={() => setAiProvider('gemini')}
-                  className={`px-2 py-0.5 rounded font-semibold transition ${
-                    aiProvider === 'gemini' ? 'bg-indigo-600 text-white' : 'text-slate-400'
-                  }`}
-                >
-                  Gemini
-                </button>
+              <div className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-indigo-950/70 border border-indigo-700/60 text-[10px] text-indigo-300 font-mono shadow-sm">
+                <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
+                <span>DLM Studio AI</span>
               </div>
             </div>
           </div>

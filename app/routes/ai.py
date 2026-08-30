@@ -114,23 +114,14 @@ def document_chat(
                     source_names.append(fname)
             context = "\n\n---\n\n".join(parts)
 
-    provider = (data.ai_provider or "sarvam").lower()
-
-    if provider == "groq":
-        answer = query_groq_ai(prompt=data.question, context=context)
-    elif provider == "gemini":
-        answer = query_gemini_ai(prompt=data.question, context=context)
-    else:
-        answer = query_sarvam_ai(prompt=data.question, context=context)
+    answer = query_sarvam_ai(prompt=data.question, context=context)
 
     if not is_valid_ai_text(answer):
         answer = query_gemini_ai(prompt=data.question, context=context)
-    if not is_valid_ai_text(answer):
-        answer = query_groq_ai(prompt=data.question, context=context)
 
     return AIChatResponse(
         answer=answer,
-        provider_used=provider.upper(),
+        provider_used="DLM Notebook AI",
         sources=source_names,
     )
 
