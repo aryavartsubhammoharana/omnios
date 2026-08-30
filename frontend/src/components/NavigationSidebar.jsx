@@ -311,7 +311,7 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
                 className="flex items-center space-x-2.5 truncate cursor-pointer hover:opacity-90 transition group"
                 title="Open Profile & Settings"
               >
-                {user.avatar_url ? (
+                {user.auth_provider === 'google' && user.avatar_url ? (
                   <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full object-cover border border-indigo-500/40 group-hover:border-indigo-400 flex-shrink-0" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow border border-indigo-400/40">
@@ -340,7 +340,7 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
               title={`${user.full_name} (${user.email}) - Settings`}
               className="w-11 h-11 rounded-2xl mx-auto flex items-center justify-center hover:bg-gray-800/70 transition cursor-pointer mt-1 group"
             >
-              {user.avatar_url ? (
+              {user.auth_provider === 'google' && user.avatar_url ? (
                 <img
                   src={user.avatar_url}
                   alt={user.full_name}

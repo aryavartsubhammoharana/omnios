@@ -11,7 +11,7 @@ import {
 import NavigationSidebar from './NavigationSidebar';
 
 export default function Navbar() {
-  const { user, logout, confirmRole, updateProfile, changePassword, uploadAvatar, deleteAccount } = useContext(AuthContext);
+  const { user, logout, confirmRole, updateProfile, changePassword, deleteAccount } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [streak, setStreak] = useState(1);
@@ -28,10 +28,8 @@ export default function Navbar() {
   const [editName, setEditName] = useState('');
   const [editClass, setEditClass] = useState('Class 11 Science');
   const [savingProfile, setSavingProfile] = useState(false);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
-  const fileInputRef = useRef(null);
 
   // Change Password State (Local Users Only)
   const [oldPassword, setOldPassword] = useState('');
@@ -94,22 +92,6 @@ export default function Navbar() {
       setRoleError(err.response?.data?.detail || 'Failed to confirm role.');
     } finally {
       setSavingRole(false);
-    }
-  };
-
-  const handleAvatarChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadingPhoto(true);
-    setProfileError('');
-    try {
-      await uploadAvatar(file);
-      setProfileSuccess('Profile picture updated successfully!');
-      setTimeout(() => setProfileSuccess(''), 3000);
-    } catch (err) {
-      setProfileError('Failed to upload image. Please choose a valid PNG/JPEG file.');
-    } finally {
-      setUploadingPhoto(false);
     }
   };
 
@@ -425,33 +407,17 @@ export default function Navbar() {
             <div className="px-6 py-4 border-b border-gray-800/80 flex items-center justify-between flex-shrink-0 bg-gray-950/60">
               <div className="flex items-center space-x-3.5">
                 <div className="relative group">
-                  {user.avatar_url ? (
+                  {user.auth_provider === 'google' && user.avatar_url ? (
                     <img 
                       src={user.avatar_url} 
                       alt={user.full_name} 
                       className="w-12 h-12 rounded-2xl object-cover border-2 border-indigo-500/50 shadow-md" 
                     />
                   ) : (
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-600/20 border-2 border-indigo-500/40 text-indigo-400 flex items-center justify-center font-bold text-lg">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 border-2 border-indigo-400/40 text-white flex items-center justify-center font-extrabold text-xl shadow-md">
                       {user.full_name ? user.full_name[0].toUpperCase() : 'U'}
                     </div>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingPhoto}
-                    className="absolute -bottom-1 -right-1 p-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow transition"
-                    title="Change Profile Photo"
-                  >
-                    {uploadingPhoto ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
-                  </button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleAvatarChange}
-                    accept="image/png, image/jpeg, image/webp"
-                    className="hidden"
-                  />
                 </div>
 
                 <div>
@@ -461,6 +427,15 @@ export default function Navbar() {
                       <Lock className="w-2.5 h-2.5" />
                       <span>{user.role}</span>
                     </span>
+                    {user.auth_provider === 'google' ? (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800 font-mono">
+                        Google Picture
+                      </span>
+                    ) : (
+                      <span className="text-[9px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-300 border border-gray-700 font-mono">
+                        Initials Avatar
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-gray-400 font-mono mt-0.5 flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-indigo-400" />

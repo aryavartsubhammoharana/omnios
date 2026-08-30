@@ -76,17 +76,6 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   };
 
-  const uploadAvatar = async (file) => {
-    const formData = new FormData();
-    formData.append('avatar', file);
-    formData.append('file', file);
-    const res = await API.post('/api/auth/upload-avatar', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    setUser(res.data);
-    return res.data;
-  };
-
   const deleteAccount = async () => {
     await API.delete('/api/auth/delete-account');
     localStorage.removeItem('noteai_token');
@@ -101,7 +90,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider value={{ 
       user, loading, login, signup, verifyOtp, resendOtp, 
-      googleLogin, confirmRole, updateProfile, changePassword, uploadAvatar, deleteAccount, logout 
+      googleLogin, confirmRole, updateProfile, changePassword, deleteAccount, logout 
     }}>
       {children}
     </AuthContext.Provider>
