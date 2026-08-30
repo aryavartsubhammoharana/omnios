@@ -13,8 +13,8 @@ from app.models.classroom import Classroom, Enrollment
 from app.routes.auth import get_current_user
 from app.services.extractor import extract_text_from_file
 from app.services.vector_store import (
-    index_document_in_dual_vector_store,
-    delete_document_from_dual_vector_store
+    index_document_in_vector_store,
+    delete_document_from_vector_store
 )
 
 router = APIRouter(prefix="/api/upload", tags=["Upload"])
@@ -253,17 +253,7 @@ def delete_document(
             print(f"Error removing document file: {e}")
 
     try:
-        class_code = None
-        if doc.classroom_id:
-            c_obj = db.query(Classroom).filter(Classroom.id == doc.classroom_id).first()
-            if c_obj:
-                class_code = c_obj.code
-
-        delete_document_from_dual_vector_store(
-            doc_id=doc.id,
-            classroom_id=doc.classroom_id,
-            classroom_code=class_code
-        )
+        delete_document_from_vector_store(doc_id=doc.id)
     except Exception as e:
         print(f"Error removing document from vector store: {e}")
 
