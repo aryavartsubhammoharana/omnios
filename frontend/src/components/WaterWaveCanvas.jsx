@@ -39,6 +39,9 @@ export const WaterWaveCanvas = () => {
     logoImg.src = '/logo.png';
     let logoLoaded = false;
 
+    // Custom Glowing Plus Cursor when near logo
+    const PLUS_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'><path d='M14 3 L14 25 M3 14 L25 14' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round'/><circle cx='14' cy='14' r='2.5' fill='%236366f1'/></svg>") 14 14, crosshair`;
+
     // Mouse velocity & interaction state
     const mouse = {
       x: -1,
@@ -171,14 +174,32 @@ export const WaterWaveCanvas = () => {
       }
     };
 
+    const updateCursorState = (x, y) => {
+      if (width === 0 || height === 0) return;
+      const logoSize = Math.min(width * 0.76, height * 0.76, 460);
+      const centerX = width * 0.5;
+      const centerY = height * 0.5;
+      const distFromCenter = Math.hypot(x - centerX, y - centerY);
+      const logoRadius = (logoSize * 0.5) * 1.08; // Logo zone
+
+      // When cursor is over or near the logo, transform cursor to PLUS (+)
+      if (distFromCenter <= logoRadius) {
+        canvas.style.cursor = PLUS_CURSOR;
+      } else {
+        canvas.style.cursor = 'default';
+      }
+    };
+
     const handleMouseMove = (e) => {
       const rect = canvas.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
 
+      updateCursorState(currentX, currentY);
+
       if (mouse.active && mouse.prevX >= 0 && mouse.prevY >= 0) {
         const speed = Math.hypot(currentX - mouse.prevX, currentY - mouse.prevY);
-        // Wave energy directly proportional to the user's cursor drag
+        // Wave energy directly proportional to cursor drag
         const strength = Math.min(220, 40 + speed * 3.2);
         const radius = Math.min(30, 15 + speed * 0.35);
         addDropLine(mouse.prevX, mouse.prevY, currentX, currentY, radius, strength);
@@ -197,6 +218,7 @@ export const WaterWaveCanvas = () => {
       const rect = canvas.getBoundingClientRect();
       const currentX = e.clientX - rect.left;
       const currentY = e.clientY - rect.top;
+      updateCursorState(currentX, currentY);
       mouse.prevX = currentX;
       mouse.prevY = currentY;
       mouse.x = currentX;
@@ -210,6 +232,7 @@ export const WaterWaveCanvas = () => {
       mouse.active = false;
       mouse.prevX = -1;
       mouse.prevY = -1;
+      canvas.style.cursor = 'default';
     };
 
     canvas.addEventListener('mousemove', handleMouseMove, { passive: true });
@@ -341,7 +364,7 @@ export const WaterWaveCanvas = () => {
     <div className="w-full h-full relative overflow-hidden select-none">
       <canvas
         ref={canvasRef}
-        className="w-full h-full block cursor-pointer"
+        className="w-full h-full block"
       />
     </div>
   );
