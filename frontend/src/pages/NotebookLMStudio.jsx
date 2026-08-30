@@ -430,11 +430,6 @@ export default function NotebookLMStudio() {
             <div className="flex items-center space-x-2.5">
               <Bot className="w-4 h-4 text-indigo-400" />
               <span className="text-xs font-bold text-gray-200">{activeSession?.title}</span>
-              
-              <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border bg-slate-900 border-indigo-800/60">
-                <Globe className="w-3 h-3 text-sky-400" />
-                <span className="text-sky-300 font-mono">Vector DB: ournotes</span>
-              </div>
             </div>
 
             <div className="flex items-center space-x-2">
