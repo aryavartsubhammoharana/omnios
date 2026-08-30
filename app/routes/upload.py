@@ -283,6 +283,29 @@ def rename_folder(
     return {"message": f"Renamed folder from '{req.old_folder_name}' to '{req.new_folder_name}' ({updated_count} notes updated)"}
 
 
+@router.get("/developer-docs")
+def get_developer_documents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    dev_docs = db.query(DocumentFile).filter(
+        DocumentFile.classroom_id == None,
+        DocumentFile.processing_status == "ready"
+    ).order_by(DocumentFile.created_at.desc()).all()
+
+    return [
+        {
+            "id": d.id,
+            "filename": d.filename,
+            "folder_name": d.folder_name or "Developer Library",
+            "file_url": f"/{d.file_path.replace(chr(92), '/')}" if d.file_path else None,
+            "created_at": d.created_at,
+            "processing_status": d.processing_status
+        }
+        for d in dev_docs
+    ]
+
+
 @router.get("/document/{doc_id}")
 def get_document_details(
     doc_id: int,
@@ -294,7 +317,9 @@ def get_document_details(
         raise HTTPException(status_code=404, detail="Document not found")
 
     has_access = False
-    if doc.uploaded_by_id == current_user.id:
+    if doc.classroom_id is None:
+        has_access = True
+    elif doc.uploaded_by_id == current_user.id:
         has_access = True
     elif doc.classroom_id:
         is_teacher = db.query(Classroom).filter(Classroom.id == doc.classroom_id, Classroom.teacher_id == current_user.id).first()
@@ -305,7 +330,7 @@ def get_document_details(
     if not has_access:
         raise HTTPException(status_code=403, detail="You do not have permission to access this document")
 
-    file_url = f"/{doc.file_path.replace(chr(92), '/')}"
+    file_url = f"/{doc.file_path.replace(chr(92), '/')}" if doc.file_path else None
 
     return {
         "id": doc.id,
