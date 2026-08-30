@@ -430,18 +430,9 @@ export default function NotebookLMStudio() {
               <Bot className="w-4 h-4 text-indigo-400" />
               <span className="text-xs font-bold text-gray-200">{activeSession?.title}</span>
               
-              <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border bg-slate-900">
-                {selectedClassroomId === 'all' ? (
-                  <>
-                    <Globe className="w-3 h-3 text-sky-400" />
-                    <span className="text-sky-300">Dual Vector DB (Personal + Enrolled)</span>
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-3 h-3 text-emerald-400" />
-                    <span className="text-emerald-300">Classroom Vector DB (Private)</span>
-                  </>
-                )}
+              <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium border bg-slate-900 border-indigo-800/60">
+                <Globe className="w-3 h-3 text-sky-400" />
+                <span className="text-sky-300 font-mono">Vector DB: ournotes</span>
               </div>
             </div>
 

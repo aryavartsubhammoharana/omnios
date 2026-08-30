@@ -38,14 +38,7 @@ def document_chat(
         if not has_access:
             raise HTTPException(status_code=403, detail="You do not have permission to query this document")
 
-        classroom = db.query(Classroom).filter(Classroom.id == doc.classroom_id).first() if doc.classroom_id else None
-        class_code = classroom.code if classroom else None
-
-        if class_code:
-            matches = query_classroom_vector_db(class_code, data.question, n_results=5)
-            matches = [m for m in matches if m.get("doc_id") == doc.id]
-        else:
-            matches = []
+        matches = query_vector_store(query_text=data.question, doc_id=doc.id, n_results=6)
 
         if matches:
             parts = []
@@ -71,20 +64,17 @@ def document_chat(
         if not is_teacher and not is_enrolled:
             raise HTTPException(status_code=403, detail="You are not a member of this classroom")
 
-        class_code = classroom.code
-
-        if class_code:
-            class_matches = query_classroom_vector_db(class_code, data.question, n_results=6)
-            if class_matches:
-                parts = []
-                for i, ch in enumerate(class_matches):
-                    idx = ch.get("chunk_index", i) + 1
-                    fname = ch.get("filename", "Classroom Lecture Note")
-                    parts.append(f"[Source {i+1}: {fname} (Chunk #{idx})]\n{ch['chunk_text']}")
-                    label = f"{fname} (Chunk #{idx})"
-                    if label not in source_names:
-                        source_names.append(label)
-                context = "\n\n---\n\n".join(parts)
+        class_matches = query_vector_store(query_text=data.question, classroom_id=data.classroom_id, n_results=6)
+        if class_matches:
+            parts = []
+            for i, ch in enumerate(class_matches):
+                idx = ch.get("chunk_index", i) + 1
+                fname = ch.get("filename", "Classroom Lecture Note")
+                parts.append(f"[Source {i+1}: {fname} (Chunk #{idx})]\n{ch['chunk_text']}")
+                label = f"{fname} (Chunk #{idx})"
+                if label not in source_names:
+                    source_names.append(label)
+            context = "\n\n---\n\n".join(parts)
 
         if not context:
             docs = db.query(DocumentFile).filter(DocumentFile.classroom_id == data.classroom_id, DocumentFile.processing_status == "ready").all()
@@ -94,20 +84,20 @@ def document_chat(
 
     else:
         if current_user.role == "teacher":
-            allowed_classrooms = db.query(Classroom).filter(Classroom.teacher_id == current_user.id).all()
+            allowed_c_ids = [c.id for c in db.query(Classroom.id).filter(Classroom.teacher_id == current_user.id).all()]
         else:
-            enrolled_ids = [e.classroom_id for e in db.query(Enrollment.classroom_id).filter(Enrollment.student_id == current_user.id).all()]
-            allowed_classrooms = db.query(Classroom).filter(Classroom.id.in_(enrolled_ids)).all() if enrolled_ids else []
+            allowed_c_ids = [e.classroom_id for e in db.query(Enrollment.classroom_id).filter(Enrollment.student_id == current_user.id).all()]
 
-        all_user_matches = []
-        for c in allowed_classrooms:
-            if c.code:
-                c_matches = query_classroom_vector_db(c.code, data.question, n_results=3)
-                all_user_matches.extend(c_matches)
+        all_user_matches = query_vector_store(
+            query_text=data.question,
+            uploaded_by_id=current_user.id,
+            allowed_classroom_ids=allowed_c_ids,
+            n_results=6
+        )
 
         if all_user_matches:
             parts = []
-            for i, ch in enumerate(all_user_matches[:6]):
+            for i, ch in enumerate(all_user_matches):
                 fname = ch.get("filename", "Study Note")
                 parts.append(f"[Source {i+1}: {fname}]\n{ch['chunk_text']}")
                 if fname not in source_names:

@@ -72,12 +72,13 @@ def process_file_text_in_background(doc_id: int):
             db.commit()
 
             try:
-                index_document_in_dual_vector_store(
+                index_document_in_vector_store(
                     doc_id=doc.id,
                     content_text=doc.content_text,
                     filename=doc.filename,
                     classroom_id=doc.classroom_id,
-                    classroom_code=class_code
+                    classroom_code=class_code,
+                    uploaded_by_id=doc.uploaded_by_id
                 )
             except Exception as e:
                 print(f"Error during vector DB indexing: {e}")
