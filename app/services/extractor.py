@@ -93,6 +93,8 @@ def stitch_pages_to_2x2_grid(page_images: list[Image.Image], page_numbers: list[
 
 def scan_grid_image_with_vision(grid_path: str, page_numbers: list[int]) -> str:
     import time
+    import base64
+    import requests
     from google import genai
 
     if not os.path.exists(grid_path):
@@ -105,43 +107,68 @@ def scan_grid_image_with_vision(grid_path: str, page_numbers: list[int]) -> str:
         f"--- Page {page_numbers[0]} ---\n[Extracted Text]\n"
     )
 
-    if not settings.GEMINI_API_KEY:
-        return ""
-
     try:
-        client = genai.Client(api_key=settings.GEMINI_API_KEY.strip())
         with open(grid_path, "rb") as f:
-            img_bytes = f.read()
+            b64_data = base64.b64encode(f.read()).decode("utf-8")
 
-        candidate_models = [
-            "gemini-3.5-flash-lite",
-            "gemini-flash-latest",
-            "gemini-3.5-flash",
-            "gemini-2.5-flash"
-        ]
-
-        for attempt in range(3):
-            for model_name in candidate_models:
-                try:
-                    response = client.models.generate_content(
-                        model=model_name,
-                        contents=[
-                            {
-                                "role": "user",
-                                "parts": [
-                                    {"text": prompt},
-                                    {"inline_data": {"mime_type": "image/jpeg", "data": img_bytes}}
-                                ]
-                            }
-                        ]
-                    )
-                    if response.text and len(response.text.strip()) > 30:
-                        return response.text.strip()
-                except Exception as e:
-                    time.sleep(1.0)
-            time.sleep(2.0)
+        local_vision_models = ["qwen2.5vl:3b", "llava:latest", "moondream:latest"]
+        for l_model in local_vision_models:
+            try:
+                res = requests.post(
+                    "http://localhost:11434/api/generate",
+                    json={
+                        "model": l_model,
+                        "prompt": prompt,
+                        "images": [b64_data],
+                        "stream": False
+                    },
+                    timeout=90
+                )
+                if res.status_code == 200:
+                    text_out = res.json().get("response", "").strip()
+                    if text_out and len(text_out) > 30:
+                        print(f"[OK] Local Vision OCR ({l_model}): Transcribed {len(text_out)} chars for {pages_str}")
+                        return text_out
+            except Exception:
+                continue
     except Exception as e:
-        print(f"Vision 2x2 grid scan error: {e}")
+        print(f"Local Ollama vision OCR attempt: {e}")
+
+    if settings.GEMINI_API_KEY:
+        try:
+            client = genai.Client(api_key=settings.GEMINI_API_KEY.strip())
+            with open(grid_path, "rb") as f:
+                img_bytes = f.read()
+
+            candidate_models = [
+                "gemini-3.5-flash-lite",
+                "gemini-flash-latest",
+                "gemini-3.5-flash",
+                "gemini-2.5-flash"
+            ]
+
+            for attempt in range(2):
+                for model_name in candidate_models:
+                    try:
+                        response = client.models.generate_content(
+                            model=model_name,
+                            contents=[
+                                {
+                                    "role": "user",
+                                    "parts": [
+                                        {"text": prompt},
+                                        {"inline_data": {"mime_type": "image/jpeg", "data": img_bytes}}
+                                    ]
+                                }
+                            ]
+                        )
+                        if response.text and len(response.text.strip()) > 30:
+                            return response.text.strip()
+                    except Exception:
+                        time.sleep(1.0)
+                time.sleep(1.5)
+        except Exception as e:
+            print(f"Cloud vision 2x2 grid scan error: {e}")
 
     return ""
 
