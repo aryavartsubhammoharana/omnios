@@ -84,16 +84,6 @@ def process_file_text_in_background(doc_id: int):
             except Exception as e:
                 print(f"Error during vector DB indexing: {e}")
 
-            if not doc.classroom_id:
-                if doc.file_path and os.path.exists(doc.file_path):
-                    try:
-                        os.remove(doc.file_path)
-                        doc.file_path = ""
-                        db.commit()
-                        print(f"[OK] DLM Notebook Ephemeral File: Cleaned physical file from disk for doc_id={doc.id} after vector indexing.")
-                    except Exception as ex:
-                        print(f"Note cleaning DLM ephemeral file: {ex}")
-
     except Exception as e:
         print(f"Fatal error in background file processing: {e}")
     finally:
@@ -218,6 +208,8 @@ def list_documents(
 
     classroom_map = {c.id: c.name for c in db.query(Classroom).all()}
 
+    valid_docs = [d for d in docs if d.file_path and os.path.exists(d.file_path)]
+
     return [
         {
             "id": doc.id,
@@ -232,7 +224,7 @@ def list_documents(
             "uploaded_by_id": doc.uploaded_by_id,
             "created_at": doc.created_at,
         }
-        for doc in docs
+        for doc in valid_docs
     ]
 
 
