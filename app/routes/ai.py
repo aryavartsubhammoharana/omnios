@@ -6,7 +6,7 @@ from app.models.file import DocumentFile
 from app.models.classroom import Classroom, Enrollment
 from app.schemas.ai import DocumentChatRequest, DocumentSummaryRequest, AIChatResponse
 from app.services.ai import query_gemini_ai, query_sarvam_ai, query_groq_ai, generate_document_summary, is_valid_ai_text
-from app.services.vector_store import query_classroom_vector_db, query_global_vector_db
+from app.services.vector_store import query_vector_store
 from app.utils.deps import get_current_user
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
