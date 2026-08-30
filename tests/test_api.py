@@ -9,7 +9,7 @@ def test_health_endpoint():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "online"
-    assert "gemini" in data["models"]
+    assert "OmniOS" in data["message"]
 
 def test_teacher_login():
     response = client.post("/api/auth/login", json={

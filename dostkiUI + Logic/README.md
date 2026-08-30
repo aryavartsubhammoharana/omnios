@@ -71,7 +71,7 @@
 
 ```
 server/
-├── docker-compose.yml              # PostgreSQL with pgvector + Redis
+
 ├── package.json                    # Dependencies & scripts
 ├── .env.example                    # Sample environment variables
 ├── .gitignore
@@ -123,18 +123,7 @@ server/
 
 ## ⚡ Quick Start Guide
 
-### Option A: 1-Command Full Containerization (Docker)
-Run the entire platform (Node.js Server + PostgreSQL with `pgvector` + Redis) with a single command:
 
-```bash
-# 1. Clone & enter directory
-cd server
-
-# 2. Build and start all containers
-docker compose up --build -d
-```
-
-Once started, open **`http://localhost:5000`** in your browser to access the web client!
 
 ---
 
@@ -142,7 +131,7 @@ Once started, open **`http://localhost:5000`** in your browser to access the web
 
 #### 1. Prerequisites
 - **Node.js**: `>= 18.0.0`
-- **Docker & Docker Compose** (for PostgreSQL with `pgvector` and Redis)
+
 
 #### 2. Start PostgreSQL + Redis via Docker
 ```bash

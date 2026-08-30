@@ -12,6 +12,7 @@ class User(Base):
     role = Column(String, default="student", nullable=False)
     student_class = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
+    google_id = Column(String, unique=True, index=True, nullable=True)
     auth_provider = Column(String, default="local", nullable=False)
     is_verified = Column(Boolean, default=True, nullable=False)
     is_role_confirmed = Column(Boolean, default=False, nullable=False)

@@ -45,6 +45,7 @@ class UserOut(BaseModel):
     role: str
     student_class: Optional[str] = None
     avatar_url: Optional[str] = None
+    google_id: Optional[str] = None
     auth_provider: Optional[str] = "local"
     is_verified: bool = True
     is_role_confirmed: bool = False

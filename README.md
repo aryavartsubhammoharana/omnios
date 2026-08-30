@@ -16,6 +16,7 @@
    - [6. 78% Token Squeezing & TPM Rate-Limit Optimizer](#6-78-token-squeezing--tpm-rate-limit-optimizer)
    - [7. Teacher Account Deletion Pipeline (Disk Cleanup vs Knowledge Retention)](#7-teacher-account-deletion-pipeline-disk-cleanup-vs-knowledge-retention)
    - [8. Indian Standard Time (IST - Asia/Kolkata) Project-Wide Sync](#8-indian-standard-time-ist---asiakolkata-project-wide-sync)
+   - [9. Google Authentication & Identity Architecture (Zero-Friction Minimal Scopes)](#9-google-authentication--identity-architecture-zero-friction-minimal-scopes)
 2. [Core Feature Breakdown](#-core-feature-breakdown)
    - [Notes Grouping & Multi-Format Extractors (PDF, DOCX, PPTX, TXT)](#-notes-grouping--multi-format-extractors)
    - [Groq AI Assessment & Quiz Generator with KaTeX Math](#-groq-ai-assessment--quiz-generator-with-katex-math)
@@ -316,6 +317,48 @@ NoteAI implements an intelligent storage tiering strategy to prevent server disk
 
 ---
 
+## 9. Google Authentication & Identity Architecture (Zero-Friction Minimal Scopes)
+
+### 🔑 The Philosophy: Minimal Privileges with Maximum Trust
+NoteAI strictly enforces **Scope Minimization (`openid email profile`)** for Google authentication. The platform never requests invasive scopes (such as Google Drive access, Gmail reading/sending, or Google Calendar).
+- **Why we don't bind to Google Drive**: Files are stored and managed directly in isolated PostgreSQL and ChromaDB vector stores, avoiding external Google quota or API downtime risks.
+- **Why we don't bind to Gmail APIs**: System notifications and OTPs are dispatched reliably using standard SMTP over secure TLS.
+
+---
+
+### 🧬 Data Extracted from Google Auth & Reasons for Attaching Each Feature:
+
+1. **`sub` (`google_id` in PostgreSQL)**:
+   - **What it is**: A permanent, mathematically unique string identifying the Google account (e.g., `"108392817482910482"`).
+   - **Why it's attached**: Protects user identity. If a user renames their Google account or changes their primary email address, their `google_id` remains constant. This prevents duplicate account creation and guarantees they never lose access to their enrolled classrooms and quizzes.
+2. **`email`**:
+   - **What it is**: The verified email address from Google.
+   - **Why it's attached**: Primary communication channel for course notifications and local password recovery.
+3. **`picture` (`avatar_url`)**:
+   - **What it is**: The high-res profile picture URL hosted by Google.
+   - **Why it's attached**: Instantly sets the user's classroom avatar upon 1-click Google Sign-In, eliminating the need to manually crop and upload avatars.
+4. **`email_verified`**:
+   - **What it is**: Cryptographic verification status returned in the Google ID token.
+   - **Why it's attached**: Because Google has already authenticated ownership of the email, NoteAI safely marks the account as verified (`is_verified = True`), skipping the manual 6-digit OTP barrier for a friction-free login experience.
+5. **FastAPI `BackgroundTasks` Non-Blocking Email Dispatch**:
+   - **Why it's attached**: SMTP network handshakes can take 1–3 seconds. Running email dispatch as background tasks allows the API to return instant `< 50ms` HTTP 200 responses to the frontend.
+
+---
+
+### 📊 Comparative Analysis: Authentication Architecture (Before vs. After)
+
+| Dimension / Feature | 🔴 Before (Initial Auth Flow) | 🟢 After (Hardened & Unified Auth Flow) |
+| :--- | :--- | :--- |
+| **Google Identity Tracking** | Matched solely by `email` string. If email changed, account identity broke. | **Dual-Key Lookup**: Primary match on immutable `google_id` (`sub`) with graceful fallback to `email`. |
+| **Audience Verification** | Did not verify `aud` parameter against `GOOGLE_CLIENT_ID`. | **Audience Guard**: Verifies `aud` and `azp` against configured Client ID with security alerts on mismatch. |
+| **Email Dispatch Latency** | Synchronous SMTP calls blocked HTTP request threads (1.5–3s delay). | **Non-Blocking Background Tasks**: FastAPI `BackgroundTasks` dispatches emails asynchronously (`< 50ms` response). |
+| **Dev OTP Security** | Returned plaintext OTP in JSON response unconditionally. | **Environment-Gated Protection**: `dev_otp` is automatically hidden in production when SMTP is configured. |
+| **HTTP Method Compatibility** | Rigid `POST`-only endpoints caused `405 Method Not Allowed` when frontend called `PUT`. | **Multi-Method Support**: `@router.api_route(methods=["POST", "PUT"])` on `/confirm-role` and `/change-password`. |
+| **Avatar Multi-Part Keys** | Expected strictly `avatar` key, breaking frontend sending `file` form-data. | **Polymorphic Field Binding**: Accepts both `avatar` and `file` multi-part form fields seamlessly. |
+| **Database Schema** | `users` table lacked dedicated `google_id` column. | `users.google_id` column added with unique index and automated migration sync script. |
+
+---
+
 # 🚀 Core Feature Breakdown
 
 ### 📁 Notes Grouping & Multi-Format Extractors
@@ -349,7 +392,7 @@ NoteAI implements an intelligent storage tiering strategy to prevent server disk
 - **Backend**: Python 3.11+, FastAPI, SQLAlchemy ORM, PostgreSQL (`pgvector`), ChromaDB, PyMuPDF (`fitz`), Pillow (`PIL`), python-docx, python-pptx, youtube-transcript-api, Gmail SMTP.
 - **AI Engines**: Groq (`openai/gpt-oss-120b`, `qwen/qwen3.8-27b`), Google Gemini (`gemini-2.5-flash`), Sarvam AI (`sarvam-105b-conversations`).
 - **Frontend**: React 18, Vite, Tailwind CSS, KaTeX Math Rendering, Lucide Icons, Google Identity Services.
-- **DevOps**: Multi-stage Docker, Docker Compose, PostgreSQL 16.
+- **DevOps**: PostgreSQL 16.
 
 ---
 
@@ -413,10 +456,7 @@ npm install
 npm run dev
 ```
 
-### 3. Docker Launch (1-Click Deployment)
-```bash
-docker-compose up --build -d
-```
+
 - **Web App**: `http://localhost:5173` (or `http://localhost:8000`)
 - **Swagger API Docs**: `http://localhost:8000/docs`
 

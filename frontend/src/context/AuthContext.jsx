@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }) => {
 
   const uploadAvatar = async (file) => {
     const formData = new FormData();
+    formData.append('avatar', file);
     formData.append('file', file);
     const res = await API.post('/api/auth/upload-avatar', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }

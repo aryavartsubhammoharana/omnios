@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "OmniOS - Classroom & OmniAI Studio"
+    DEBUG: bool = os.getenv("DEBUG", "True").lower() in ("true", "1", "t")
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:subham2007@localhost:5432/noteai_db")
     SECRET_KEY: str = os.getenv("SECRET_KEY", "noteai_super_secret_jwt_key_2026_safe_auth_token_987654")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
