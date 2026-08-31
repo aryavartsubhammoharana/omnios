@@ -2,7 +2,6 @@ import sys
 import shutil
 import atexit
 import subprocess
-import requests
 import uvicorn
 from app.main import app
 
@@ -13,21 +12,25 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         pass
 
 
-def launch_public_tunnel(port: int = 8000, subdomain: str = "omnios-app"):
+def launch_public_tunnel(port: int = 8000):
     import time
     import re
 
-    try:
-        ip_pass = requests.get("https://loca.lt/mytunnelpassword", timeout=3).text.strip()
-    except Exception:
-        ip_pass = "Run 'curl https://loca.lt/mytunnelpassword'"
-
-    npx_cmd = shutil.which("npx") or "npx.cmd"
+    cloudflared_cmd = shutil.which("cloudflared")
     tunnel_url = None
 
+    if not cloudflared_cmd:
+        print("⚠️ 'cloudflared' is not installed or not in PATH.")
+        print("=" * 74)
+        print(f"🚀 OmniOS Local Server:   http://127.0.0.1:{port}")
+        print("=" * 74)
+        return
+
     try:
+        # shell=False is often safer and works better for capturing cloudflared in some environments,
+        # but shell=True is needed if cloudflared is resolved by the shell on Windows.
         tunnel_proc = subprocess.Popen(
-            [npx_cmd, "localtunnel", "--port", str(port), "--subdomain", subdomain],
+            f"\"{cloudflared_cmd}\" tunnel --url http://127.0.0.1:{port}",
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
@@ -36,28 +39,29 @@ def launch_public_tunnel(port: int = 8000, subdomain: str = "omnios-app"):
         )
         atexit.register(lambda: tunnel_proc.kill())
 
-        for _ in range(40):
+        # Wait up to 10 seconds for the URL to appear in logs
+        for _ in range(100):
             line = tunnel_proc.stdout.readline()
             if not line:
                 time.sleep(0.1)
                 continue
-            match = re.search(r"https://[a-zA-Z0-9-]+\.loca\.lt", line)
+            
+            match = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", line)
             if match:
                 tunnel_url = match.group(0)
                 break
-    except Exception:
-        pass
-
-    if not tunnel_url:
-        tunnel_url = f"https://{subdomain}.loca.lt"
+    except Exception as e:
+        print(f"Tunnel Error: {e}")
 
     print("=" * 74)
     print(f"🚀 OmniOS Local Server:   http://127.0.0.1:{port}")
-    print(f"🌐 Public Live Tunnel:    {tunnel_url}")
-    print(f"🔑 Tunnel Password (IP):  {ip_pass}")
+    if tunnel_url:
+        print(f"🌐 Cloudflare Tunnel:     {tunnel_url}")
+    else:
+        print("🌐 Cloudflare Tunnel:     Failed to fetch URL automatically.")
     print("=" * 74)
 
 
 if __name__ == "__main__":
-    launch_public_tunnel(port=8000, subdomain="omnios-app")
+    launch_public_tunnel(port=8000)
     uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
