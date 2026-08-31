@@ -169,7 +169,7 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
               }`}>
                 <Sparkles className={`w-5 h-5 ${isActive('/omniai') ? 'text-indigo-400' : 'text-gray-400 group-hover:text-white'}`} />
               </div>
-              {isExpanded && <span className="truncate">OmniAI (Gemini Studio)</span>}
+              {isExpanded && <span className="truncate">OmniAI Studio</span>}
             </Link>
 
             {/* Divider */}
