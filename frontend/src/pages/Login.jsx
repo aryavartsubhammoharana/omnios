@@ -1,17 +1,13 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { WaterWaveCanvas } from '../components/WaterWaveCanvas';
 import { GoogleLoginButton } from '../components/GoogleLoginButton';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const { user, loading, login, googleLogin } = useContext(AuthContext);
+  const { user, loading, googleLogin } = useContext(AuthContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,19 +41,6 @@ export default function Login() {
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
-      await login(email.trim(), password);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid email or password.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen w-screen bg-[#111113] text-zinc-100 flex flex-col md:flex-row overflow-hidden font-sans select-none">
@@ -116,67 +99,6 @@ export default function Login() {
               />
             </div>
           </div>
-
-          {/* OR Divider Line */}
-          <div className="relative flex items-center justify-center py-1">
-            <div className="border-t border-zinc-800 w-full" />
-            <span className="bg-[#171719] px-3 text-[10px] font-mono text-zinc-500 uppercase tracking-widest absolute">
-              OR
-            </span>
-          </div>
-
-          {/* Email + Password Form */}
-          <form onSubmit={handleSubmit} className="space-y-3.5">
-            <div>
-              <label className="block text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-1 font-mono">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-[#111113] border border-zinc-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-inner"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-1 font-mono">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder=""
-                  className="w-full bg-[#111113] border border-zinc-800 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition shadow-inner"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-3 text-zinc-500 hover:text-zinc-300 transition"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 disabled:opacity-50 text-white font-semibold text-xs py-3 rounded-xl transition duration-200 shadow-lg shadow-indigo-600/25 flex items-center justify-center space-x-2 mt-2"
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
-              <span>{submitting ? 'Signing in...' : 'Sign In'}</span>
-            </button>
-          </form>
 
           {/* Switch to Signup */}
           <div className="text-center pt-2">
