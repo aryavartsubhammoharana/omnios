@@ -46,7 +46,7 @@ def launch_public_tunnel(port: int = 8000):
                 time.sleep(0.1)
                 continue
             
-            match = re.search(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com", line)
+            match = re.search(r"https://(?!api\.)[a-zA-Z0-9-]+\.trycloudflare\.com", line)
             if match:
                 tunnel_url = match.group(0)
                 break
