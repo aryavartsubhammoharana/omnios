@@ -4,6 +4,9 @@ import atexit
 import subprocess
 import requests
 import uvicorn
+import threading
+import time
+import re
 from app.main import app
 
 if sys.stdout and hasattr(sys.stdout, "reconfigure"):
@@ -13,10 +16,7 @@ if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         pass
 
 
-def launch_public_tunnel(port: int = 8000, subdomain: str = "omnios-app"):
-    import time
-    import re
-
+def launch_tunnel_bg(port: int, subdomain: str):
     try:
         ip_pass = requests.get("https://loca.lt/mytunnelpassword", timeout=3).text.strip()
     except Exception:
@@ -36,7 +36,7 @@ def launch_public_tunnel(port: int = 8000, subdomain: str = "omnios-app"):
         )
         atexit.register(lambda: tunnel_proc.kill())
 
-        for _ in range(40):
+        for _ in range(30):
             line = tunnel_proc.stdout.readline()
             if not line:
                 time.sleep(0.1)
@@ -51,11 +51,17 @@ def launch_public_tunnel(port: int = 8000, subdomain: str = "omnios-app"):
     if not tunnel_url:
         tunnel_url = f"https://{subdomain}.loca.lt"
 
-    print("=" * 74)
+    print("\n" + "=" * 74)
     print(f"🚀 OmniOS Local Server:   http://127.0.0.1:{port}")
     print(f"🌐 Public Live Tunnel:    {tunnel_url}")
     print(f"🔑 Tunnel Password (IP):  {ip_pass}")
-    print("=" * 74)
+    print("=" * 74 + "\n")
+
+
+def launch_public_tunnel(port: int = 8000, subdomain: str = "omnios-app"):
+    # Run the tunnel in a background thread so it NEVER blocks the main server
+    t = threading.Thread(target=launch_tunnel_bg, args=(port, subdomain), daemon=True)
+    t.start()
 
 
 if __name__ == "__main__":
