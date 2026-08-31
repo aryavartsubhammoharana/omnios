@@ -188,15 +188,6 @@ export default function Login() {
             </p>
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="text-center pt-8">
-          <p className="text-[11px] text-zinc-500 leading-relaxed max-w-sm mx-auto">
-            By continuing you agree to our{' '}
-            <span className="text-zinc-400 hover:underline cursor-pointer">terms of service</span> and{' '}
-            <span className="text-zinc-400 hover:underline cursor-pointer">privacy policy</span>.
-          </p>
-        </div>
       </div>
     </div>
   );
