@@ -59,9 +59,7 @@ export default function Signup() {
       </div>
 
       {/* -- Right Side: Minimalist Clean Sign Up -- */}
-      <div className="w-full md:w-1/2 min-h-screen flex flex-col justify-between p-6 sm:p-12 lg:p-16 bg-[#171719] relative z-10">
-        <div />
-
+      <div className="w-full md:w-1/2 min-h-screen flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 bg-[#171719] relative z-10">
         <div className="w-full max-w-[420px] mx-auto space-y-5">
           <div className="flex justify-center">
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-violet-500/20 border border-white/10 p-2 flex items-center justify-center shadow-lg">
@@ -163,7 +161,6 @@ export default function Signup() {
             </p>
           </div>
         </div>
-        <div />
       </div>
     </div>
   );

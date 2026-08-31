@@ -61,9 +61,7 @@ export default function Login() {
       </div>
 
       {/* -- Right Side: Minimalist Clean Login Form -- */}
-      <div className="w-full md:w-1/2 min-h-screen flex flex-col justify-between p-6 sm:p-12 lg:p-16 bg-[#171719] relative z-10">
-        <div />
-
+      <div className="w-full md:w-1/2 min-h-screen flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 bg-[#171719] relative z-10">
         <div className="w-full max-w-[360px] mx-auto space-y-6">
           {/* Brand Icon */}
           <div className="flex justify-center">
