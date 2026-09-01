@@ -200,7 +200,7 @@ def build_advanced_diagnostic_prompt(
     active_chapters: List[str],
     weak_topics: List[str],
     study_notes_context: str,
-    q_count: int = 8,
+    q_count: int = 20,
     lang: str = "en"
 ) -> str:
     chapter_str = "\n".join([f"- {c}" for c in active_chapters[:6]])
