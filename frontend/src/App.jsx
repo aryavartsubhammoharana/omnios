@@ -36,11 +36,7 @@ function AppContent() {
           />
           <Route
             path="/signup"
-            element={
-              <PublicRoute>
-                <Signup />
-              </PublicRoute>
-            }
+            element={<Navigate to="/login" replace />}
           />
           <Route
             path="/dashboard"

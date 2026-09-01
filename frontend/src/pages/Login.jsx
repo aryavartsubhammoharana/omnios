@@ -1,5 +1,5 @@
-import React, { useState, useContext, useEffect } from 'react';
-import { useNavigate, Link, Navigate } from 'react-router-dom';
+import React, { useContext, useEffect, useState } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Loader2 } from 'lucide-react';
 import { WaterWaveCanvas } from '../components/WaterWaveCanvas';
@@ -98,15 +98,6 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Switch to Signup */}
-          <div className="text-center pt-2">
-            <p className="text-xs text-zinc-400">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 font-semibold hover:underline">
-                Sign up
-              </Link>
-            </p>
-          </div>
         </div>
       </div>
     </div>
