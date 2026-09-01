@@ -22,8 +22,8 @@ def is_valid_ai_text(text: str) -> bool:
 def _build_squeezed_tutor_prompt(prompt: str, context: str) -> str:
     c_clean = context.strip()[:2500] if context and context.strip() else ""
     if c_clean:
-        return f"Role: OmniAI Academic Tutor.\nTask: Explain accurately based on Context using structured Markdown & LaTeX $...$.\nContext:\n{c_clean}\n\nQuestion: {prompt}"
-    return f"Role: OmniAI Academic Tutor.\nTask: Explain clearly using Markdown and LaTeX $...$.\nQuestion: {prompt}"
+        return f"Role: OmniAI Academic Tutor.\nTask: Explain accurately based on Context using structured Markdown. MANDATORY: ALWAYS wrap EVERY math formula, variable, and equation in LaTeX delimiters like $...$ (e.g. $I_D = I_{{DSS}}\\left(1 - \\frac{{V_{{GS}}}}{{V_P}}\\right)^2$, $I_{{CEO}} = (\\beta + 1)I_{{CBO}}$).\nContext:\n{c_clean}\n\nQuestion: {prompt}"
+    return f"Role: OmniAI Academic Tutor.\nTask: Explain clearly using Markdown. MANDATORY: ALWAYS wrap EVERY math formula, variable, and equation in LaTeX delimiters like $...$ (e.g. $I_D = I_{{DSS}}\\left(1 - \\frac{{V_{{GS}}}}{{V_P}}\\right)^2$).\nQuestion: {prompt}"
 
 
 def query_gemini_ai(prompt: str, context: str = "") -> str:

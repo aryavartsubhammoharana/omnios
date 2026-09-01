@@ -15,73 +15,71 @@ export function formatLatex(content) {
   // 1. Strip outer double quotes if string was wrapped in quotes
   text = text.replace(/^"([\s\S]*)"$/, '$1');
 
-  // 2. Normalize double-escaped LaTeX backslashes: \\lambda -> \lambda, \\sim -> \sim, \\text -> \text
+  // 2. Normalize double-escaped LaTeX backslashes: \\lambda -> \lambda, \\left -> \left, \\frac -> \frac
   text = text.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
 
   // 3. Convert bracket delimiters \[ ... \] and \( ... \)
   text = text.replace(/\\\[([\s\S]*?)\\\]/g, '\n\n$$$$$1$$$$\n\n');
   text = text.replace(/\\\(([\s\S]*?)\\\)/g, ' $$$1$$ ');
 
-  // 4. Fix parentheses containing LaTeX commands or exponents e.g.
-  // "(\lambda \sim 10^3\text{ m})" -> "($\lambda \sim 10^3\text{ m}$)"
-  // "( \lambda \sim 10^{-12}\text{ m}$$)" -> "($\lambda \sim 10^{-12}\text{ m}$)"
+  // 4. Tokenize already delimited math ($$...$$ and $...$) so we don't double-wrap
+  const mathTokens = [];
+  text = text.replace(/(\$\$[\s\S]*?\$\$|\$[^\$\n]+?\$)/g, (match) => {
+    const idx = mathTokens.length;
+    mathTokens.push(match);
+    return `___MATH_DELIM_${idx}___`;
+  });
+
+  // 5. Intelligent detection and auto-wrapping of full un-delimited formulas and equations
+  // e.g. "• JFET saturation current: I_D = I_{DSS}\left(1 - \frac{V_{GS}}{V_P}\right)^2"
+  // e.g. "• BJT leakage relation: I_{CEO} = (\beta + 1)I_{CBO}"
+  const lines = text.split('\n');
+  const processedLines = lines.map(line => {
+    if (line.includes('___MATH_DELIM_')) return line;
+
+    if (/\\(?:left|right|frac|sqrt|beta|alpha|theta|pi|lambda|sigma|mu|Omega|Delta|sum|int|infty|times|cdot|partial)|[A-Za-z0-9]_[A-Za-z0-9\{\}]+/.test(line)) {
+      let replaced = line.replace(/^(\s*(?:[\*\-\•]|\d+\.)\s*[^:\n]+:\s*)([A-Za-z0-9_\{\}\^\+\-\*\/\(\)\s\\=]+)(.*)$/g, (m, prefix, expr, suffix) => {
+        const trimmed = expr.trim();
+        if (trimmed && !trimmed.startsWith('$') && (trimmed.includes('\\') || trimmed.includes('_') || trimmed.includes('^') || trimmed.includes('='))) {
+          const idx = mathTokens.length;
+          mathTokens.push(`$${trimmed}$`);
+          return `${prefix}___MATH_DELIM_${idx}___${suffix || ''}`;
+        }
+        return m;
+      });
+
+      if (replaced !== line) return replaced;
+
+      replaced = line.replace(/([A-Za-z0-9_\{}\^]+\s*=\s*)?([A-Za-z0-9_\{}\^]*\\left[\(\[\{][\s\S]*?\\right[\)\]\}](?:\^[0-9\-\{\}]+)?)/g, (m, lhs, rhs) => {
+        const fullExpr = ((lhs || '') + rhs).trim();
+        const idx = mathTokens.length;
+        mathTokens.push(`$${fullExpr}$`);
+        return `___MATH_DELIM_${idx}___`;
+      });
+
+      if (replaced !== line) return replaced;
+    }
+
+    return line;
+  });
+
+  text = processedLines.join('\n');
+
+  // 6. Fix parentheses containing LaTeX commands: "(\lambda \sim 10^3\text{ m})" -> "($\lambda \sim 10^3\text{ m}$)"
   text = text.replace(/\(\s*([^\$\n\(\)]*?\\[a-zA-Z]+[^\$\n\(\)]*?)\s*\)/g, (match, inner) => {
     const cleaned = inner.replace(/\$+/g, '').trim();
     return `($${cleaned}$)`;
   });
 
-  text = text.replace(/\(\s*([^\$\n\(\)]*?\^[0-9\-\{\}]+[^\$\n\(\)]*?)\s*\)/g, (match, inner) => {
-    const cleaned = inner.replace(/\$+/g, '').trim();
-    return `($${cleaned}$)`;
+  // 7. Wrap standalone fractions, Greek letters, and sqrt/int/sum if still un-delimited
+  text = text.replace(/(?<![\$\w])((\\frac\s*\{[^{}]*\}\s*\{[^{}]*\}|\\sqrt\s*\{[^{}]*\}|\\(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|hbar|infty|partial|nabla)(?:_[a-zA-Z0-9]+|\^[a-zA-Z0-9]+)*)(?![a-zA-Z]))(?![\$\w])/g, '$$$1$$');
+
+  // 8. Restore protected math blocks
+  mathTokens.forEach((m, idx) => {
+    text = text.replace(`___MATH_DELIM_${idx}___`, m);
   });
 
-  // 5. Fix stray $$ at end of words/expressions e.g. "\phi$$" or "10^{-12}\text{ m}$$"
-  text = text.replace(/([^\$])(\\[a-zA-Z]+(?:_[a-zA-Z0-9]+|\^[a-zA-Z0-9]+)?)\$\$/g, '$1$$$2$$');
-  text = text.replace(/([^\$])(\\[a-zA-Z]+[^\$\n\(\)]*?)\$\$/g, '$1$$$2$$');
-  text = text.replace(/([^\$])([0-9\-\{\}\^]+\\[a-zA-Z]+[^\$\n\(\)]*?)\$\$/g, '$1$$$2$$');
-
-  // 6. Fix premature dollar sign closings before continuing LaTeX commands
-  text = text.replace(/\$([^\$\n]+)\$(\s*\\[a-zA-Z,;:!~]+[^\$\n.]+)/g, '$$$1 $2$$');
-
-  // 7. Brace-Aware Math Wrapper for Greek letters & symbols
-  const tokens = text.split(/(\$\$[\s\S]*?\$\$|\$[^\$\n]*?\$)/g);
-  for (let i = 0; i < tokens.length; i++) {
-    if (i % 2 === 0 && tokens[i]) {
-      let part = tokens[i];
-
-      // Wrap standalone fractions, square roots, integrals
-      part = part.replace(/(\\frac\s*\{[^{}]*\}\s*\{[^{}]*\})/g, '$$$1$$');
-      part = part.replace(/(\\(?:sqrt|int|sum)\s*\{[^{}]*\})/g, '$$$1$$');
-      
-      const greekRegex = /^\\(?:alpha|beta|gamma|delta|epsilon|varepsilon|zeta|eta|theta|vartheta|iota|kappa|lambda|mu|nu|xi|pi|varpi|rho|varrho|sigma|varsigma|tau|upsilon|phi|varphi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|hbar|infty|partial|nabla)(?:_[a-zA-Z0-9]+|\^[a-zA-Z0-9]+)*(?![a-zA-Z])/;
-      
-      let newPart = '';
-      let braceDepth = 0;
-      
-      for (let j = 0; j < part.length; j++) {
-         if (part[j] === '{') braceDepth++;
-         else if (part[j] === '}') braceDepth = Math.max(0, braceDepth - 1);
-         
-         if (braceDepth === 0 && part[j] === '\\') {
-            const remainder = part.slice(j);
-            const match = remainder.match(greekRegex);
-            if (match) {
-               if (j === 0 || part[j-1] !== '\\') {
-                  newPart += '$' + match[0] + '$';
-                  j += match[0].length - 1;
-                  continue;
-               }
-            }
-         }
-         newPart += part[j];
-      }
-      
-      tokens[i] = newPart;
-    }
-  }
-  text = tokens.join('');
-
-  // 8. Clean duplicate dollar signs and trailing period collisions
+  // 9. Clean duplicate dollar signs and trailing period collisions
   text = text.replace(/\${3,}/g, '$$');
   text = text.replace(/\$\s{1,}\$/g, ' ');
   text = text.replace(/\.\$\$/g, '$$$$.');
