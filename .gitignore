@@ -35,3 +35,6 @@ Thumbs.db
 
 dontdelete.json
 gcs_credentials.json
+
+chroma_data/
+*.log
