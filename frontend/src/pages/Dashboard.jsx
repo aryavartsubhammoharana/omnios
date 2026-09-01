@@ -91,23 +91,6 @@ export default function Dashboard() {
             </p>
           </div>
 
-          {/* Center / Quick Stats Pill */}
-          <div className="hidden lg:flex items-center gap-4 bg-gray-900/80 border border-gray-800 rounded-2xl px-5 py-2.5 shadow-inner">
-            <div className="text-center">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Active Classes</p>
-              <p className="text-lg font-extrabold text-indigo-400">{classrooms.length}</p>
-            </div>
-            <div className="w-px h-8 bg-gray-800"></div>
-            <div className="text-center">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">AI Knowledge</p>
-              <p className="text-lg font-extrabold text-emerald-400">Dual RAG</p>
-            </div>
-            <div className="w-px h-8 bg-gray-800"></div>
-            <div className="text-center">
-              <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Extractors</p>
-              <p className="text-lg font-extrabold text-purple-400">Multi-Format</p>
-            </div>
-          </div>
 
           {/* Right: Action Buttons */}
           <div className="flex items-center gap-3 shrink-0">
