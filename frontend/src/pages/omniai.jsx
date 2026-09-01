@@ -358,23 +358,37 @@ export default function OmniChat() {
 
   const welcomeVibe = useMemo(() => {
     const vibes = [
-      "Slay Today?", "No Cap?", "Vibe Check?", "Say Less.", "Let's Cook.",
-      "We Cookin?", "Main Character?", "Era Loading...", "Lowkey Curious?", "Spill It.",
-      "Rizz Up?", "Brain Rot?", "Hit Different?", "Understood, King?", "It's Giving?",
-      "Understood, Queen?", "Pop Off?", "That's Bussin?", "Glow Up?", "Stay Pressed?",
-      "Touch Grass?", "No Lore?", "Based Energy?", "Sigma Mode?", "Serve It.",
-      "Rent Free?", "Understood, Bestie?", "Real Talk?", "Not Clickbait?", "Caught Lacking?",
-      "Twin Flame?", "Era Change?", "Understood, Fam?", "Core Memory?", "That's Ate?",
-      "Understood, Bro?", "Chefs Kiss?", "Understood, Sis?", "Rizz Check?", "Hot Take?",
-      "NPC Energy?", "Plot Twist?", "Understood, Fr?", "No Gatekeeping?", "Fell Off?",
-      "Peak Fiction?", "Understood, G?", "Quiet Luxury?", "Delulu Era?", "Snatched Up?",
-      "Mid Check?", "We Ate?", "Era Reset?", "Understood, Babe?", "Understood, Luv?",
-      "Villain Arc?", "Main Quest?", "Rizz Loaded?", "Ate That?", "Start Cooking?",
-      "Glazing Hard?", "Touch Down?", "Ick Check?", "Big Facts?", "Unc Energy?",
-      "Era Drop?", "Subtle Flex?", "Ion Know?", "W Drop?", "L Energy?",
-      "Rizz Different?", "Era Alert?", "Stay Slaying?", "No Printer?", "Caught Vibing?",
-      "Say Period?", "Fully Cooked?", "Ate Rn?", "Core Unlocked?", "Stay Locked?",
-      "On Site?", "Pop Out?", "Understood, Gang?", "Understood, Champ?", "Understood, Homie?",
+      // Curiosity Gap — brain can't resist finishing the thought
+      "Ask me.", "Find out?", "What if?", "You sure?", "Miss this?",
+      "Think so?", "Prove it.", "Really though?", "Go on.", "I'm listening.",
+
+      // Direct Challenge — ego trigger
+      "Try me.", "Dare you.", "Too hard?", "Can't stop?", "You scared?",
+      "Smart enough?", "Bet you.", "Afraid, huh?", "Test me.", "One shot?",
+
+      // FOMO + Urgency — loss aversion
+      "Miss out?", "Right now?", "Don't wait.", "Last chance?", "Starting without?",
+      "Falling behind?", "Others asked.", "Already missed?", "Not yet?", "Why delay?",
+
+      // Intrigue / Mystery — open loop
+      "Secret here.", "Hidden answer?", "Know this?", "Unlock it?", "Just ask.",
+      "Right answer?", "Surprise inside?", "Almost there.", "One question?", "Reveal it?",
+
+      // Personal / Intimate — feels 1-on-1
+      "Just us.", "Your move.", "For you.", "Only here.", "We talk?",
+      "Tell me.", "Your doubt?", "No judgment.", "Between us.", "Ask freely.",
+
+      // Action Trigger — verb-first momentum
+      "Type it.", "Start here.", "Drop it.", "Spill it.", "Go ahead.",
+      "Hit me.", "Fire away.", "Begin now.", "Ask away.", "Let's start.",
+
+      // Confidence + Value Signal — status
+      "I know.", "Got this.", "Watch this.", "See how?", "I'll explain.",
+      "Fast answer.", "No confusion.", "Crystal clear.", "Trust me.", "Solved already?",
+
+      // Playful Tension — fun + pull
+      "Hmm, curious?", "Tick tock.", "Still thinking?", "Or nah?", "Why not?",
+      "Come on.", "Just once?", "You won't?", "Ready yet?", "Almost asking?",
     ];
     return vibes[Math.floor(Math.random() * vibes.length)];
   }, [activeSessionId]);
