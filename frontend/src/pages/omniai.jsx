@@ -50,10 +50,8 @@ export default function OmniAI() {
     return result;
   };
 
-  const initialDraftId = (chatId && chatId.length === 14) ? chatId : generateSecure14CharId();
-
   const [draftSession, setDraftSession] = useState(() => ({
-    id: initialDraftId,
+    id: 'new',
     user_id: user?.id,
     title: 'New Conversation',
     messages: [],
@@ -78,8 +76,8 @@ export default function OmniAI() {
   });
 
   const [activeSessionId, setActiveSessionId] = useState(() => {
-    if (chatId) return chatId;
-    return draftSession.id;
+    if (chatId && chatId !== 'new') return chatId;
+    return 'new';
   });
 
   const [inputQuestion, setInputQuestion] = useState('');
@@ -87,26 +85,25 @@ export default function OmniAI() {
   const chatEndRef = useRef(null);
 
   useEffect(() => {
-    if (chatId) {
+    if (!chatId || chatId === 'new') {
+      setActiveSessionId('new');
+      setDraftSession({
+        id: 'new',
+        user_id: user?.id,
+        title: 'New Conversation',
+        messages: [],
+        createdAt: new Date().toISOString()
+      });
+      if (!chatId) {
+        navigate('/omniai/new', { replace: true });
+      }
+    } else {
       const existing = chatSessions.find(s => s.id === chatId);
       if (existing) {
         setActiveSessionId(chatId);
-      } else if (chatId.length === 14) {
-        setDraftSession(prev => (prev.id === chatId ? prev : {
-          id: chatId,
-          user_id: user?.id,
-          title: 'New Conversation',
-          messages: [],
-          createdAt: new Date().toISOString()
-        }));
-        setActiveSessionId(chatId);
       } else {
-        const freshId = generateSecure14CharId();
-        navigate(`/omniai/${freshId}`, { replace: true });
+        navigate('/omniai/new', { replace: true });
       }
-    } else {
-      const currentId = activeSessionId || draftSession.id;
-      navigate(`/omniai/${currentId}`, { replace: true });
     }
   }, [chatId, user]);
 
@@ -164,17 +161,15 @@ export default function OmniAI() {
   };
 
   const handleCreateNewSession = () => {
-    const newDraftId = generateSecure14CharId();
-    const newDraft = {
-      id: newDraftId,
+    setDraftSession({
+      id: 'new',
       user_id: user?.id,
       title: 'New Conversation',
       messages: [],
       createdAt: new Date().toISOString()
-    };
-    setDraftSession(newDraft);
-    setActiveSessionId(newDraftId);
-    navigate(`/omniai/${newDraftId}`);
+    });
+    setActiveSessionId('new');
+    navigate('/omniai/new');
   };
 
   const handleDeleteSession = (sessionId, e) => {
@@ -274,20 +269,22 @@ export default function OmniAI() {
     let currentSessionId = activeSessionId;
     const isCurrentInSaved = chatSessions.some(s => s.id === currentSessionId);
 
-    if (!isCurrentInSaved) {
+    if (!isCurrentInSaved || currentSessionId === 'new') {
+      const new14CharId = generateSecure14CharId();
       const newCommittedSession = {
-        id: draftSession.id,
+        id: new14CharId,
         user_id: user?.id,
         title: userText.slice(0, 26) + (userText.length > 26 ? '...' : ''),
         messages: [{ sender: 'user', text: userText }],
         createdAt: new Date().toISOString()
       };
       setChatSessions(prev => [newCommittedSession, ...prev]);
-      currentSessionId = newCommittedSession.id;
+      currentSessionId = new14CharId;
       setActiveSessionId(currentSessionId);
+      navigate(`/omniai/${currentSessionId}`, { replace: true });
 
       setDraftSession({
-        id: generateSecure14CharId(),
+        id: 'new',
         user_id: user?.id,
         title: 'New Conversation',
         messages: [],
