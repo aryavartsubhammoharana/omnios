@@ -466,19 +466,19 @@ export default function OmniAI() {
           {/* Studio Top Bar with Toggle Button */}
           <div className="p-3 border-b border-gray-800/80 bg-gray-950/80 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center space-x-3">
-              {/* Sidebar Open/Close Toggle Button */}
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-1.5 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white transition shadow-sm flex items-center gap-1.5 text-xs cursor-pointer"
-                title={isSidebarOpen ? "Collapse Workspace Scope" : "Open Workspace Scope"}
-              >
-                {isSidebarOpen ? <PanelLeftClose className="w-4 h-4 text-indigo-400" /> : <PanelLeftOpen className="w-4 h-4 text-indigo-400" />}
-                <span className="hidden sm:inline text-[11px] font-medium text-gray-300">
-                  {isSidebarOpen ? "Collapse Scope" : "Open Scope"}
-                </span>
-              </button>
-
-              <div className="h-4 w-px bg-gray-800" />
+              {/* Show Open button only when sidebar is collapsed */}
+              {!isSidebarOpen && (
+                <>
+                  <button
+                    onClick={() => setIsSidebarOpen(true)}
+                    className="p-1.5 rounded-xl bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 text-gray-400 hover:text-white transition shadow-sm flex items-center justify-center cursor-pointer"
+                    title="Open Workspace Scope"
+                  >
+                    <PanelLeftOpen className="w-4 h-4 text-indigo-400" />
+                  </button>
+                  <div className="h-4 w-px bg-gray-800" />
+                </>
+              )}
 
               <div className="flex items-center space-x-2">
                 <Bot className="w-4 h-4 text-indigo-400" />
