@@ -34,18 +34,46 @@ export default function OmniAI() {
   const [readerFontSize, setReaderFontSize] = useState(14);
   const [isReaderFullscreen, setIsReaderFullscreen] = useState(false);
 
+  const generateSecure14CharId = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const array = new Uint8Array(14);
+    if (typeof window !== 'undefined' && window.crypto) {
+      window.crypto.getRandomValues(array);
+      return Array.from(array, byte => chars[byte % chars.length]).join('');
+    }
+    let result = '';
+    for (let i = 0; i < 14; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const [draftSession, setDraftSession] = useState(() => ({
+    id: generateSecure14CharId(),
+    user_id: user?.id,
+    title: 'New Conversation',
+    messages: [],
+    createdAt: new Date().toISOString()
+  }));
+
   const [chatSessions, setChatSessions] = useState(() => {
-    const saved = localStorage.getItem(`notebooklm_sessions_${user?.id || 'default'}`);
-    return saved ? JSON.parse(saved) : [
-      {
-        id: 'session_1',
-        title: 'New Study Session',
-        messages: [],
-        createdAt: new Date().toISOString()
+    const storageKey = `omnios_chat_sessions_${user?.id || 'guest'}`;
+    const legacyKey = `notebooklm_sessions_${user?.id || 'default'}`;
+    const saved = localStorage.getItem(storageKey) || localStorage.getItem(legacyKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(s => s && Array.isArray(s.messages) && s.messages.length > 0);
+        }
+      } catch (e) {
+        console.warn("Could not parse saved sessions", e);
       }
-    ];
+    }
+    return [];
   });
-  const [activeSessionId, setActiveSessionId] = useState('session_1');
+
+  const [activeSessionId, setActiveSessionId] = useState(() => draftSession.id);
   const [inputQuestion, setInputQuestion] = useState('');
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef(null);
@@ -78,14 +106,16 @@ export default function OmniAI() {
   }, [selectedClassroomId]);
 
   useEffect(() => {
-    localStorage.setItem(`notebooklm_sessions_${user?.id || 'default'}`, JSON.stringify(chatSessions));
+    const storageKey = `omnios_chat_sessions_${user?.id || 'guest'}`;
+    const validSaved = chatSessions.filter(s => s && Array.isArray(s.messages) && s.messages.length > 0);
+    localStorage.setItem(storageKey, JSON.stringify(validSaved));
   }, [chatSessions, user]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatSessions, activeSessionId]);
 
-  const activeSession = chatSessions.find(s => s.id === activeSessionId) || chatSessions[0];
+  const activeSession = chatSessions.find(s => s.id === activeSessionId) || draftSession;
 
   const toggleDocSelection = (docId) => {
     setSelectedDocIds(prev =>
@@ -102,23 +132,27 @@ export default function OmniAI() {
   };
 
   const handleCreateNewSession = () => {
-    const newSession = {
-      id: `session_${Date.now()}`,
-      title: `Study Session #${chatSessions.length + 1}`,
+    const newDraft = {
+      id: generateSecure14CharId(),
+      user_id: user?.id,
+      title: 'New Conversation',
       messages: [],
       createdAt: new Date().toISOString()
     };
-    setChatSessions(prev => [newSession, ...prev]);
-    setActiveSessionId(newSession.id);
+    setDraftSession(newDraft);
+    setActiveSessionId(newDraft.id);
   };
 
   const handleDeleteSession = (sessionId, e) => {
     e.stopPropagation();
-    if (chatSessions.length <= 1) return;
     const remaining = chatSessions.filter(s => s.id !== sessionId);
     setChatSessions(remaining);
     if (activeSessionId === sessionId) {
-      setActiveSessionId(remaining[0].id);
+      if (remaining.length > 0) {
+        setActiveSessionId(remaining[0].id);
+      } else {
+        handleCreateNewSession();
+      }
     }
   };
 
@@ -202,16 +236,40 @@ export default function OmniAI() {
 
     setInputQuestion('');
 
-    setChatSessions(prev => prev.map(s => {
-      if (s.id === activeSessionId) {
-        return {
-          ...s,
-          title: s.messages.length === 0 ? userText.slice(0, 28) + (userText.length > 28 ? '...' : '') : s.title,
-          messages: [...s.messages, { sender: 'user', text: userText }]
-        };
-      }
-      return s;
-    }));
+    let currentSessionId = activeSessionId;
+    const isCurrentInSaved = chatSessions.some(s => s.id === currentSessionId);
+
+    if (!isCurrentInSaved) {
+      const newCommittedSession = {
+        id: draftSession.id,
+        user_id: user?.id,
+        title: userText.slice(0, 26) + (userText.length > 26 ? '...' : ''),
+        messages: [{ sender: 'user', text: userText }],
+        createdAt: new Date().toISOString()
+      };
+      setChatSessions(prev => [newCommittedSession, ...prev]);
+      currentSessionId = newCommittedSession.id;
+      setActiveSessionId(currentSessionId);
+
+      setDraftSession({
+        id: generateSecure14CharId(),
+        user_id: user?.id,
+        title: 'New Conversation',
+        messages: [],
+        createdAt: new Date().toISOString()
+      });
+    } else {
+      setChatSessions(prev => prev.map(s => {
+        if (s.id === currentSessionId) {
+          return {
+            ...s,
+            title: s.messages.length === 0 ? userText.slice(0, 26) + (userText.length > 26 ? '...' : '') : s.title,
+            messages: [...s.messages, { sender: 'user', text: userText }]
+          };
+        }
+        return s;
+      }));
+    }
 
     setSending(true);
 
@@ -227,7 +285,7 @@ export default function OmniAI() {
       });
 
       setChatSessions(prev => prev.map(s => {
-        if (s.id === activeSessionId) {
+        if (s.id === currentSessionId) {
           return {
             ...s,
             messages: [...s.messages, { sender: 'ai', text: res.data.answer, provider: res.data.provider_used }]
@@ -238,7 +296,7 @@ export default function OmniAI() {
     } catch (err) {
       console.error("Error calling AI chat:", err);
       setChatSessions(prev => prev.map(s => {
-        if (s.id === activeSessionId) {
+        if (s.id === currentSessionId) {
           return {
             ...s,
             messages: [...s.messages, { sender: 'ai', text: 'Sorry, I encountered an error answering your query. Please try again.' }]
@@ -403,30 +461,35 @@ export default function OmniAI() {
                 </div>
 
                 <div className="space-y-1.5 overflow-y-auto flex-1 pr-1">
-                  {chatSessions.map((session) => {
-                    const isActive = session.id === activeSessionId;
-                    return (
-                      <div
-                        key={session.id}
-                        onClick={() => setActiveSessionId(session.id)}
-                        className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between text-xs ${
-                          isActive
-                            ? 'bg-gray-800 border-indigo-500 text-white font-bold shadow-sm'
-                            : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:bg-gray-900 hover:text-gray-200'
-                        }`}
-                      >
-                        <span className="truncate max-w-[150px]">{session.title}</span>
-                        {chatSessions.length > 1 && (
+                  {chatSessions.length === 0 ? (
+                    <p className="text-[11px] text-gray-500 py-3 text-center italic">
+                      No saved chats yet.
+                    </p>
+                  ) : (
+                    chatSessions.map((session) => {
+                      const isActive = session.id === activeSessionId;
+                      return (
+                        <div
+                          key={session.id}
+                          onClick={() => setActiveSessionId(session.id)}
+                          className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between text-xs ${
+                            isActive
+                              ? 'bg-gray-800 border-indigo-500 text-white font-bold shadow-sm'
+                              : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:bg-gray-900 hover:text-gray-200'
+                          }`}
+                        >
+                          <span className="truncate max-w-[150px]">{session.title}</span>
                           <button
                             onClick={(e) => handleDeleteSession(session.id, e)}
                             className="p-1 text-gray-500 hover:text-red-400 rounded transition"
+                            title="Delete Chat Thread"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                        )}
-                      </div>
-                    );
-                  })}
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </>
