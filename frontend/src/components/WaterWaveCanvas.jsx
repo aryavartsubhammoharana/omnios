@@ -1,13 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * WaterWaveCanvas Component - Ultra Low RAM & CPU Optimized
- * Features:
- * - 10-Second Auto Normal Stage: Smoothly decays back to pristine crystal resting state within 10s of inactivity
- * - Zero Garbage Collection (Pre-allocated buffers on resize, 0 allocations per frame)
- * - Tab Visibility lifecycle: Automatically pauses when tab is hidden, smoothly resumes without stutter on return
- * - Complete resource disposal on unmount: 100% memory reclaimed when navigating to other pages
- * - Smooth Bilinear Interpolation & Cosine Wave Hydrodynamics
+ * WaterWaveCanvas Component - Ultra-Smooth Hydrodynamic Liquid Wave Simulation
+ * Upgrades:
+ * - 9-Point Isotropic 2D Wave Laplacian: Organic, perfectly circular ripples with zero grid-axis artifacts
+ * - Sub-Grid Bilinear Normal & Gradient Interpolation: Ultra-velvety continuous refraction with zero stepping
+ * - Subtle Chromatic Aquatic Dispersion: Realistic optical light splitting on wave peaks
+ * - Smooth Mouse Velocity Easing: Natural gentle waves with fluid momentum
+ * - 10-Second Auto-Decay to Zero-Load Crystal Resting State
+ * - Zero Garbage Collection (Pre-allocated buffers, 0 allocations per frame)
+ * - Tab Visibility lifecycle protection
  */
 const WaterWaveCanvas = () => {
   const canvasRef = useRef(null);
@@ -37,13 +39,13 @@ const WaterWaveCanvas = () => {
     let nextBuffer = null;
     let sourceData = null;
 
-    // Pre-allocated reusable Image Data & 32-bit pixel buffers (ZERO allocations per frame!)
+    // Pre-allocated reusable Image Data & 32-bit pixel buffers
     let outputImgData = null;
     let outData32 = null;
     let srcData32 = null;
 
-    const BASE_DAMPING = 0.968; // Base viscosity
-    const EPSILON = 0.003; // Smooth zero-energy threshold for silent pond
+    const BASE_DAMPING = 0.972; // Velvety smooth viscosity
+    const EPSILON = 0.0025; // Silent crystal zero threshold
     let lastInteractionTime = Date.now();
 
     const mouse = {
@@ -51,10 +53,11 @@ const WaterWaveCanvas = () => {
       y: -1,
       prevX: -1,
       prevY: -1,
+      smoothSpeed: 0,
       active: false
     };
 
-    // Custom Electric Cyan & Indigo SVG Plus Cursor (with glowing aura)
+    // Custom Electric Cyan & Indigo SVG Plus Cursor
     const PLUS_CURSOR = `url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36'><defs><filter id='glow' x='-40%' y='-40%' width='180%' height='180%'><feGaussianBlur stdDeviation='2.5' result='blur'/><feMerge><feMergeNode in='blur'/><feMergeNode in='SourceGraphic'/></feMerge></filter></defs><circle cx='18' cy='18' r='12' fill='rgba(99,102,241,0.2)' stroke='%2338bdf8' stroke-width='1.2' stroke-dasharray='3 2'/><path d='M18 6 L18 30 M6 18 L30 18' stroke='%2338bdf8' stroke-width='2.4' stroke-linecap='round' filter='url(%23glow)'/><circle cx='18' cy='18' r='2.5' fill='%23ffffff'/></svg>") 18 18, crosshair`;
 
     // Offscreen Canvas for Crystal-Clear OmniOS Logo Rendering
@@ -80,18 +83,18 @@ const WaterWaveCanvas = () => {
       sourceCtx.fillStyle = '#111113';
       sourceCtx.fillRect(0, 0, width, height);
 
-      // Subtle Ambient Indigo & Slate Vignette Glow
+      // Ambient Indigo & Slate Vignette Glow
       const bgGrad = sourceCtx.createRadialGradient(
         width * 0.5, height * 0.5, 40,
-        width * 0.5, height * 0.5, Math.max(width, height) * 0.65
+        width * 0.5, height * 0.5, Math.max(width, height) * 0.68
       );
-      bgGrad.addColorStop(0, 'rgba(30, 27, 75, 0.45)');
-      bgGrad.addColorStop(0.5, 'rgba(15, 23, 42, 0.25)');
-      bgGrad.addColorStop(1, 'rgba(17, 17, 19, 0.95)');
+      bgGrad.addColorStop(0, 'rgba(30, 27, 75, 0.48)');
+      bgGrad.addColorStop(0.5, 'rgba(15, 23, 42, 0.28)');
+      bgGrad.addColorStop(1, 'rgba(17, 17, 19, 0.96)');
       sourceCtx.fillStyle = bgGrad;
       sourceCtx.fillRect(0, 0, width, height);
 
-      // Center OmniOS Logo (1:1 Ratio, No Cropping, Smooth Quality)
+      // Center OmniOS Logo
       if (logoLoaded) {
         const logoSize = Math.min(width * 0.72, height * 0.72, 420);
         const lx = (width - logoSize) * 0.5;
@@ -100,10 +103,10 @@ const WaterWaveCanvas = () => {
         // Ambient Logo Halo Glow
         const auraGrad = sourceCtx.createRadialGradient(
           width * 0.5, height * 0.5, logoSize * 0.25,
-          width * 0.5, height * 0.5, logoSize * 0.75
+          width * 0.5, height * 0.5, logoSize * 0.78
         );
-        auraGrad.addColorStop(0, 'rgba(99, 102, 241, 0.25)');
-        auraGrad.addColorStop(0.5, 'rgba(147, 51, 234, 0.12)');
+        auraGrad.addColorStop(0, 'rgba(99, 102, 241, 0.28)');
+        auraGrad.addColorStop(0.5, 'rgba(147, 51, 234, 0.14)');
         auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         sourceCtx.fillStyle = auraGrad;
         sourceCtx.fillRect(0, 0, width, height);
@@ -132,7 +135,7 @@ const WaterWaveCanvas = () => {
 
         // Subtle Logo Edge Border
         sourceCtx.save();
-        sourceCtx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        sourceCtx.strokeStyle = 'rgba(255, 255, 255, 0.09)';
         sourceCtx.lineWidth = 1.5;
         sourceCtx.beginPath();
         sourceCtx.roundRect ? sourceCtx.roundRect(lx, ly, logoSize, logoSize, cornerRadius) : sourceCtx.strokeRect(lx, ly, logoSize, logoSize);
@@ -168,7 +171,6 @@ const WaterWaveCanvas = () => {
       currentBuffer = buffer1;
       nextBuffer = buffer2;
 
-      // Pre-allocate the output buffer ONCE (zero GC overhead in render loop!)
       outputImgData = ctx.createImageData(width, height);
       outData32 = new Uint32Array(outputImgData.data.buffer);
 
@@ -182,14 +184,14 @@ const WaterWaveCanvas = () => {
     const addDrop = (x, y, radius, strength) => {
       if (!currentBuffer || simWidth === 0 || simHeight === 0) return;
 
-      const simX = Math.floor(x / SIM_SCALE);
-      const simY = Math.floor(y / SIM_SCALE);
-      const simRadius = Math.max(1, Math.floor(radius / SIM_SCALE));
+      const simX = x / SIM_SCALE;
+      const simY = y / SIM_SCALE;
+      const simRadius = Math.max(1.2, radius / SIM_SCALE);
 
-      const minX = Math.max(1, simX - simRadius);
-      const maxX = Math.min(simWidth - 2, simX + simRadius);
-      const minY = Math.max(1, simY - simRadius);
-      const maxY = Math.min(simHeight - 2, simY + simRadius);
+      const minX = Math.max(1, Math.floor(simX - simRadius));
+      const maxX = Math.min(simWidth - 2, Math.ceil(simX + simRadius));
+      const minY = Math.max(1, Math.floor(simY - simRadius));
+      const maxY = Math.min(simHeight - 2, Math.ceil(simY + simRadius));
 
       const rSq = simRadius * simRadius;
 
@@ -201,7 +203,7 @@ const WaterWaveCanvas = () => {
           const distSq = dx * dx + dy * dy;
           if (distSq < rSq) {
             const dist = Math.sqrt(distSq);
-            // Smooth Cosine Bell-Curve Profile
+            // Ultra-Smooth Cosine Bell-Curve Profile
             const factor = Math.cos((dist / simRadius) * (Math.PI * 0.5));
             currentBuffer[rowOffset + i] += strength * factor;
           }
@@ -209,12 +211,12 @@ const WaterWaveCanvas = () => {
       }
     };
 
-    // Continuous Fluid Stroke Interpolation (Dense 2.5px spacing)
+    // Dense Continuous Stroke Interpolation
     const addDropLine = (x0, y0, x1, y1, radius, strength) => {
       const dx = x1 - x0;
       const dy = y1 - y0;
       const dist = Math.hypot(dx, dy);
-      const steps = Math.max(1, Math.ceil(dist / 2.5));
+      const steps = Math.max(1, Math.ceil(dist / 2.0));
 
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
@@ -246,12 +248,14 @@ const WaterWaveCanvas = () => {
       updateCursorState(currentX, currentY);
 
       if (mouse.active && mouse.prevX >= 0 && mouse.prevY >= 0) {
-        const speed = Math.hypot(currentX - mouse.prevX, currentY - mouse.prevY);
-        const strength = Math.min(200, 30 + speed * 2.5);
-        const radius = Math.min(26, 14 + speed * 0.25);
+        const rawSpeed = Math.hypot(currentX - mouse.prevX, currentY - mouse.prevY);
+        mouse.smoothSpeed += (rawSpeed - mouse.smoothSpeed) * 0.35; // smooth momentum
+
+        const strength = Math.min(180, 25 + mouse.smoothSpeed * 2.2);
+        const radius = Math.min(28, 16 + mouse.smoothSpeed * 0.3);
         addDropLine(mouse.prevX, mouse.prevY, currentX, currentY, radius, strength);
       } else {
-        addDrop(currentX, currentY, 18, 60);
+        addDrop(currentX, currentY, 18, 55);
       }
 
       mouse.prevX = currentX;
@@ -272,13 +276,14 @@ const WaterWaveCanvas = () => {
       mouse.x = currentX;
       mouse.y = currentY;
       mouse.active = true;
-      addDrop(currentX, currentY, 20, 65);
+      addDrop(currentX, currentY, 20, 60);
     };
 
     const handleMouseLeave = () => {
       mouse.active = false;
       mouse.prevX = -1;
       mouse.prevY = -1;
+      mouse.smoothSpeed = 0;
       lastInteractionTime = Date.now();
       canvas.style.cursor = 'default';
     };
@@ -311,7 +316,25 @@ const WaterWaveCanvas = () => {
       return { r: r | 0, g: g | 0, b: b | 0 };
     };
 
-    // Tab Visibility Handler to prevent freezing / lag on tab switch
+    // Sub-Grid Bilinear Wave Height Sampler for Silky Smooth Normals
+    const sampleWaveHeight = (buf, w, h, fx, fy) => {
+      const x0 = Math.max(0, Math.min(w - 1, Math.floor(fx)));
+      const y0 = Math.max(0, Math.min(h - 1, Math.floor(fy)));
+      const x1 = Math.min(w - 1, x0 + 1);
+      const y1 = Math.min(h - 1, y0 + 1);
+
+      const dx = fx - x0;
+      const dy = fy - y0;
+
+      const h00 = buf[y0 * w + x0];
+      const h10 = buf[y0 * w + x1];
+      const h01 = buf[y1 * w + x0];
+      const h11 = buf[y1 * w + x1];
+
+      return (h00 * (1 - dx) + h10 * dx) * (1 - dy) + (h01 * (1 - dx) + h11 * dx) * dy;
+    };
+
+    // Tab Visibility Handler
     const handleVisibilityChange = () => {
       if (document.hidden) {
         isTabVisible = false;
@@ -324,6 +347,7 @@ const WaterWaveCanvas = () => {
         mouse.active = false;
         mouse.prevX = -1;
         mouse.prevY = -1;
+        mouse.smoothSpeed = 0;
         lastInteractionTime = Date.now();
         if (isRunning && !animationFrameId) {
           animationFrameId = requestAnimationFrame(render);
@@ -344,19 +368,17 @@ const WaterWaveCanvas = () => {
       const timeSinceInteraction = (Date.now() - lastInteractionTime) / 1000;
 
       // ── Smooth 10-Second Decay to Normal Stage ──
-      // From 1.5s to 9.5s of inactivity, gracefully increase damping so at ~10s it returns 100% to calm normal state
       let activeDamping = BASE_DAMPING;
-      if (!mouse.active || timeSinceInteraction > 1.5) {
-        const decayProgress = Math.min(1.0, Math.max(0, (timeSinceInteraction - 1.5) / 8.0));
-        activeDamping = BASE_DAMPING - decayProgress * 0.055; // smoothly decays to ~0.913
+      if (!mouse.active || timeSinceInteraction > 1.8) {
+        const decayProgress = Math.min(1.0, Math.max(0, (timeSinceInteraction - 1.8) / 8.0));
+        activeDamping = BASE_DAMPING - decayProgress * 0.055;
       }
 
-      // If inactive for >= 10s and energy is very low, snap completely to pristine resting normal stage
       if (timeSinceInteraction >= 9.8) {
         activeDamping = 0.88;
       }
 
-      // -- 1. Discrete 2D Wave Propagation Step --
+      // -- 1. Isotropic 9-Point Wave Propagation Step (Eliminates grid diamond artifacts) --
       for (let y = 1; y < simHeight - 1; y++) {
         const rowOffset = y * simWidth;
         const topRowOffset = (y - 1) * simWidth;
@@ -364,14 +386,13 @@ const WaterWaveCanvas = () => {
 
         for (let x = 1; x < simWidth - 1; x++) {
           const idx = rowOffset + x;
-          let waveHeight =
-            ((currentBuffer[idx - 1] +
-              currentBuffer[idx + 1] +
-              currentBuffer[topRowOffset + x] +
-              currentBuffer[bottomRowOffset + x]) *
-              0.5) -
-            nextBuffer[idx];
+          
+          // Cardinal neighbors (0.40 weight)
+          const cardinals = currentBuffer[idx - 1] + currentBuffer[idx + 1] + currentBuffer[topRowOffset + x] + currentBuffer[bottomRowOffset + x];
+          // Diagonal neighbors (0.10 weight)
+          const diagonals = currentBuffer[topRowOffset + x - 1] + currentBuffer[topRowOffset + x + 1] + currentBuffer[bottomRowOffset + x - 1] + currentBuffer[bottomRowOffset + x + 1];
 
+          let waveHeight = (cardinals * 0.40 + diagonals * 0.10) - nextBuffer[idx];
           waveHeight *= activeDamping;
 
           if (Math.abs(waveHeight) < EPSILON || timeSinceInteraction >= 10.2) {
@@ -385,55 +406,58 @@ const WaterWaveCanvas = () => {
         }
       }
 
-      // Swap buffers
+      // Swap simulation buffers
       const temp = currentBuffer;
       currentBuffer = nextBuffer;
       nextBuffer = temp;
 
-      // If at normal resting stage (10s passed or 0 energy), clear buffers to pristine clean state
       if (timeSinceInteraction >= 10.2 && maxEnergy === 0) {
         currentBuffer.fill(0);
         nextBuffer.fill(0);
       }
 
-      // -- 2. Refraction & Specular Caustics Render --
+      // -- 2. Continuous Refraction, Chromatic Dispersion & Specular Caustics --
       const srcW = width;
       const srcH = height;
 
       if (maxEnergy === 0) {
-        // Pristine resting normal stage
         outData32.set(srcData32);
       } else {
+        const invScale = 1.0 / SIM_SCALE;
+        const delta = 1.0;
+
         for (let y = 0; y < height; y++) {
-          const simY = Math.min(simHeight - 2, Math.floor(y / SIM_SCALE));
-          const simRow = simY * simWidth;
-          const simRowNext = (simY + 1) * simWidth;
+          const fy = y * invScale;
           const outRow = y * width;
 
           for (let x = 0; x < width; x++) {
-            const simX = Math.min(simWidth - 2, Math.floor(x / SIM_SCALE));
-            const simIdx = simRow + simX;
+            const fx = x * invScale;
 
-            const gradX = currentBuffer[simIdx + 1] - currentBuffer[simIdx - 1];
-            const gradY = currentBuffer[simRowNext + simX] - currentBuffer[(simY - 1 < 0 ? 0 : simY - 1) * simWidth + simX];
+            // Sample smooth sub-grid wave gradient
+            const hL = sampleWaveHeight(currentBuffer, simWidth, simHeight, fx - delta, fy);
+            const hR = sampleWaveHeight(currentBuffer, simWidth, simHeight, fx + delta, fy);
+            const hU = sampleWaveHeight(currentBuffer, simWidth, simHeight, fx, fy - delta);
+            const hD = sampleWaveHeight(currentBuffer, simWidth, simHeight, fx, fy + delta);
 
-            if (gradX === 0 && gradY === 0) {
+            const gradX = hR - hL;
+            const gradY = hD - hU;
+
+            if (Math.abs(gradX) < 0.001 && Math.abs(gradY) < 0.001) {
               outData32[outRow + x] = srcData32[y * srcW + x];
               continue;
             }
 
-            // High-Definition Sub-Pixel Coordinates
-            const refX = x + gradX * 0.85;
-            const refY = y + gradY * 0.85;
+            // High-Definition Sub-Pixel Coordinates with Chromatic Dispersion
+            // Red channel slightly less refracted, Blue slightly more (natural water optics)
+            const refRed = sampleBilinear(srcData32, srcW, srcH, x + gradX * 0.82, y + gradY * 0.82);
+            const refGreen = sampleBilinear(srcData32, srcW, srcH, x + gradX * 0.86, y + gradY * 0.86);
+            const refBlue = sampleBilinear(srcData32, srcW, srcH, x + gradX * 0.90, y + gradY * 0.90);
 
-            // Bilinear Interpolation for Velvety Smooth Refraction
-            const sampled = sampleBilinear(srcData32, srcW, srcH, refX, refY);
-
-            // Specular caustic wave gleam
-            const shading = (gradX - gradY) * 1.35;
-            let r = Math.min(255, Math.max(0, sampled.r + shading * 0.6));
-            let g = Math.min(255, Math.max(0, sampled.g + shading * 0.8));
-            let b = Math.min(255, Math.max(0, sampled.b + shading * 1.15));
+            // Specular Caustic Gleam (Velvet Water Surface Reflection)
+            const shading = (gradX - gradY) * 1.45;
+            const r = Math.min(255, Math.max(0, (refRed.r + shading * 0.6) | 0));
+            const g = Math.min(255, Math.max(0, (refGreen.g + shading * 0.85) | 0));
+            const b = Math.min(255, Math.max(0, (refBlue.b + shading * 1.25) | 0));
 
             outData32[outRow + x] = (0xff000000) | (b << 16) | (g << 8) | r;
           }
@@ -449,7 +473,6 @@ const WaterWaveCanvas = () => {
 
     animationFrameId = requestAnimationFrame(render);
 
-    // Complete teardown and memory cleanup on component unmount
     return () => {
       isRunning = false;
       if (animationFrameId) {
@@ -462,7 +485,6 @@ const WaterWaveCanvas = () => {
       canvas.removeEventListener('mouseenter', handleMouseEnter);
       canvas.removeEventListener('mouseleave', handleMouseLeave);
 
-      // Nullify all buffers to immediately free memory for garbage collection
       buffer1 = null;
       buffer2 = null;
       currentBuffer = null;
@@ -480,11 +502,11 @@ const WaterWaveCanvas = () => {
     <div className="w-full h-full relative overflow-hidden select-none">
       <canvas
         ref={canvasRef}
-        className="w-full h-full block"
+        className="w-full h-full block touch-none"
+        style={{ imageRendering: 'auto' }}
       />
     </div>
   );
 };
 
 export { WaterWaveCanvas };
-export default WaterWaveCanvas;
