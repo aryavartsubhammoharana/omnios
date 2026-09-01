@@ -1,45 +1,47 @@
 /**
  * Precision Worldwide LaTeX & KaTeX Math Normalizer
  * Resolves:
- * - Markdown tables with inline math formulas
- * - Double-escaped backslashes (\\sim -> \sim, \\text -> \text)
- * - Trailing/stray $$ on variables (\phi$$, \nu$$, \omega=2rad s-1$$)
- * - Unbalanced or unclosed single/double dollar signs
+ * - Parentheses with LaTeX commands e.g. "(\lambda \sim 10^3\text{ m})" -> "($\lambda \sim 10^3\text{ m}$)"
+ * - Stray trailing $$ e.g. "( \lambda \sim 10^{-12}\text{ m}$$)" -> "($\lambda \sim 10^{-12}\text{ m}$)"
+ * - Double-escaped backslashes (\\lambda -> \lambda, \\sim -> \sim, \\text -> \text)
  * - Safe Math Fraction, Radicals, and Greek Letter Isolation
+ * - Unbalanced or unclosed single/double dollar signs
  */
 export function formatLatex(content) {
   if (!content || typeof content !== 'string') return content || '';
 
   let text = content;
 
-  // 1. Strip outer double quotes if whole string was wrapped in quotes
+  // 1. Strip outer double quotes if string was wrapped in quotes
   text = text.replace(/^"([\s\S]*)"$/, '$1');
 
-  // 2. Normalize double-escaped LaTeX commands (e.g. \\lambda -> \lambda, \\sim -> \sim, \\text -> \text)
-  text = text.replace(/\\\\(sim|approx|text|le|ge|pm|times|div|cdot|neq|leq|geq|alpha|beta|gamma|delta|epsilon|theta|lambda|mu|nu|pi|sigma|phi|omega|Delta|Theta|Lambda|Sigma|Omega|frac|sqrt|int|sum|partial|nabla)/g, '\\$1');
+  // 2. Normalize double-escaped LaTeX backslashes: \\lambda -> \lambda, \\sim -> \sim, \\text -> \text
+  text = text.replace(/\\\\([a-zA-Z]+)/g, '\\$1');
 
-  // 3. Normalize bracket delimiters
-  text = text.replace(/\\\\\[([\s\S]*?)\\\\\]/g, '\n\n$$$$$1$$$$\n\n');
+  // 3. Convert bracket delimiters \[ ... \] and \( ... \)
   text = text.replace(/\\\[([\s\S]*?)\\\]/g, '\n\n$$$$$1$$$$\n\n');
-  text = text.replace(/\\\\\(([\s\S]*?)\\\\\)/g, ' $$$1$$ ');
   text = text.replace(/\\\(([\s\S]*?)\\\)/g, ' $$$1$$ ');
 
-  // 4. Fix AI stray $$ on expressions e.g. "(\lambda \sim 10^{-12}\text{ m}$$)" -> "($\lambda \sim 10^{-12}\text{ m}$)"
-  text = text.replace(/([^\$])(\\[a-zA-Z]+[^\$\n]*?)\$\$/g, '$1$$$2$$');
-  text = text.replace(/\$\$([^\$\n]+)\$\$/g, (m, inner) => {
-    // If it is an inline expression without newlines, keep as $$ or $
-    return `$$${inner}$$`;
+  // 4. Fix parentheses containing LaTeX commands or exponents e.g.
+  // "(\lambda \sim 10^3\text{ m})" -> "($\lambda \sim 10^3\text{ m}$)"
+  // "( \lambda \sim 10^{-12}\text{ m}$$)" -> "($\lambda \sim 10^{-12}\text{ m}$)"
+  text = text.replace(/\(\s*([^\$\n\(\)]*?\\[a-zA-Z]+[^\$\n\(\)]*?)\s*\)/g, (match, inner) => {
+    const cleaned = inner.replace(/\$+/g, '').trim();
+    return `($${cleaned}$)`;
   });
 
-  // 5. Fix premature dollar sign closings before continuing LaTeX commands:
+  text = text.replace(/\(\s*([^\$\n\(\)]*?\^[0-9\-\{\}]+[^\$\n\(\)]*?)\s*\)/g, (match, inner) => {
+    const cleaned = inner.replace(/\$+/g, '').trim();
+    return `($${cleaned}$)`;
+  });
+
+  // 5. Fix stray $$ at end of words/expressions e.g. "\phi$$" or "10^{-12}\text{ m}$$"
+  text = text.replace(/([^\$])(\\[a-zA-Z]+(?:_[a-zA-Z0-9]+|\^[a-zA-Z0-9]+)?)\$\$/g, '$1$$$2$$');
+  text = text.replace(/([^\$])(\\[a-zA-Z]+[^\$\n\(\)]*?)\$\$/g, '$1$$$2$$');
+  text = text.replace(/([^\$])([0-9\-\{\}\^]+\\[a-zA-Z]+[^\$\n\(\)]*?)\$\$/g, '$1$$$2$$');
+
+  // 6. Fix premature dollar sign closings before continuing LaTeX commands
   text = text.replace(/\$([^\$\n]+)\$(\s*\\[a-zA-Z,;:!~]+[^\$\n.]+)/g, '$$$1 $2$$');
-
-  // 6. Fix expressions starting with \lambda, \sim, 10^ without opening $:
-  // e.g. "(\ \sim 10^{-12}\text{ m})" -> "($\sim 10^{-12}\text{ m}$)"
-  text = text.replace(/(^|[\s\(])(\\(?:lambda|sim|approx|mu|nu|gamma|delta|theta|alpha|beta|omega|phi)\s*[^\$\n\)]+?)([\)\s,;:]|$)/g, (match, prefix, mathExpr, suffix) => {
-    if (mathExpr.includes('$')) return match;
-    return `${prefix}$${mathExpr.trim()}$${suffix}`;
-  });
 
   // 7. Brace-Aware Math Wrapper for Greek letters & symbols
   const tokens = text.split(/(\$\$[\s\S]*?\$\$|\$[^\$\n]*?\$)/g);
@@ -79,9 +81,9 @@ export function formatLatex(content) {
   }
   text = tokens.join('');
 
-  // 8. Clean duplicate dollar signs and fix trailing periods
+  // 8. Clean duplicate dollar signs and trailing period collisions
+  text = text.replace(/\${3,}/g, '$$');
   text = text.replace(/\$\s{1,}\$/g, ' ');
-  text = text.replace(/\$\$\$+/g, '$$$$');
   text = text.replace(/\.\$\$/g, '$$$$.');
   text = text.replace(/\.\$/g, '$.');
 

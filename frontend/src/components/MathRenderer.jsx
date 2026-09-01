@@ -26,8 +26,9 @@ export default function MathRenderer({ content, className = '' }) {
         ],
         output: 'html',
         throwOnError: false,
-        errorColor: '#f43f5e',
-        strict: false
+        errorColor: '#cbd5e1',
+        strict: false,
+        trust: true
       });
     } catch (e) {
       console.warn('KaTeX auto-render notice:', e);
@@ -81,7 +82,7 @@ function convertMarkdownToSafeHtml(text) {
   tokenized = tokenized.replace(/\*([^*\n]+)\*/g, '<em class="italic text-slate-300">$1</em>');
   tokenized = tokenized.replace(/`([^`\n]+)`/g, '<code class="bg-slate-800 text-indigo-300 px-1 py-0.5 rounded font-mono text-[11px]">$1</code>');
 
-  // 6. Lists (Bullets & Numbers) - ignore lines inside already formed HTML tables
+  // 6. Lists (Bullets & Numbers)
   const lines = tokenized.split('\n');
   const formattedLines = [];
   let inHtmlBlock = false;
@@ -109,10 +110,8 @@ function convertMarkdownToSafeHtml(text) {
   }
   tokenized = formattedLines.join('\n');
 
-  // 7. Paragraphs and linebreaks (avoid breaking HTML table tags)
+  // 7. Paragraphs and linebreaks
   tokenized = tokenized.replace(/\n\n+/g, '<div class="my-2"></div>');
-  
-  // Replace remaining newlines with <br/> except around HTML block elements
   tokenized = tokenized.replace(/\n(?!(?:<\/table>|<\/div>|<div|<\/tbody>|<\/thead>|<tr|<\/tr>|<table))/gi, '<br/>');
 
   // 8. Restore KaTeX math blocks
