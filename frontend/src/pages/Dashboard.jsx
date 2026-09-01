@@ -87,7 +87,7 @@ export default function Dashboard() {
               </span>
             </div>
             <p className="text-xs sm:text-sm text-gray-400 font-medium">
-              Manage courses, study notes, and explore OmniAI Studio.
+              Manage courses, study notes, and explore OmniChat Studio.
             </p>
           </div>
 
@@ -113,11 +113,11 @@ export default function Dashboard() {
             )}
 
             <Link
-              to="/omniai"
+              to="/omnichat"
               className="px-4 py-2.5 rounded-xl bg-gray-800/90 hover:bg-gray-700/90 text-indigo-300 border border-indigo-500/30 text-xs font-semibold flex items-center gap-2 transition shadow-md"
             >
               <Sparkles className="w-4 h-4 text-indigo-400" />
-              <span>OmniAI</span>
+              <span>OmniChat</span>
             </Link>
           </div>
         </div>
@@ -201,12 +201,12 @@ export default function Dashboard() {
                     </Link>
 
                     <Link
-                      to={`/omniai?classroom_id=${c.id}`}
-                      title="Open OmniAI workspace for this classroom"
+                      to={`/omnichat?classroom_id=${c.id}`}
+                      title="Open OmniChat workspace for this classroom"
                       className="text-xs text-gray-300 hover:text-white flex items-center gap-1.5 bg-gray-900/90 hover:bg-indigo-950/60 px-3 py-1.5 rounded-xl border border-gray-700/80 hover:border-indigo-500/40 transition shadow-sm"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>OmniAI</span>
+                      <span>OmniChat</span>
                     </Link>
                   </div>
                 </div>

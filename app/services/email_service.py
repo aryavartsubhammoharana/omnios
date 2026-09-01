@@ -32,7 +32,7 @@ def send_verification_otp_email(recipient_email: str, otp_code: str, user_name: 
         </head>
         <body>
           <div class="card">
-            <div class="logo">OmniOS • Classroom & OmniAI Studio</div>
+            <div class="logo">OmniOS • Classroom & OmniChat Studio</div>
             <p>Hello <strong>{user_name}</strong>,</p>
             <p>Thank you for registering on OmniOS. Use the 6-digit verification code below to activate your account:</p>
             

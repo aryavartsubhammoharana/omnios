@@ -152,24 +152,24 @@ export default function NavigationSidebar({ isPinned, onTogglePin, onOpenSetting
               </Link>
             )}
 
-            {/* 3. Gemini / OmniAI Studio */}
+            {/* 3. Gemini / OmniChat Studio */}
             <Link
-              to="/omniai"
-              title="OmniAI Studio (Gemini)"
+              to="/omnichat"
+              title="OmniChat Studio"
               className={`flex items-center rounded-r-full text-sm font-medium transition group ${
                 isExpanded ? 'px-3.5 py-2.5 space-x-3.5' : 'justify-center p-2.5 rounded-2xl mx-auto w-11 h-11'
               } ${
-                isActive('/omniai')
+                (isActive('/omnichat') || isActive('/omniai'))
                   ? 'bg-sky-500/20 text-sky-300 font-semibold'
                   : 'text-gray-400 hover:bg-gray-800/60 hover:text-white'
               }`}
             >
               <div className={`flex items-center justify-center flex-shrink-0 ${
-                !isExpanded && isActive('/omniai') ? 'w-10 h-7 rounded-full bg-sky-500/25 text-sky-300 flex items-center justify-center' : ''
+                !isExpanded && (isActive('/omnichat') || isActive('/omniai')) ? 'w-10 h-7 rounded-full bg-sky-500/25 text-sky-300 flex items-center justify-center' : ''
               }`}>
-                <Sparkles className={`w-5 h-5 ${isActive('/omniai') ? 'text-indigo-400' : 'text-gray-400 group-hover:text-white'}`} />
+                <Sparkles className={`w-5 h-5 ${(isActive('/omnichat') || isActive('/omniai')) ? 'text-indigo-400' : 'text-gray-400 group-hover:text-white'}`} />
               </div>
-              {isExpanded && <span className="truncate">OmniAI Studio</span>}
+              {isExpanded && <span className="truncate">OmniChat</span>}
             </Link>
 
             {/* Divider */}

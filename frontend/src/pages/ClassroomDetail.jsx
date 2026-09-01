@@ -577,11 +577,11 @@ export default function ClassroomDetail() {
             )}
 
             <Link
-              to={`/omniai?classroom_id=${id}`}
+              to={`/omnichat?classroom_id=${id}`}
               className="flex-1 sm:flex-initial inline-flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-lg shadow-indigo-600/20 text-center"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Open OmniAI Studio</span>
+              <span>Open OmniChat Studio</span>
             </Link>
           </div>
         </div>

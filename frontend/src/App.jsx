@@ -10,7 +10,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import ClassroomDetail from './pages/ClassroomDetail';
-import OmniAI from './pages/omniai';
+import OmniChat from './pages/omniai';
 import QuickPDFReader from './pages/QuickPDFReader';
 import QuizAttempt from './pages/QuizAttempt';
 import StudentDailyHub from './pages/StudentDailyHub';
@@ -55,28 +55,36 @@ function AppContent() {
             }
           />
           <Route
-            path="/omniai"
+            path="/omnichat"
             element={
               <ProtectedRoute>
-                <OmniAI />
+                <OmniChat />
               </ProtectedRoute>
             }
+          />
+          <Route
+            path="/omnichat/:chatId"
+            element={
+              <ProtectedRoute>
+                <OmniChat />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/omniai"
+            element={<Navigate to="/omnichat" replace />}
           />
           <Route
             path="/omniai/:chatId"
-            element={
-              <ProtectedRoute>
-                <OmniAI />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/omnichat" replace />}
           />
           <Route
             path="/notebooklm"
-            element={<Navigate to="/omniai" replace />}
+            element={<Navigate to="/omnichat" replace />}
           />
           <Route
             path="/notebooklm/:chatId"
-            element={<Navigate to="/omniai" replace />}
+            element={<Navigate to="/omnichat" replace />}
           />
           <Route
             path="/quick-reader"

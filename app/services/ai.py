@@ -22,8 +22,8 @@ def is_valid_ai_text(text: str) -> bool:
 def _build_squeezed_tutor_prompt(prompt: str, context: str) -> str:
     c_clean = context.strip()[:2500] if context and context.strip() else ""
     if c_clean:
-        return f"Role: OmniAI Academic Tutor.\nTask: Explain accurately based on Context using structured Markdown. MANDATORY: ALWAYS wrap EVERY math formula, variable, and equation in LaTeX delimiters like $...$ (e.g. $I_D = I_{{DSS}}\\left(1 - \\frac{{V_{{GS}}}}{{V_P}}\\right)^2$, $I_{{CEO}} = (\\beta + 1)I_{{CBO}}$).\nContext:\n{c_clean}\n\nQuestion: {prompt}"
-    return f"Role: OmniAI Academic Tutor.\nTask: Explain clearly using Markdown. MANDATORY: ALWAYS wrap EVERY math formula, variable, and equation in LaTeX delimiters like $...$ (e.g. $I_D = I_{{DSS}}\\left(1 - \\frac{{V_{{GS}}}}{{V_P}}\\right)^2$).\nQuestion: {prompt}"
+        return f"Role: OmniChat Academic Tutor.\nTask: Explain accurately based on Context using structured Markdown. MANDATORY: ALWAYS wrap EVERY math formula, variable, and equation in LaTeX delimiters like $...$ (e.g. $I_D = I_{{DSS}}\\left(1 - \\frac{{V_{{GS}}}}{{V_P}}\\right)^2$, $I_{{CEO}} = (\\beta + 1)I_{{CBO}}$).\nContext:\n{c_clean}\n\nQuestion: {prompt}"
+    return f"Role: OmniChat Academic Tutor.\nTask: Explain clearly using Markdown. MANDATORY: ALWAYS wrap EVERY math formula, variable, and equation in LaTeX delimiters like $...$ (e.g. $I_D = I_{{DSS}}\\left(1 - \\frac{{V_{{GS}}}}{{V_P}}\\right)^2$).\nQuestion: {prompt}"
 
 
 def query_gemini_ai(prompt: str, context: str = "") -> str:
@@ -103,7 +103,7 @@ def query_groq_ai(prompt: str, context: str = "") -> str:
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=[
-                        {"role": "system", "content": "Role: OmniAI Tutor. Format concise Markdown with LaTeX $...$."},
+                        {"role": "system", "content": "Role: OmniChat Tutor. Format concise Markdown with LaTeX $...$."},
                         {"role": "user", "content": squeezed_prompt}
                     ],
                     temperature=0.3,
@@ -117,7 +117,7 @@ def query_groq_ai(prompt: str, context: str = "") -> str:
     except Exception as e:
         print(f"Groq client error: {e}")
 
-    return "OmniAI is ready to assist. Please ask your question."
+    return "OmniChat is ready to assist. Please ask your question."
 
 
 def generate_document_summary(content: str, filename: str = "Document") -> str:

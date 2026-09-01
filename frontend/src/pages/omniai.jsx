@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import MathRenderer from '../components/MathRenderer';
 
-export default function OmniAI() {
+export default function OmniChat() {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -95,14 +95,14 @@ export default function OmniAI() {
         createdAt: new Date().toISOString()
       });
       if (!chatId) {
-        navigate('/omniai/new', { replace: true });
+        navigate('/omnichat/new', { replace: true });
       }
     } else {
       const existing = chatSessions.find(s => s.id === chatId);
       if (existing) {
         setActiveSessionId(chatId);
       } else {
-        navigate('/omniai/new', { replace: true });
+        navigate('/omnichat/new', { replace: true });
       }
     }
   }, [chatId, user]);
@@ -169,7 +169,7 @@ export default function OmniAI() {
       createdAt: new Date().toISOString()
     });
     setActiveSessionId('new');
-    navigate('/omniai/new');
+    navigate('/omnichat/new');
   };
 
   const handleDeleteSession = (sessionId, e) => {
@@ -179,7 +179,7 @@ export default function OmniAI() {
     if (activeSessionId === sessionId) {
       if (remaining.length > 0) {
         setActiveSessionId(remaining[0].id);
-        navigate(`/omniai/${remaining[0].id}`);
+        navigate(`/omnichat/${remaining[0].id}`);
       } else {
         handleCreateNewSession();
       }
@@ -281,7 +281,7 @@ export default function OmniAI() {
       setChatSessions(prev => [newCommittedSession, ...prev]);
       currentSessionId = new14CharId;
       setActiveSessionId(currentSessionId);
-      navigate(`/omniai/${currentSessionId}`, { replace: true });
+      navigate(`/omnichat/${currentSessionId}`, { replace: true });
 
       setDraftSession({
         id: 'new',
@@ -470,7 +470,7 @@ export default function OmniAI() {
                           key={session.id}
                           onClick={() => {
                             setActiveSessionId(session.id);
-                            navigate(`/omniai/${session.id}`);
+                            navigate(`/omnichat/${session.id}`);
                           }}
                           className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between text-xs ${
                             isActive
@@ -532,7 +532,7 @@ export default function OmniAI() {
 
               <div className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-indigo-950/70 border border-indigo-700/60 text-[10px] text-indigo-300 font-mono shadow-sm">
                 <Sparkles className="w-3 h-3 text-amber-400 animate-pulse" />
-                <span>OmniAI Studio</span>
+                <span>OmniChat Studio</span>
               </div>
             </div>
           </div>
@@ -810,7 +810,7 @@ export default function OmniAI() {
                     {readingDoc.filename}
                   </h3>
                   <span className="text-[10px] text-indigo-400 uppercase font-mono">
-                    OmniAI Document Reader
+                    OmniChat Document Reader
                   </span>
                 </div>
               </div>
