@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Loader2 } from 'lucide-react';
-import { WaterWaveCanvas } from '../components/WaterWaveCanvas';
 import { GoogleLoginButton } from '../components/GoogleLoginButton';
 
 export default function Login() {
@@ -18,7 +17,7 @@ export default function Login() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#111113]">
+      <div className="min-h-screen flex items-center justify-center bg-[#090d16]">
         <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
       </div>
     );
@@ -41,63 +40,47 @@ export default function Login() {
     }
   };
 
-
   return (
-    <div className="min-h-screen w-screen bg-[#111113] text-zinc-100 flex flex-col md:flex-row overflow-hidden font-sans select-none">
-      {/* -- Left Side: Interactive Water Wave & Ripple Fluid Physics Canvas -- */}
-      <div className="hidden md:flex md:w-1/2 relative bg-[#05070c] overflow-hidden items-center justify-center">
-        {/* Real-time Interactive Liquid Water Wave Canvas */}
-        <WaterWaveCanvas />
-        
-        {/* Vignette overlays */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#111113] pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#111113]/60 via-transparent to-[#111113]/30 pointer-events-none" />
+    <div className="min-h-screen w-screen bg-[#090d16] text-zinc-100 flex items-center justify-center p-6 relative overflow-hidden font-sans select-none">
+      {/* Subtle ambient glowing orbs */}
+      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-indigo-600/10 rounded-full blur-[130px] pointer-events-none" />
+      <div className="absolute bottom-1/3 left-1/2 -translate-x-1/2 translate-y-1/2 w-[420px] h-[420px] bg-violet-600/10 rounded-full blur-[110px] pointer-events-none" />
 
-        {/* Floating branding pill on the canvas */}
-        <div className="absolute bottom-8 left-8 flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-xs text-zinc-300 pointer-events-none shadow-lg">
-          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span className="font-medium tracking-tight">OmniOS  Academic AI Ecosystem</span>
+      {/* Center Minimalist Clean Login Card */}
+      <div className="w-full max-w-[400px] p-8 sm:p-10 rounded-3xl bg-[#111113]/85 border border-white/10 backdrop-blur-2xl shadow-2xl space-y-6 relative z-10 animate-in fade-in zoom-in-95 duration-300">
+        {/* Brand Icon */}
+        <div className="flex justify-center">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-violet-500/20 border border-white/10 p-2.5 flex items-center justify-center shadow-lg">
+            <img src="/logo.png" alt="OmniOS" className="w-9 h-9 object-contain rounded-lg" />
+          </div>
         </div>
-      </div>
 
-      {/* -- Right Side: Minimalist Clean Login Form -- */}
-      <div className="w-full md:w-1/2 min-h-screen flex flex-col justify-center items-center p-6 sm:p-12 lg:p-16 bg-[#171719] relative z-10">
-        <div className="w-full max-w-[360px] mx-auto space-y-6">
-          {/* Brand Icon */}
-          <div className="flex justify-center">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500/20 to-violet-500/20 border border-white/10 p-2 flex items-center justify-center shadow-lg">
-              <img src="/logo.png" alt="OmniOS" className="w-8 h-8 object-contain rounded-lg" />
-            </div>
+        {/* Heading */}
+        <div className="text-center space-y-1.5">
+          <h1 className="text-2xl font-serif sm:text-[28px] font-normal tracking-tight text-zinc-100">
+            Log into your account
+          </h1>
+          <p className="text-xs text-zinc-400">
+            Continue with your Google account
+          </p>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="p-3 rounded-xl bg-red-950/40 border border-red-800/50 text-xs text-red-300 text-center font-medium">
+            {error}
           </div>
+        )}
 
-          {/* Heading */}
-          <div className="text-center space-y-1.5">
-            <h1 className="text-2xl font-serif sm:text-[28px] font-normal tracking-tight text-zinc-100">
-              Log into your account
-            </h1>
-            <p className="text-xs text-zinc-400">
-              Choose your preferred sign-in method
-            </p>
+        {/* Google Sign-In Action */}
+        <div className="pt-2">
+          <div className="w-full flex justify-center">
+            <GoogleLoginButton
+              onCredentialReceived={handleGoogleCredential}
+              buttonText="Continue with Google"
+              className="w-full"
+            />
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 rounded-xl bg-red-950/40 border border-red-800/50 text-xs text-red-300 text-center font-medium">
-              {error}
-            </div>
-          )}
-
-          {/* Google Sign-In Action */}
-          <div className="pt-1">
-            <div className="w-full flex justify-center">
-              <GoogleLoginButton
-                onCredentialReceived={handleGoogleCredential}
-                buttonText="Continue with Google"
-                className="w-full"
-              />
-            </div>
-          </div>
-
         </div>
       </div>
     </div>
