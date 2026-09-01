@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext, useRef, useMemo } from 'react';
 import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { AuthContext } from '../context/AuthContext';
@@ -356,6 +356,29 @@ export default function OmniChat() {
 
   const isFreshSession = !activeSession?.messages || activeSession.messages.length === 0;
 
+  const welcomeVibe = useMemo(() => {
+    const vibes = [
+      "Slay Today?", "No Cap?", "Vibe Check?", "Say Less.", "Let's Cook.",
+      "We Cookin?", "Main Character?", "Era Loading...", "Lowkey Curious?", "Spill It.",
+      "Rizz Up?", "Brain Rot?", "Hit Different?", "Understood, King?", "It's Giving?",
+      "Understood, Queen?", "Pop Off?", "That's Bussin?", "Glow Up?", "Stay Pressed?",
+      "Touch Grass?", "No Lore?", "Based Energy?", "Sigma Mode?", "Serve It.",
+      "Rent Free?", "Understood, Bestie?", "Real Talk?", "Not Clickbait?", "Caught Lacking?",
+      "Twin Flame?", "Era Change?", "Understood, Fam?", "Core Memory?", "That's Ate?",
+      "Understood, Bro?", "Chefs Kiss?", "Understood, Sis?", "Rizz Check?", "Hot Take?",
+      "NPC Energy?", "Plot Twist?", "Understood, Fr?", "No Gatekeeping?", "Fell Off?",
+      "Peak Fiction?", "Understood, G?", "Quiet Luxury?", "Delulu Era?", "Snatched Up?",
+      "Mid Check?", "We Ate?", "Era Reset?", "Understood, Babe?", "Understood, Luv?",
+      "Villain Arc?", "Main Quest?", "Rizz Loaded?", "Ate That?", "Start Cooking?",
+      "Glazing Hard?", "Touch Down?", "Ick Check?", "Big Facts?", "Unc Energy?",
+      "Era Drop?", "Subtle Flex?", "Ion Know?", "W Drop?", "L Energy?",
+      "Rizz Different?", "Era Alert?", "Stay Slaying?", "No Printer?", "Caught Vibing?",
+      "Say Period?", "Fully Cooked?", "Ate Rn?", "Core Unlocked?", "Stay Locked?",
+      "On Site?", "Pop Out?", "Understood, Gang?", "Understood, Champ?", "Understood, Homie?",
+    ];
+    return vibes[Math.floor(Math.random() * vibes.length)];
+  }, [activeSessionId]);
+
   return (
     <div className="h-[calc(100vh-61px)] bg-[#090d16] text-gray-100 flex flex-col overflow-hidden relative">
       <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
@@ -546,7 +569,7 @@ export default function OmniChat() {
                   <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-400" />
                 </div>
                 <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300">
-                  Where shall we begin today?
+                  {welcomeVibe}
                 </h2>
               </div>
             ) : (
