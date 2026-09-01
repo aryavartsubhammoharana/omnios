@@ -266,34 +266,6 @@ export default function OmniAI() {
 
   const isFreshSession = !activeSession?.messages || activeSession.messages.length === 0;
 
-  // ChatGPT/Gemini/Claude Starter Prompts
-  const starterPrompts = [
-    {
-      icon: <BookOpen className="w-4 h-4 text-emerald-400" />,
-      title: "Summarize Key Notes",
-      desc: "Synthesize core concepts, key formulas, and exam takeaways from active notes.",
-      prompt: "Provide a comprehensive high-yield summary and cheat sheet from my active study notes."
-    },
-    {
-      icon: <Calculator className="w-4 h-4 text-indigo-400" />,
-      title: "Derive Numerical Formulas",
-      desc: "Step-by-step mathematical derivation with LaTeX formulas ($F=ma$).",
-      prompt: "Explain the most important formulas and step-by-step mathematical derivations with LaTeX."
-    },
-    {
-      icon: <Lightbulb className="w-4 h-4 text-amber-400" />,
-      title: "Explain Like I'm 12",
-      desc: "Break down difficult topics with simple analogies and intuitive mental models.",
-      prompt: "Explain the most complex and difficult concept from my uploaded material with intuitive real-world analogies."
-    },
-    {
-      icon: <HelpCircle className="w-4 h-4 text-purple-400" />,
-      title: "Test My Knowledge",
-      desc: "Challenge me with 3 conceptual practice questions from my syllabus.",
-      prompt: "Give me 3 challenging concept-check practice questions based on my active notes to test my understanding."
-    }
-  ];
-
   return (
     <div className="h-[calc(100vh-61px)] bg-[#090d16] text-gray-100 flex flex-col overflow-hidden relative">
       <div className="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none -z-10 animate-pulse-glow"></div>
@@ -504,59 +476,15 @@ export default function OmniAI() {
 
           {/* Main Chat Area */}
           <div className="flex-1 min-h-0 p-4 sm:p-6 overflow-y-auto space-y-4 font-sans text-xs">
-            {/* ChatGPT / Gemini / Claude Style Welcome Empty State */}
+            {/* Minimal Clean Welcome Empty State */}
             {isFreshSession ? (
-              <div className="max-w-3xl mx-auto py-8 sm:py-12 flex flex-col items-center text-center space-y-6 sm:space-y-8 animate-in fade-in zoom-in-95 duration-300">
-                {/* Hero Icon & Greeting */}
-                <div className="space-y-3">
-                  <div className="inline-flex p-3 sm:p-4 rounded-3xl bg-gradient-to-tr from-indigo-500/20 via-violet-500/20 to-cyan-500/20 border border-indigo-500/30 shadow-2xl shadow-indigo-500/10">
-                    <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-400" />
-                  </div>
-                  <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300">
-                    Where shall we begin today?
-                  </h2>
-                  <p className="text-xs sm:text-sm text-gray-400 max-w-lg mx-auto leading-relaxed">
-                    OmniAI Studio is connected to your active documents and academic syllabus. Ask doubts, solve complex numericals, or generate study summaries.
-                  </p>
+              <div className="max-w-xl mx-auto py-16 sm:py-24 flex flex-col items-center text-center space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                <div className="inline-flex p-3 sm:p-4 rounded-3xl bg-gradient-to-tr from-indigo-500/20 via-violet-500/20 to-cyan-500/20 border border-indigo-500/30 shadow-2xl shadow-indigo-500/10">
+                  <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-indigo-400" />
                 </div>
-
-                {/* Capability Badges */}
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                  <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-indigo-300 flex items-center gap-1.5 shadow-sm">
-                    <Zap className="w-3 h-3 text-amber-400" />
-                    <span>Dual RAG Vector Retrieval</span>
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-emerald-300 flex items-center gap-1.5 shadow-sm">
-                    <Book className="w-3 h-3 text-emerald-400" />
-                    <span>{availableDocs.filter(d => selectedDocIds.includes(d.id)).length} Active Notes Connected</span>
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-purple-300 flex items-center gap-1.5 shadow-sm">
-                    <Calculator className="w-3 h-3 text-purple-400" />
-                    <span>LaTeX Math Rendering</span>
-                  </span>
-                </div>
-
-                {/* 4 Interactive Starter Prompt Cards (ChatGPT / Claude Grid Style) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full text-left pt-2">
-                  {starterPrompts.map((item, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => handleSendQuestion(null, item.prompt)}
-                      className="p-4 rounded-2xl bg-gray-900/80 hover:bg-gray-800/90 border border-gray-800/90 hover:border-indigo-500/50 transition duration-200 cursor-pointer flex flex-col justify-between space-y-2 group shadow-md hover:shadow-indigo-500/10"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 font-bold text-xs text-white group-hover:text-indigo-300 transition">
-                          {item.icon}
-                          <span>{item.title}</span>
-                        </div>
-                        <ArrowRight className="w-3.5 h-3.5 text-gray-500 group-hover:text-indigo-400 group-hover:translate-x-1 transition duration-200" />
-                      </div>
-                      <p className="text-[11px] text-gray-400 leading-relaxed group-hover:text-gray-300">
-                        {item.desc}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300">
+                  Where shall we begin today?
+                </h2>
               </div>
             ) : (
               /* Chat Messages List */
