@@ -442,42 +442,7 @@ export default function OmniAI() {
                 )}
               </div>
 
-              <hr className="border-gray-800/80" />
-
-              {/* Active Documents Section */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Active Documents</h3>
-                  <span className="text-[10px] text-indigo-400 font-mono">{availableDocs.filter(d => selectedDocIds.includes(d.id)).length} Active</span>
-                </div>
-
-                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
-                  {availableDocs.filter(d => selectedDocIds.includes(d.id)).length === 0 ? (
-                    <p className="text-[11px] text-gray-500 py-1 italic">No active documents chosen.</p>
-                  ) : (
-                    availableDocs.filter(d => selectedDocIds.includes(d.id)).map(doc => (
-                      <div
-                        key={doc.id}
-                        className="p-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between text-[11px] text-slate-300 group hover:border-slate-700"
-                      >
-                        <div className="flex items-center space-x-1.5 truncate">
-                          <FileText className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                          <span className="truncate max-w-[140px]">{doc.filename}</span>
-                        </div>
-                        <button
-                          onClick={(e) => handleOpenReader(doc, e)}
-                          title="Read Document in Studio Reader"
-                          className="p-1 text-slate-400 hover:text-indigo-300 hover:bg-indigo-950 rounded transition flex items-center gap-1 text-[10px] cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              <hr className="border-gray-800/80" />
+              <hr className="border-gray-800/80 my-1" />
 
               {/* Saved Chat Threads */}
               <div className="flex-1 flex flex-col min-h-0">
