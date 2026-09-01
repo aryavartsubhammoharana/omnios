@@ -28,30 +28,6 @@ export const AuthProvider = ({ children }) => {
     fetchCurrentUser();
   }, []);
 
-  const login = async (email, password) => {
-    const res = await API.post('/api/auth/login', { email, password });
-    localStorage.setItem('noteai_token', res.data.access_token);
-    setUser(res.data.user);
-    return res.data.user;
-  };
-
-  const signup = async (email, password, full_name, role, student_class) => {
-    const res = await API.post('/api/auth/signup', { email, password, full_name, role, student_class });
-    return res.data;
-  };
-
-  const verifyOtp = async (email, otp) => {
-    const res = await API.post('/api/auth/verify-otp', { email, otp });
-    localStorage.setItem('noteai_token', res.data.access_token);
-    setUser(res.data.user);
-    return res.data.user;
-  };
-
-  const resendOtp = async (email) => {
-    const res = await API.post('/api/auth/resend-otp', { email });
-    return res.data;
-  };
-
   const googleLogin = async ({ credential, access_token, role = 'student', student_class = null }) => {
     const res = await API.post('/api/auth/google', { credential, access_token, role, student_class });
     localStorage.setItem('noteai_token', res.data.access_token);
@@ -71,11 +47,6 @@ export const AuthProvider = ({ children }) => {
     return res.data;
   };
 
-  const changePassword = async (old_password, new_password) => {
-    const res = await API.put('/api/auth/change-password', { old_password, new_password });
-    return res.data;
-  };
-
   const deleteAccount = async () => {
     await API.delete('/api/auth/delete-account');
     localStorage.removeItem('noteai_token');
@@ -89,8 +60,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{ 
-      user, loading, login, signup, verifyOtp, resendOtp, 
-      googleLogin, confirmRole, updateProfile, changePassword, deleteAccount, logout 
+      user, loading, googleLogin, confirmRole, updateProfile, deleteAccount, logout 
     }}>
       {children}
     </AuthContext.Provider>

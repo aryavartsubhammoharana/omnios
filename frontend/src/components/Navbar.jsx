@@ -11,7 +11,7 @@ import {
 import NavigationSidebar from './NavigationSidebar';
 
 export default function Navbar() {
-  const { user, logout, confirmRole, updateProfile, changePassword, deleteAccount } = useContext(AuthContext);
+  const { user, logout, confirmRole, updateProfile, deleteAccount } = useContext(AuthContext);
   const navigate = useNavigate();
   const location = useLocation();
   const [streak, setStreak] = useState(1);
@@ -31,11 +31,6 @@ export default function Navbar() {
   const [profileSuccess, setProfileSuccess] = useState('');
   const [profileError, setProfileError] = useState('');
 
-  // Change Password State (Local Users Only)
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [savingPassword, setSavingPassword] = useState(false);
 
   // Delete Account State
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -125,31 +120,6 @@ export default function Navbar() {
     }
   };
 
-  const handleChangePasswordSubmit = async (e) => {
-    e.preventDefault();
-    setProfileError('');
-    if (newPassword !== confirmNewPassword) {
-      setProfileError('New passwords do not match.');
-      return;
-    }
-    if (newPassword.length < 6) {
-      setProfileError('Password must be at least 6 characters long.');
-      return;
-    }
-    setSavingPassword(true);
-    try {
-      await changePassword(oldPassword || null, newPassword);
-      setProfileSuccess('Password changed successfully!');
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmNewPassword('');
-      setTimeout(() => setProfileSuccess(''), 3000);
-    } catch (err) {
-      setProfileError(err.response?.data?.detail || 'Failed to change password.');
-    } finally {
-      setSavingPassword(false);
-    }
-  };
 
   const handleDeleteAccountConfirm = async () => {
     setDeletingAccount(true);
@@ -566,93 +536,29 @@ export default function Navbar() {
 
               {/* Right Column: Authentication & Security / Danger Zone */}
               <div className="md:col-span-5 space-y-4">
-                {user.auth_provider === 'google' ? (
-                  /* Google OAuth Security Card (No Password Needed) */
-                  <div className="bg-gradient-to-br from-indigo-950/40 to-gray-900/60 p-4 rounded-2xl border border-indigo-800/40 space-y-3 shadow-inner">
-                    <div className="flex items-center space-x-2 pb-1 border-b border-gray-800">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Google Security</h4>
-                    </div>
-
-                    <div className="flex items-center space-x-3 bg-gray-900/80 p-3 rounded-xl border border-gray-800">
-                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-gray-900 shadow">
-                        G
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-white block">Google Verified Sign-In</span>
-                        <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                          <Check className="w-3 h-3" /> Passwordless OAuth 2.0
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-gray-300 leading-relaxed">
-                      Your account is protected by <strong>Google Identity Services</strong>. You do not need or manage a server password. Sign in anytime directly with your Google account.
-                    </p>
+                {/* Google OAuth Security Card */}
+                <div className="bg-gradient-to-br from-indigo-950/40 to-gray-900/60 p-4 rounded-2xl border border-indigo-800/40 space-y-3 shadow-inner">
+                  <div className="flex items-center space-x-2 pb-1 border-b border-gray-800">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Google Security</h4>
                   </div>
-                ) : (
-                  /* Change Password Card (Only for Local Email Accounts) */
-                  <div className="bg-gray-900/60 p-4 rounded-2xl border border-gray-800 space-y-3">
-                    <div className="flex items-center space-x-2 pb-1 border-b border-gray-800/80">
-                      <KeyRound className="w-3.5 h-3.5 text-purple-400" />
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Change Password</h4>
+
+                  <div className="flex items-center space-x-3 bg-gray-900/80 p-3 rounded-xl border border-gray-800">
+                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center font-bold text-gray-900 shadow">
+                      G
                     </div>
-
-                    <form onSubmit={handleChangePasswordSubmit} className="space-y-2.5">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
-                          Current Password
-                        </label>
-                        <input
-                          type="password"
-                          value={oldPassword}
-                          onChange={(e) => setOldPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
-                          New Password
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="At least 6 characters"
-                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[10px] font-semibold text-gray-400 uppercase font-mono mb-1">
-                          Confirm New Password
-                        </label>
-                        <input
-                          type="password"
-                          required
-                          value={confirmNewPassword}
-                          onChange={(e) => setConfirmNewPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full bg-gray-900 border border-gray-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500 shadow-inner"
-                        />
-                      </div>
-
-                      <div className="pt-1 flex justify-end">
-                        <button
-                          type="submit"
-                          disabled={savingPassword}
-                          className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition disabled:opacity-50 flex items-center space-x-1.5"
-                        >
-                          {savingPassword ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
-                          <span>{savingPassword ? 'Updating...' : 'Update Password'}</span>
-                        </button>
-                      </div>
-                    </form>
+                    <div>
+                      <span className="text-xs font-bold text-white block">Google Verified Sign-In</span>
+                      <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Passwordless OAuth 2.0
+                      </span>
+                    </div>
                   </div>
-                )}
+
+                  <p className="text-[11px] text-gray-300 leading-relaxed">
+                    Your account is protected by <strong>Google Identity Services</strong>. You do not need or manage a server password. Sign in anytime directly with your Google account.
+                  </p>
+                </div>
 
                 {/* Danger Zone: Delete Account */}
                 <div className="bg-red-950/30 border border-red-900/50 rounded-2xl p-4 space-y-2">
