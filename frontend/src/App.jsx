@@ -63,7 +63,19 @@ function AppContent() {
             }
           />
           <Route
+            path="/omniai/:chatId"
+            element={
+              <ProtectedRoute>
+                <OmniAI />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/notebooklm"
+            element={<Navigate to="/omniai" replace />}
+          />
+          <Route
+            path="/notebooklm/:chatId"
             element={<Navigate to="/omniai" replace />}
           />
           <Route

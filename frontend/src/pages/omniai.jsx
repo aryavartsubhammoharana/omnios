@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import API from '../api/client';
 import { AuthContext } from '../context/AuthContext';
 import { 
@@ -11,6 +11,8 @@ import {
 import MathRenderer from '../components/MathRenderer';
 
 export default function OmniAI() {
+  const { chatId } = useParams();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialClassroomId = searchParams.get('classroom_id');
   const { user } = useContext(AuthContext);
@@ -48,8 +50,10 @@ export default function OmniAI() {
     return result;
   };
 
+  const initialDraftId = (chatId && chatId.length === 14) ? chatId : generateSecure14CharId();
+
   const [draftSession, setDraftSession] = useState(() => ({
-    id: generateSecure14CharId(),
+    id: initialDraftId,
     user_id: user?.id,
     title: 'New Conversation',
     messages: [],
@@ -73,10 +77,38 @@ export default function OmniAI() {
     return [];
   });
 
-  const [activeSessionId, setActiveSessionId] = useState(() => draftSession.id);
+  const [activeSessionId, setActiveSessionId] = useState(() => {
+    if (chatId) return chatId;
+    return draftSession.id;
+  });
+
   const [inputQuestion, setInputQuestion] = useState('');
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (chatId) {
+      const existing = chatSessions.find(s => s.id === chatId);
+      if (existing) {
+        setActiveSessionId(chatId);
+      } else if (chatId.length === 14) {
+        setDraftSession(prev => (prev.id === chatId ? prev : {
+          id: chatId,
+          user_id: user?.id,
+          title: 'New Conversation',
+          messages: [],
+          createdAt: new Date().toISOString()
+        }));
+        setActiveSessionId(chatId);
+      } else {
+        const freshId = generateSecure14CharId();
+        navigate(`/omniai/${freshId}`, { replace: true });
+      }
+    } else {
+      const currentId = activeSessionId || draftSession.id;
+      navigate(`/omniai/${currentId}`, { replace: true });
+    }
+  }, [chatId, user]);
 
   useEffect(() => {
     API.get('/api/classroom/list')
@@ -132,15 +164,17 @@ export default function OmniAI() {
   };
 
   const handleCreateNewSession = () => {
+    const newDraftId = generateSecure14CharId();
     const newDraft = {
-      id: generateSecure14CharId(),
+      id: newDraftId,
       user_id: user?.id,
       title: 'New Conversation',
       messages: [],
       createdAt: new Date().toISOString()
     };
     setDraftSession(newDraft);
-    setActiveSessionId(newDraft.id);
+    setActiveSessionId(newDraftId);
+    navigate(`/omniai/${newDraftId}`);
   };
 
   const handleDeleteSession = (sessionId, e) => {
@@ -150,6 +184,7 @@ export default function OmniAI() {
     if (activeSessionId === sessionId) {
       if (remaining.length > 0) {
         setActiveSessionId(remaining[0].id);
+        navigate(`/omniai/${remaining[0].id}`);
       } else {
         handleCreateNewSession();
       }
@@ -471,7 +506,10 @@ export default function OmniAI() {
                       return (
                         <div
                           key={session.id}
-                          onClick={() => setActiveSessionId(session.id)}
+                          onClick={() => {
+                            setActiveSessionId(session.id);
+                            navigate(`/omniai/${session.id}`);
+                          }}
                           className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between text-xs ${
                             isActive
                               ? 'bg-gray-800 border-indigo-500 text-white font-bold shadow-sm'
